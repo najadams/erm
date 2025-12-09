@@ -17,12 +17,24 @@ import Sidebar from '@/components/layout/Sidebar';
 import StatsCard from '@/components/ui/StatsCard';
 import RecentRecords from '@/components/dashboard/RecentRecords';
 import UploadRecordModal from '@/components/dashboard/UploadRecordModal';
+import StatsCards from '@/components/dashboard/StatsCards';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 
-export default function Home() {
+export default function Dashboard() {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const router = useRouter();
+  const { data: session, status } = useSession();
+
+  if (status === 'loading') {
+    return <Box p={4}>Loading...</Box>;
+  }
+
+  if (status === 'unauthenticated') {
+    router.push('/login');
+    return null;
+  }
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
