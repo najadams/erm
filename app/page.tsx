@@ -16,6 +16,7 @@ import ScheduleIcon from '@mui/icons-material/Schedule';
 import Sidebar from '@/components/layout/Sidebar';
 
 import RecentRecords from '@/components/dashboard/RecentRecords';
+import ActivityFeed from '@/components/dashboard/ActivityFeed';
 import UploadRecordModal from '@/components/dashboard/UploadRecordModal';
 import StatsCards from '@/components/dashboard/StatsCards';
 import { useRouter } from 'next/navigation';
