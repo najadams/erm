@@ -35,8 +35,9 @@ model Record {
   fileUrl     String
   fileType    String
   category    String
-  tags        String   // Stored as JSON string or comma-separated
-  status      String   @default("active") // active, archived, verified, pending_review
+  tags        String   // JSON string of tags
+  status      String   @default("ACTIVE") // ACTIVE, ARCHIVED, VERIFIED, PENDING
+  version     Int      @default(1)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   userId      String
