@@ -101,6 +101,11 @@ export default function Dashboard() {
         {/* Recent Records Table */}
         <RecentRecords />
 
+        {/* Activity Feed */}
+        <Box sx={{ mt: 4 }}>
+          <ActivityFeed />
+        </Box>
+
         {/* Upload Modal */}
         <UploadRecordModal 
           open={uploadModalOpen} 
