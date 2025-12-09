@@ -14,7 +14,7 @@ import FolderIcon from '@mui/icons-material/Folder';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 
 import Sidebar from '@/components/layout/Sidebar';
-import StatsCard from '@/components/ui/StatsCard';
+
 import RecentRecords from '@/components/dashboard/RecentRecords';
 import UploadRecordModal from '@/components/dashboard/UploadRecordModal';
 import StatsCards from '@/components/dashboard/StatsCards';
@@ -94,29 +94,8 @@ export default function Dashboard() {
         </Box>
 
         {/* Stats Cards */}
-        <Grid container spacing={4} sx={{ mb: 5 }}>
-          <Grid item xs={12} sm={4}>
-            <StatsCard 
-              title="Total Records" 
-              value="1,248" 
-              icon={<FolderIcon fontSize="large" color="secondary" />} 
-            />
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <StatsCard 
-              title="Recent Uploads" 
-              value="24" 
-              icon={<CloudUploadIcon fontSize="large" color="info" />} 
-            />
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <StatsCard 
-              title="Pending Review" 
-              value="5" 
-              icon={<ScheduleIcon fontSize="large" color="warning" />} 
-            />
-          </Grid>
-        </Grid>
+        {/* Stats Cards */}
+        <StatsCards />
 
         {/* Recent Records Table */}
         <RecentRecords />
