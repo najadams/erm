@@ -1,0 +1,1669 @@
+[2025-10-25T09:51:36.531Z] [INFO] Starting Sophon app in development mode
+[2025-10-25T09:51:36.533Z] [INFO] App is packaged: false
+[2025-10-25T09:51:36.533Z] [INFO] Current working directory: /Users/a./Projects/Web/pos
+[2025-10-25T09:51:36.533Z] [INFO] App path: /Users/a./Projects/Web/pos
+[2025-10-25T09:51:36.533Z] [INFO] Resources path: N/A
+[2025-10-25T09:51:36.574Z] [INFO] Electron app ready event triggered
+[2025-10-25T09:51:36.574Z] [INFO] Platform: darwin
+[2025-10-25T09:51:36.574Z] [INFO] Architecture: arm64
+[2025-10-25T09:51:36.574Z] [INFO] Electron version: 37.7.1
+[2025-10-25T09:51:36.574Z] [INFO] Node version: 22.20.0
+[2025-10-25T09:51:36.574Z] [INFO] Running in development mode
+[2025-10-25T09:51:36.574Z] [INFO] Development mode: creating window immediately
+[2025-10-25T09:51:36.574Z] [INFO] Creating browser window...
+[2025-10-25T09:51:36.625Z] [INFO] Loading frontend from: http://localhost:5173/
+[2025-10-25T09:51:36.625Z] [INFO] Frontend ready status: false
+[2025-10-25T09:51:36.630Z] [INFO] DevTools opened for development mode
+[2025-10-25T09:51:36.630Z] [INFO] Browser window created successfully
+[2025-10-25T09:51:36.630Z] [INFO] Starting backend server...
+[2025-10-25T09:51:36.631Z] [INFO] Starting backend server...
+[2025-10-25T09:51:36.631Z] [INFO] Backend path: /Users/a./Projects/Web/pos/backend/index.js
+[2025-10-25T09:51:36.631Z] [INFO] Backend directory: /Users/a./Projects/Web/pos/backend
+[2025-10-25T09:51:36.632Z] [INFO] Backend package: sophon-backend v1.0.0
+[2025-10-25T09:51:36.632Z] [INFO] CORS dependency listed: ^2.8.5
+[2025-10-25T09:51:36.632Z] [INFO] Spawning backend process with NODE_ENV: development
+[2025-10-25T09:51:36.635Z] [INFO] Backend process spawned with PID: 72298
+[2025-10-25T09:51:36.798Z] [BACKEND] [INFO] Running as backend process, skipping Electron initialization entirely
+[INFO] Environment flags - BACKEND_DIR: true IS_BACKEND_PROCESS: true SKIP_SINGLE_INSTANCE_LOCK: false
+[dotenv@17.2.3] injecting env (6) from .env -- tip: 📡 add observability to secrets: https://dotenvx.com/ops
+[2025-10-25T09:51:37.005Z] [BACKEND] Backend starting with PORT: 3021
+process.env.PORT: 3021
+[2025-10-25T09:51:37.006Z] [BACKEND] Initializing database...
+[2025-10-25T09:51:37.010Z] [BACKEND] Database path: /Users/a./Projects/Web/pos/backend/data/db/database.sqlite
+[2025-10-25T09:51:37.012Z] [BACKEND_ERROR] Error opening database: Could not locate the bindings file. Tried:
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/out/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/out/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/default/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/compiled/22.20.0/darwin/arm64/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/lib/binding/node-v136-darwin-arm64/better_sqlite3.node
+[2025-10-25T09:51:37.013Z] [BACKEND_ERROR] Error initializing database: Error: Could not locate the bindings file. Tried:
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/out/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/out/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/default/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/compiled/22.20.0/darwin/arm64/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/lib/binding/node-v136-darwin-arm64/better_sqlite3.node
+    at bindings (/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/bindings@1.5.0/node_modules/bindings/bindings.js:126:9)
+    at new Database (/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/lib/database.js:48:64)
+    at initializeDatabase (/Users/a./Projects/Web/pos/backend/data/db/db.js:53:18)
+    at Object.get (/Users/a./Projects/Web/pos/backend/data/db/db.js:141:22)
+    at /Users/a./Projects/Web/pos/backend/utils/dbUtils.js:42:14
+    at new Promise (<anonymous>)
+    at Object.checkTableExists (/Users/a./Projects/Web/pos/backend/utils/dbUtils.js:41:12)
+    at Object.initialize (/Users/a./Projects/Web/pos/backend/utils/dbUtils.js:21:38)
+    at /Users/a./Projects/Web/pos/backend/index.js:115:41
+    at Object.<anonymous> (/Users/a./Projects/Web/pos/backend/index.js:178:3) {
+  tries: [
+    '/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/better_sqlite3.node',
+    '/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/Debug/better_sqlite3.node',
+    '/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/Release/better_sqlite3.node',
+    '/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/out/Debug/better_sqlite3.node',
+    '/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/Debug/better_sqlite3.node',
+    '/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/out/Release/better_sqlite3.node',
+    '/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/Release/better_sqlite3.node',
+    '/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/default/better_sqlite3.node',
+    '/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/compiled/22.20.0/darwin/arm64/better_sqlite3.node',
+    '/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node',
+    '/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node',
+    '/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node',
+    '/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/lib/binding/node-v136-darwin-arm64/better_sqlite3.node'
+  ]
+}
+[2025-10-25T09:51:37.013Z] [BACKEND_ERROR] Database unavailable; starting in network-only mode: Could not locate the bindings file. Tried:
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/out/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/out/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/default/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/compiled/22.20.0/darwin/arm64/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/lib/binding/node-v136-darwin-arm64/better_sqlite3.node
+[2025-10-25T09:51:37.060Z] [BACKEND] Registered minimal network routes (DB unavailable)
+Backend server running on http://0.0.0.0:3021
+Backend ready on port 3021
+Database path: /Users/a./Projects/Web/pos/backend/data/db/database.sqlite
+[2025-10-25T09:51:37.060Z] [INFO] Backend is ready and listening on port 3021
+[2025-10-25T09:51:37.060Z] [INFO] Backend server started and is listening on port 3021
+[2025-10-25T09:51:37.060Z] [INFO] Application startup completed successfully
+[2025-10-25T09:51:37.060Z] [BACKEND_ERROR] Error opening database: Could not locate the bindings file. Tried:
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/out/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/out/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/default/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/compiled/22.20.0/darwin/arm64/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/lib/binding/node-v136-darwin-arm64/better_sqlite3.node
+Networking initialization error: Could not locate the bindings file. Tried:
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/out/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/out/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/default/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/compiled/22.20.0/darwin/arm64/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/lib/binding/node-v136-darwin-arm64/better_sqlite3.node
+[2025-10-25T09:51:37.881Z] [INFO] Window content ready, showing window
+[2025-10-25T09:51:37.913Z] [BACKEND] undefined
+[2025-10-25T09:51:37.932Z] [BACKEND] undefined
+[2025-10-25T09:51:42.823Z] [BACKEND] undefined
+[2025-10-25T09:51:42.876Z] [BACKEND] undefined
+[2025-10-25T09:52:07.884Z] [BACKEND] undefined
+[2025-10-25T09:52:07.892Z] [BACKEND] undefined
+[2025-10-25T09:52:12.828Z] [BACKEND] undefined
+[2025-10-25T09:52:12.832Z] [BACKEND] undefined
+[2025-10-25T09:52:37.878Z] [BACKEND] undefined
+[2025-10-25T09:52:37.880Z] [BACKEND] undefined
+[2025-10-25T09:52:42.825Z] [BACKEND] undefined
+[2025-10-25T09:52:42.826Z] [BACKEND] undefined
+[2025-10-25T09:52:42.852Z] [INFO] App activated
+[2025-10-25T09:53:08.825Z] [BACKEND] undefined
+[2025-10-25T09:53:08.827Z] [BACKEND] undefined
+[2025-10-25T09:53:12.829Z] [BACKEND] undefined
+[2025-10-25T09:53:12.835Z] [BACKEND] undefined
+[2025-10-25T09:53:37.882Z] [BACKEND] undefined
+[2025-10-25T09:53:37.888Z] [BACKEND] undefined
+[2025-10-25T09:53:42.830Z] [BACKEND] undefined
+[2025-10-25T09:53:42.841Z] [BACKEND] undefined
+[2025-10-25T09:54:08.830Z] [BACKEND] undefined
+[2025-10-25T09:54:08.835Z] [BACKEND] undefined
+[2025-10-25T09:54:12.831Z] [BACKEND] undefined
+[2025-10-25T09:54:12.834Z] [BACKEND] undefined
+[2025-10-25T09:54:38.831Z] [BACKEND] undefined
+[2025-10-25T09:54:38.837Z] [BACKEND] undefined
+[2025-10-25T09:54:42.832Z] [BACKEND] undefined
+[2025-10-25T09:54:42.835Z] [BACKEND] undefined
+[2025-10-25T09:55:12.800Z] [BACKEND] undefined
+[2025-10-25T09:55:12.805Z] [BACKEND] undefined
+[2025-10-25T09:55:15.420Z] [BACKEND] undefined
+[2025-10-25T09:55:15.424Z] [BACKEND] undefined
+[2025-10-25T09:55:37.843Z] [BACKEND] undefined
+[2025-10-25T09:55:37.850Z] [BACKEND] undefined
+[2025-10-25T09:56:07.844Z] [BACKEND] undefined
+[2025-10-25T09:56:07.852Z] [BACKEND] undefined
+[2025-10-25T09:56:25.797Z] [BACKEND] undefined
+[2025-10-25T09:56:25.803Z] [BACKEND] undefined
+[2025-10-25T09:56:37.839Z] [BACKEND] undefined
+[2025-10-25T09:56:37.841Z] [BACKEND] undefined
+[2025-10-25T09:57:07.842Z] [BACKEND] undefined
+[2025-10-25T09:57:07.846Z] [BACKEND] undefined
+[2025-10-25T09:57:25.514Z] [INFO] App activated
+[2025-10-25T09:57:25.793Z] [BACKEND] undefined
+[2025-10-25T09:57:25.803Z] [BACKEND] undefined
+[2025-10-25T09:57:37.843Z] [BACKEND] undefined
+[2025-10-25T09:57:37.848Z] [BACKEND] undefined
+[2025-10-25T09:58:07.843Z] [BACKEND] undefined
+[2025-10-25T09:58:07.848Z] [BACKEND] undefined
+[2025-10-25T09:58:25.793Z] [BACKEND] undefined
+[2025-10-25T09:58:25.798Z] [BACKEND] undefined
+[2025-10-25T09:58:37.841Z] [BACKEND] undefined
+[2025-10-25T09:58:37.848Z] [BACKEND] undefined
+[2025-10-25T09:59:07.842Z] [BACKEND] undefined
+[2025-10-25T09:59:07.848Z] [BACKEND] undefined
+[2025-10-25T09:59:25.790Z] [BACKEND] undefined
+[2025-10-25T09:59:25.796Z] [BACKEND] undefined
+[2025-10-25T09:59:37.843Z] [BACKEND] undefined
+[2025-10-25T09:59:37.848Z] [BACKEND] undefined
+[2025-10-25T10:00:07.843Z] [BACKEND] undefined
+[2025-10-25T10:00:07.850Z] [BACKEND] undefined
+[2025-10-25T10:00:25.788Z] [BACKEND] undefined
+[2025-10-25T10:00:25.791Z] [BACKEND] undefined
+[2025-10-25T10:00:37.843Z] [BACKEND] undefined
+[2025-10-25T10:00:37.852Z] [BACKEND] undefined
+[2025-10-25T10:01:07.842Z] [BACKEND] undefined
+[2025-10-25T10:01:07.847Z] [BACKEND] undefined
+[2025-10-25T10:01:25.788Z] [BACKEND] undefined
+[2025-10-25T10:01:25.791Z] [BACKEND] undefined
+[2025-10-25T10:01:37.843Z] [BACKEND] undefined
+[2025-10-25T10:01:37.849Z] [BACKEND] undefined
+[2025-10-25T10:02:07.839Z] [BACKEND] undefined
+[2025-10-25T10:02:07.842Z] [BACKEND] undefined
+[2025-10-25T10:02:25.789Z] [BACKEND] undefined
+[2025-10-25T10:02:25.794Z] [BACKEND] undefined
+[2025-10-25T10:02:37.842Z] [BACKEND] undefined
+[2025-10-25T10:02:37.846Z] [BACKEND] undefined
+[2025-10-25T10:03:07.844Z] [BACKEND] undefined
+[2025-10-25T10:03:07.848Z] [BACKEND] undefined
+[2025-10-25T10:03:25.788Z] [BACKEND] undefined
+[2025-10-25T10:03:25.802Z] [BACKEND] undefined
+[2025-10-25T10:03:37.844Z] [BACKEND] undefined
+[2025-10-25T10:03:37.849Z] [BACKEND] undefined
+[2025-10-25T10:04:07.846Z] [BACKEND] undefined
+[2025-10-25T10:04:07.852Z] [BACKEND] undefined
+[2025-10-25T10:04:25.793Z] [BACKEND] undefined
+[2025-10-25T10:04:25.799Z] [BACKEND] undefined
+[2025-10-25T10:04:37.843Z] [BACKEND] undefined
+[2025-10-25T10:04:37.849Z] [BACKEND] undefined
+[2025-10-25T10:05:07.841Z] [BACKEND] undefined
+[2025-10-25T10:05:07.846Z] [BACKEND] undefined
+[2025-10-25T10:05:25.794Z] [BACKEND] undefined
+[2025-10-25T10:05:25.801Z] [BACKEND] undefined
+[2025-10-25T10:05:37.845Z] [BACKEND] undefined
+[2025-10-25T10:05:37.851Z] [BACKEND] undefined
+[2025-10-25T10:06:07.843Z] [BACKEND] undefined
+[2025-10-25T10:06:07.848Z] [BACKEND] undefined
+[2025-10-25T10:06:08.988Z] [INFO] Starting Sophon app in development mode
+[2025-10-25T10:06:08.989Z] [INFO] App is packaged: false
+[2025-10-25T10:06:08.989Z] [INFO] Current working directory: /Users/a./Projects/Web/pos
+[2025-10-25T10:06:08.989Z] [INFO] App path: /Users/a./Projects/Web/pos
+[2025-10-25T10:06:08.989Z] [INFO] Resources path: N/A
+[2025-10-25T10:06:09.001Z] [INFO] Second instance detected, focusing existing window
+[2025-10-25T10:06:09.001Z] [INFO] Another instance is already running, quitting...
+[2025-10-25T10:06:18.481Z] [INFO] App activated
+[2025-10-25T10:06:20.341Z] [INFO] App before-quit event triggered
+[2025-10-25T10:06:20.342Z] [INFO] Starting cleanup process...
+[2025-10-25T10:06:20.342Z] [INFO] Terminating backend process...
+[2025-10-25T10:06:20.375Z] [INFO] Backend process exited with code 0 and signal null
+[2025-10-25T10:06:22.348Z] [INFO] All cleanup tasks completed - allowing app to quit
+[2025-10-25T10:06:22.450Z] [INFO] App activated
+[2025-10-25T10:06:22.471Z] [INFO] Main window closed
+[2025-10-25T10:06:22.471Z] [INFO] App will quit event triggered
+[2025-10-25T10:06:44.332Z] [INFO] Starting Sophon app in development mode
+[2025-10-25T10:06:44.332Z] [INFO] App is packaged: false
+[2025-10-25T10:06:44.332Z] [INFO] Current working directory: /Users/a./Projects/Web/pos
+[2025-10-25T10:06:44.332Z] [INFO] App path: /Users/a./Projects/Web/pos
+[2025-10-25T10:06:44.332Z] [INFO] Resources path: N/A
+[2025-10-25T10:06:44.364Z] [INFO] Electron app ready event triggered
+[2025-10-25T10:06:44.364Z] [INFO] Platform: darwin
+[2025-10-25T10:06:44.364Z] [INFO] Architecture: arm64
+[2025-10-25T10:06:44.364Z] [INFO] Electron version: 37.7.1
+[2025-10-25T10:06:44.364Z] [INFO] Node version: 22.20.0
+[2025-10-25T10:06:44.364Z] [INFO] Running in development mode
+[2025-10-25T10:06:44.364Z] [INFO] Development mode: creating window immediately
+[2025-10-25T10:06:44.364Z] [INFO] Creating browser window...
+[2025-10-25T10:06:44.413Z] [INFO] Loading frontend from: http://localhost:5173/
+[2025-10-25T10:06:44.413Z] [INFO] Frontend ready status: false
+[2025-10-25T10:06:44.417Z] [INFO] DevTools opened for development mode
+[2025-10-25T10:06:44.417Z] [INFO] Browser window created successfully
+[2025-10-25T10:06:44.417Z] [INFO] Starting backend server...
+[2025-10-25T10:06:44.417Z] [INFO] Starting backend server...
+[2025-10-25T10:06:44.418Z] [INFO] Backend path: /Users/a./Projects/Web/pos/backend/index.js
+[2025-10-25T10:06:44.418Z] [INFO] Backend directory: /Users/a./Projects/Web/pos/backend
+[2025-10-25T10:06:44.418Z] [INFO] Backend package: sophon-backend v1.0.0
+[2025-10-25T10:06:44.418Z] [INFO] CORS dependency listed: ^2.8.5
+[2025-10-25T10:06:44.419Z] [INFO] Spawning backend process with NODE_ENV: development
+[2025-10-25T10:06:44.420Z] [INFO] Backend process spawned with PID: 75757
+[2025-10-25T10:06:44.452Z] [BACKEND] [INFO] Running as backend process, skipping Electron initialization entirely
+[2025-10-25T10:06:44.452Z] [BACKEND] [INFO] Environment flags - BACKEND_DIR: [33mtrue[39m IS_BACKEND_PROCESS: [33mtrue[39m SKIP_SINGLE_INSTANCE_LOCK: [33mfalse[39m
+[2025-10-25T10:06:44.457Z] [BACKEND] [dotenv@17.2.3] injecting env (6) from .env -- tip: ✅ audit secrets and track compliance: https://dotenvx.com/ops
+[2025-10-25T10:06:44.821Z] [BACKEND] Backend starting with PORT: 3021
+process.env.PORT: 3021
+[2025-10-25T10:06:44.822Z] [BACKEND] Initializing database...
+[2025-10-25T10:06:44.828Z] [BACKEND] Database path: /Users/a./Projects/Web/pos/backend/data/db/database.sqlite
+[2025-10-25T10:06:44.830Z] [BACKEND_ERROR] Error opening database: Could not locate the bindings file. Tried:
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/out/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/out/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/default/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/compiled/20.19.3/darwin/arm64/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/lib/binding/node-v115-darwin-arm64/better_sqlite3.node
+[2025-10-25T10:06:44.833Z] [BACKEND_ERROR] Error initializing database: Error: Could not locate the bindings file. Tried:
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/out/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/out/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/default/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/compiled/20.19.3/darwin/arm64/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/lib/binding/node-v115-darwin-arm64/better_sqlite3.node
+    at bindings [90m(/Users/a./Projects/Web/pos/backend/[39mnode_modules/[4m.pnpm[24m/bindings@1.5.0/node_modules/[4mbindings[24m/bindings.js:126:9[90m)[39m
+    at new Database [90m(/Users/a./Projects/Web/pos/backend/[39mnode_modules/[4m.pnpm[24m/better-sqlite3@9.6.0/node_modules/[4mbetter-sqlite3[24m/lib/database.js:48:64[90m)[39m
+    at initializeDatabase [90m(/Users/a./Projects/Web/pos/backend/[39mdata/db/db.js:53:18[90m)[39m
+    at Object.get [90m(/Users/a./Projects/Web/pos/backend/[39mdata/db/db.js:141:22[90m)[39m
+    at [90m/Users/a./Projects/Web/pos/backend/[39mutils/dbUtils.js:42:14
+    at new Promise (<anonymous>)
+    at Object.checkTableExists [90m(/Users/a./Projects/Web/pos/backend/[39mutils/dbUtils.js:41:12[90m)[39m
+    at Object.initialize [90m(/Users/a./Projects/Web/pos/backend/[39mutils/dbUtils.js:21:38[90m)[39m
+    at [90m/Users/a./Projects/Web/pos/backend/[39mindex.js:115:41
+    at Object.<anonymous> [90m(/Users/a./Projects/Web/pos/backend/[39mindex.js:178:3[90m)[39m {
+  tries: [
+    [32m'/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/better_sqlite3.node'[39m,
+    [32m'/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/Debug/better_sqlite3.node'[39m,
+    [32m'/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/Release/better_sqlite3.node'[39m,
+    [32m'/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/out/Debug/better_sqlite3.node'[39m,
+    [32m'/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/Debug/better_sqlite3.node'[39m,
+    [32m'/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/out/Release/better_sqlite3.node'[39m,
+    [32m'/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/Release/better_sqlite3.node'[39m,
+    [32m'/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/default/better_sqlite3.node'[39m,
+    [32m'/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/compiled/20.19.3/darwin/arm64/better_sqlite3.node'[39m,
+    [32m'/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node'[39m,
+    [32m'/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node'[39m,
+    [32m'/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node'[39m,
+    [32m'/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/lib/binding/node-v115-darwin-arm64/better_sqlite3.node'[39m
+  ]
+}
+[2025-10-25T10:06:44.833Z] [BACKEND_ERROR] Database unavailable; starting in network-only mode: Could not locate the bindings file. Tried:
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/out/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/out/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/default/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/compiled/20.19.3/darwin/arm64/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/lib/binding/node-v115-darwin-arm64/better_sqlite3.node
+[2025-10-25T10:06:44.842Z] [BACKEND] Registered minimal network routes (DB unavailable)
+[2025-10-25T10:06:44.843Z] [BACKEND] Backend server running on http://0.0.0.0:3021
+[2025-10-25T10:06:44.843Z] [BACKEND] Backend ready on port 3021
+[2025-10-25T10:06:44.843Z] [INFO] Backend is ready and listening on port 3021
+[2025-10-25T10:06:44.843Z] [INFO] Backend server started and is listening on port 3021
+[2025-10-25T10:06:44.843Z] [INFO] Application startup completed successfully
+[2025-10-25T10:06:44.843Z] [BACKEND] Database path: /Users/a./Projects/Web/pos/backend/data/db/database.sqlite
+[2025-10-25T10:06:44.843Z] [BACKEND_ERROR] Error opening database: Could not locate the bindings file. Tried:
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/out/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/out/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/default/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/compiled/20.19.3/darwin/arm64/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/lib/binding/node-v115-darwin-arm64/better_sqlite3.node
+[2025-10-25T10:06:44.843Z] [BACKEND_ERROR] Networking initialization error: Could not locate the bindings file. Tried:
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/out/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/out/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/default/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/compiled/20.19.3/darwin/arm64/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/lib/binding/node-v115-darwin-arm64/better_sqlite3.node
+[2025-10-25T10:06:46.601Z] [INFO] Window content ready, showing window
+[2025-10-25T10:06:46.652Z] [BACKEND] [90mundefined[39m
+[2025-10-25T10:06:46.666Z] [BACKEND] [90mundefined[39m
+[2025-10-25T10:07:06.624Z] [INFO] App before-quit event triggered
+[2025-10-25T10:07:06.625Z] [INFO] Starting cleanup process...
+[2025-10-25T10:07:06.625Z] [INFO] Terminating backend process...
+[2025-10-25T10:18:21.089Z] [INFO] Starting Sophon app in development mode
+[2025-10-25T10:18:21.090Z] [INFO] App is packaged: false
+[2025-10-25T10:18:21.090Z] [INFO] Current working directory: /Users/a./Projects/Web/pos
+[2025-10-25T10:18:21.090Z] [INFO] App path: /Users/a./Projects/Web/pos
+[2025-10-25T10:18:21.090Z] [INFO] Resources path: N/A
+[2025-10-25T10:18:21.123Z] [INFO] Electron app ready event triggered
+[2025-10-25T10:18:21.123Z] [INFO] Platform: darwin
+[2025-10-25T10:18:21.123Z] [INFO] Architecture: arm64
+[2025-10-25T10:18:21.123Z] [INFO] Electron version: 37.7.1
+[2025-10-25T10:18:21.123Z] [INFO] Node version: 22.20.0
+[2025-10-25T10:18:21.123Z] [INFO] Running in development mode
+[2025-10-25T10:18:21.123Z] [INFO] Development mode: creating window immediately
+[2025-10-25T10:18:21.124Z] [INFO] Creating browser window...
+[2025-10-25T10:18:21.171Z] [INFO] Loading frontend from: http://localhost:5173/
+[2025-10-25T10:18:21.171Z] [INFO] Frontend ready status: false
+[2025-10-25T10:18:21.175Z] [INFO] DevTools opened for development mode
+[2025-10-25T10:18:21.175Z] [INFO] Browser window created successfully
+[2025-10-25T10:18:21.175Z] [INFO] Starting backend server...
+[2025-10-25T10:18:21.175Z] [INFO] Starting backend server...
+[2025-10-25T10:18:21.175Z] [INFO] Backend path: /Users/a./Projects/Web/pos/backend/index.js
+[2025-10-25T10:18:21.175Z] [INFO] Backend directory: /Users/a./Projects/Web/pos/backend
+[2025-10-25T10:18:21.176Z] [INFO] Backend package: sophon-backend v1.0.0
+[2025-10-25T10:18:21.176Z] [INFO] CORS dependency listed: ^2.8.5
+[2025-10-25T10:18:21.176Z] [INFO] Spawning backend process with NODE_ENV: development
+[2025-10-25T10:18:21.177Z] [INFO] Backend process spawned with PID: 79040
+[2025-10-25T10:18:21.206Z] [BACKEND] [INFO] Running as backend process, skipping Electron initialization entirely
+[2025-10-25T10:18:21.206Z] [BACKEND] [INFO] Environment flags - BACKEND_DIR: true IS_BACKEND_PROCESS: true SKIP_SINGLE_INSTANCE_LOCK: false
+[2025-10-25T10:18:21.210Z] [BACKEND] [dotenv@17.2.3] injecting env (6) from .env -- tip: 🔑 add access controls to secrets: https://dotenvx.com/ops
+[2025-10-25T10:18:21.537Z] [BACKEND] Backend starting with PORT: 3021
+process.env.PORT: 3021
+[2025-10-25T10:18:21.538Z] [BACKEND] Initializing database...
+[2025-10-25T10:18:21.544Z] [BACKEND] Database path: /Users/a./Projects/Web/pos/backend/data/db/database.sqlite
+[2025-10-25T10:18:21.546Z] [BACKEND_ERROR] Error opening database: Could not locate the bindings file. Tried:
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/out/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/out/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/default/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/compiled/20.19.3/darwin/arm64/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/lib/binding/node-v115-darwin-arm64/better_sqlite3.node
+[2025-10-25T10:18:21.550Z] [BACKEND_ERROR] Error initializing database: Error: Could not locate the bindings file. Tried:
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/out/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/out/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/default/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/compiled/20.19.3/darwin/arm64/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/lib/binding/node-v115-darwin-arm64/better_sqlite3.node
+    at bindings (/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/bindings@1.5.0/node_modules/bindings/bindings.js:126:9)
+    at new Database (/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/lib/database.js:48:64)
+    at initializeDatabase (/Users/a./Projects/Web/pos/backend/data/db/db.js:53:18)
+    at Object.get (/Users/a./Projects/Web/pos/backend/data/db/db.js:141:22)
+    at /Users/a./Projects/Web/pos/backend/utils/dbUtils.js:42:14
+    at new Promise (<anonymous>)
+    at Object.checkTableExists (/Users/a./Projects/Web/pos/backend/utils/dbUtils.js:41:12)
+    at Object.initialize (/Users/a./Projects/Web/pos/backend/utils/dbUtils.js:21:38)
+    at /Users/a./Projects/Web/pos/backend/index.js:115:41
+    at Object.<anonymous> (/Users/a./Projects/Web/pos/backend/index.js:178:3) {
+  tries: [
+    '/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/better_sqlite3.node',
+    '/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/Debug/better_sqlite3.node',
+    '/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/Release/better_sqlite3.node',
+    '/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/out/Debug/better_sqlite3.node',
+    '/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/Debug/better_sqlite3.node',
+    '/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/out/Release/better_sqlite3.node',
+    '/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/Release/better_sqlite3.node',
+    '/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/default/better_sqlite3.node',
+    '/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/compiled/20.19.3/darwin/arm64/better_sqlite3.node',
+    '/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node',
+    '/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node',
+    '/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node',
+    '/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/lib/binding/node-v115-darwin-arm64/better_sqlite3.node'
+  ]
+}
+[2025-10-25T10:18:21.551Z] [BACKEND_ERROR] Database unavailable; starting in network-only mode: Could not locate the bindings file. Tried:
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/out/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/out/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/default/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/compiled/20.19.3/darwin/arm64/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/lib/binding/node-v115-darwin-arm64/better_sqlite3.node
+[2025-10-25T10:18:21.557Z] [BACKEND] Registered minimal network routes (DB unavailable)
+[2025-10-25T10:18:21.558Z] [BACKEND] Backend server running on http://0.0.0.0:3021
+[2025-10-25T10:18:21.558Z] [BACKEND] Backend ready on port 3021
+[2025-10-25T10:18:21.558Z] [INFO] Backend is ready and listening on port 3021
+[2025-10-25T10:18:21.558Z] [INFO] Backend server started and is listening on port 3021
+[2025-10-25T10:18:21.558Z] [INFO] Application startup completed successfully
+[2025-10-25T10:18:21.559Z] [BACKEND] Database path: /Users/a./Projects/Web/pos/backend/data/db/database.sqlite
+[2025-10-25T10:18:21.559Z] [BACKEND_ERROR] Error opening database: Could not locate the bindings file. Tried:
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/out/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/out/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/default/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/compiled/20.19.3/darwin/arm64/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/lib/binding/node-v115-darwin-arm64/better_sqlite3.node
+[2025-10-25T10:18:21.559Z] [BACKEND_ERROR] Networking initialization error: Could not locate the bindings file. Tried:
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/out/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/Debug/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/out/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/Release/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/build/default/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/compiled/20.19.3/darwin/arm64/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node
+ → /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/better-sqlite3@9.6.0/node_modules/better-sqlite3/lib/binding/node-v115-darwin-arm64/better_sqlite3.node
+[2025-10-25T10:18:22.581Z] [INFO] Window content ready, showing window
+[2025-10-25T10:18:22.641Z] [BACKEND] undefined
+[2025-10-25T10:18:22.675Z] [BACKEND] undefined
+[2025-10-25T10:18:52.720Z] [BACKEND] undefined
+[2025-10-25T10:18:52.731Z] [BACKEND] undefined
+[2025-10-25T10:19:22.583Z] [BACKEND] undefined
+[2025-10-25T10:19:22.590Z] [BACKEND] undefined
+[2025-10-25T10:19:52.583Z] [BACKEND] undefined
+[2025-10-25T10:19:52.591Z] [BACKEND] undefined
+[2025-10-25T10:20:22.582Z] [BACKEND] undefined
+[2025-10-25T10:20:22.594Z] [BACKEND] undefined
+[2025-10-25T10:20:52.578Z] [BACKEND] undefined
+[2025-10-25T10:20:52.581Z] [BACKEND] undefined
+[2025-10-25T10:21:22.583Z] [BACKEND] undefined
+[2025-10-25T10:21:22.588Z] [BACKEND] undefined
+[2025-10-25T10:21:52.580Z] [BACKEND] undefined
+[2025-10-25T10:21:52.591Z] [BACKEND] undefined
+[2025-10-25T10:22:22.582Z] [BACKEND] undefined
+[2025-10-25T10:22:22.591Z] [BACKEND] undefined
+[2025-10-25T10:22:52.580Z] [BACKEND] undefined
+[2025-10-25T10:22:52.586Z] [BACKEND] undefined
+[2025-10-25T10:23:22.580Z] [BACKEND] undefined
+[2025-10-25T10:23:22.585Z] [BACKEND] undefined
+[2025-10-25T10:23:52.578Z] [BACKEND] undefined
+[2025-10-25T10:23:52.583Z] [BACKEND] undefined
+[2025-10-25T10:24:22.581Z] [BACKEND] undefined
+[2025-10-25T10:24:22.586Z] [BACKEND] undefined
+[2025-10-25T10:24:52.580Z] [BACKEND] undefined
+[2025-10-25T10:24:52.592Z] [BACKEND] undefined
+[2025-10-25T10:25:22.579Z] [BACKEND] undefined
+[2025-10-25T10:25:22.585Z] [BACKEND] undefined
+[2025-10-25T10:25:52.580Z] [BACKEND] undefined
+[2025-10-25T10:25:52.587Z] [BACKEND] undefined
+[2025-10-25T10:26:22.580Z] [BACKEND] undefined
+[2025-10-25T10:26:22.585Z] [BACKEND] undefined
+[2025-10-25T10:26:52.579Z] [BACKEND] undefined
+[2025-10-25T10:26:52.587Z] [BACKEND] undefined
+[2025-10-25T10:27:22.467Z] [BACKEND] undefined
+[2025-10-25T10:27:22.475Z] [BACKEND] undefined
+[2025-10-25T10:27:52.465Z] [BACKEND] undefined
+[2025-10-25T10:27:52.472Z] [BACKEND] undefined
+[2025-10-25T10:28:22.462Z] [BACKEND] undefined
+[2025-10-25T10:28:22.469Z] [BACKEND] undefined
+[2025-10-25T10:28:52.464Z] [BACKEND] undefined
+[2025-10-25T10:28:52.470Z] [BACKEND] undefined
+[2025-10-25T10:29:22.464Z] [BACKEND] undefined
+[2025-10-25T10:29:22.470Z] [BACKEND] undefined
+[2025-10-25T10:29:52.460Z] [BACKEND] undefined
+[2025-10-25T10:29:52.466Z] [BACKEND] undefined
+[2025-10-25T10:30:22.462Z] [BACKEND] undefined
+[2025-10-25T10:30:22.469Z] [BACKEND] undefined
+[2025-10-25T10:30:52.462Z] [BACKEND] undefined
+[2025-10-25T10:30:52.468Z] [BACKEND] undefined
+[2025-10-25T10:31:22.461Z] [BACKEND] undefined
+[2025-10-25T10:31:22.472Z] [BACKEND] undefined
+[2025-10-25T10:31:52.462Z] [BACKEND] undefined
+[2025-10-25T10:31:52.468Z] [BACKEND] undefined
+[2025-10-25T10:32:22.459Z] [BACKEND] undefined
+[2025-10-25T10:32:22.465Z] [BACKEND] undefined
+[2025-10-25T10:32:52.458Z] [BACKEND] undefined
+[2025-10-25T10:32:52.465Z] [BACKEND] undefined
+[2025-10-25T10:33:22.459Z] [BACKEND] undefined
+[2025-10-25T10:33:22.464Z] [BACKEND] undefined
+[2025-10-25T10:33:52.457Z] [BACKEND] undefined
+[2025-10-25T10:33:52.462Z] [BACKEND] undefined
+[2025-10-25T10:34:22.458Z] [BACKEND] undefined
+[2025-10-25T10:34:22.467Z] [BACKEND] undefined
+[2025-10-25T10:34:52.455Z] [BACKEND] undefined
+[2025-10-25T10:34:52.459Z] [BACKEND] undefined
+[2025-10-25T10:35:22.456Z] [BACKEND] undefined
+[2025-10-25T10:35:22.462Z] [BACKEND] undefined
+[2025-10-25T10:35:52.453Z] [BACKEND] undefined
+[2025-10-25T10:35:52.460Z] [BACKEND] undefined
+[2025-10-25T10:36:22.454Z] [BACKEND] undefined
+[2025-10-25T10:36:22.460Z] [BACKEND] undefined
+[2025-10-25T10:36:52.454Z] [BACKEND] undefined
+[2025-10-25T10:36:52.459Z] [BACKEND] undefined
+[2025-10-25T10:37:22.454Z] [BACKEND] undefined
+[2025-10-25T10:37:22.459Z] [BACKEND] undefined
+[2025-10-25T10:37:52.453Z] [BACKEND] undefined
+[2025-10-25T10:37:52.459Z] [BACKEND] undefined
+[2025-10-25T10:38:22.453Z] [BACKEND] undefined
+[2025-10-25T10:38:22.458Z] [BACKEND] undefined
+[2025-10-25T10:38:52.453Z] [BACKEND] undefined
+[2025-10-25T10:38:52.456Z] [BACKEND] undefined
+[2025-10-25T10:39:22.453Z] [BACKEND] undefined
+[2025-10-25T10:39:22.458Z] [BACKEND] undefined
+[2025-10-25T10:39:52.453Z] [BACKEND] undefined
+[2025-10-25T10:39:52.458Z] [BACKEND] undefined
+[2025-10-25T10:40:22.449Z] [BACKEND] undefined
+[2025-10-25T10:40:22.453Z] [BACKEND] undefined
+[2025-10-25T10:40:52.450Z] [BACKEND] undefined
+[2025-10-25T10:40:52.454Z] [BACKEND] undefined
+[2025-10-25T10:41:22.451Z] [BACKEND] undefined
+[2025-10-25T10:41:22.457Z] [BACKEND] undefined
+[2025-10-25T10:41:52.449Z] [BACKEND] undefined
+[2025-10-25T10:41:52.453Z] [BACKEND] undefined
+[2025-10-25T10:42:22.450Z] [BACKEND] undefined
+[2025-10-25T10:42:22.455Z] [BACKEND] undefined
+[2025-10-25T10:42:52.449Z] [BACKEND] undefined
+[2025-10-25T10:42:52.452Z] [BACKEND] undefined
+[2025-10-25T10:43:22.508Z] [BACKEND] undefined
+[2025-10-25T10:43:22.513Z] [BACKEND] undefined
+[2025-10-25T10:43:52.506Z] [BACKEND] undefined
+[2025-10-25T10:43:52.508Z] [BACKEND] undefined
+[2025-10-25T10:44:22.508Z] [BACKEND] undefined
+[2025-10-25T10:44:22.514Z] [BACKEND] undefined
+[2025-10-25T10:44:52.508Z] [BACKEND] undefined
+[2025-10-25T10:44:52.514Z] [BACKEND] undefined
+[2025-10-25T10:45:22.508Z] [BACKEND] undefined
+[2025-10-25T10:45:22.513Z] [BACKEND] undefined
+[2025-10-25T10:45:52.508Z] [BACKEND] undefined
+[2025-10-25T10:45:52.514Z] [BACKEND] undefined
+[2025-10-25T10:46:22.506Z] [BACKEND] undefined
+[2025-10-25T10:46:22.511Z] [BACKEND] undefined
+[2025-10-25T10:46:52.507Z] [BACKEND] undefined
+[2025-10-25T10:46:52.511Z] [BACKEND] undefined
+[2025-10-25T10:47:22.506Z] [BACKEND] undefined
+[2025-10-25T10:47:22.512Z] [BACKEND] undefined
+[2025-10-25T10:47:52.508Z] [BACKEND] undefined
+[2025-10-25T10:47:52.515Z] [BACKEND] undefined
+[2025-10-25T10:48:22.504Z] [BACKEND] undefined
+[2025-10-25T10:48:22.508Z] [BACKEND] undefined
+[2025-10-25T10:48:52.506Z] [BACKEND] undefined
+[2025-10-25T10:48:52.512Z] [BACKEND] undefined
+[2025-10-25T10:49:22.503Z] [BACKEND] undefined
+[2025-10-25T10:49:22.509Z] [BACKEND] undefined
+[2025-10-25T10:49:52.504Z] [BACKEND] undefined
+[2025-10-25T10:49:52.510Z] [BACKEND] undefined
+[2025-10-25T10:50:22.504Z] [BACKEND] undefined
+[2025-10-25T10:50:22.509Z] [BACKEND] undefined
+[2025-10-25T10:50:52.503Z] [BACKEND] undefined
+[2025-10-25T10:50:52.509Z] [BACKEND] undefined
+[2025-10-25T10:51:22.503Z] [BACKEND] undefined
+[2025-10-25T10:51:22.508Z] [BACKEND] undefined
+[2025-10-25T10:51:52.503Z] [BACKEND] undefined
+[2025-10-25T10:51:52.508Z] [BACKEND] undefined
+[2025-10-25T10:52:22.503Z] [BACKEND] undefined
+[2025-10-25T10:52:22.508Z] [BACKEND] undefined
+[2025-10-25T10:52:52.502Z] [BACKEND] undefined
+[2025-10-25T10:52:52.508Z] [BACKEND] undefined
+[2025-10-25T10:53:22.501Z] [BACKEND] undefined
+[2025-10-25T10:53:22.507Z] [BACKEND] undefined
+[2025-10-25T10:53:52.502Z] [BACKEND] undefined
+[2025-10-25T10:53:52.507Z] [BACKEND] undefined
+[2025-10-25T10:54:22.501Z] [BACKEND] undefined
+[2025-10-25T10:54:22.507Z] [BACKEND] undefined
+[2025-10-25T10:54:52.501Z] [BACKEND] undefined
+[2025-10-25T10:54:52.506Z] [BACKEND] undefined
+[2025-10-25T10:55:22.501Z] [BACKEND] undefined
+[2025-10-25T10:55:22.507Z] [BACKEND] undefined
+[2025-10-25T10:55:52.500Z] [BACKEND] undefined
+[2025-10-25T10:55:52.506Z] [BACKEND] undefined
+[2025-10-25T10:56:22.500Z] [BACKEND] undefined
+[2025-10-25T10:56:22.504Z] [BACKEND] undefined
+[2025-10-25T10:56:52.500Z] [BACKEND] undefined
+[2025-10-25T10:56:52.505Z] [BACKEND] undefined
+[2025-10-25T10:57:22.499Z] [BACKEND] undefined
+[2025-10-25T10:57:22.505Z] [BACKEND] undefined
+[2025-10-25T10:57:52.500Z] [BACKEND] undefined
+[2025-10-25T10:57:52.505Z] [BACKEND] undefined
+[2025-10-25T10:58:22.499Z] [BACKEND] undefined
+[2025-10-25T10:58:22.504Z] [BACKEND] undefined
+[2025-10-25T10:58:52.554Z] [BACKEND] undefined
+[2025-10-25T10:58:52.559Z] [BACKEND] undefined
+[2025-10-25T10:59:22.554Z] [BACKEND] undefined
+[2025-10-25T10:59:22.560Z] [BACKEND] undefined
+[2025-10-25T10:59:52.553Z] [BACKEND] undefined
+[2025-10-25T10:59:52.558Z] [BACKEND] undefined
+[2025-10-25T11:00:22.552Z] [BACKEND] undefined
+[2025-10-25T11:00:22.558Z] [BACKEND] undefined
+[2025-10-25T11:00:52.552Z] [BACKEND] undefined
+[2025-10-25T11:00:52.558Z] [BACKEND] undefined
+[2025-10-25T11:01:22.552Z] [BACKEND] undefined
+[2025-10-25T11:01:22.557Z] [BACKEND] undefined
+[2025-10-25T11:01:52.552Z] [BACKEND] undefined
+[2025-10-25T11:01:52.557Z] [BACKEND] undefined
+[2025-10-25T11:02:22.552Z] [BACKEND] undefined
+[2025-10-25T11:02:22.557Z] [BACKEND] undefined
+[2025-10-25T11:02:52.552Z] [BACKEND] undefined
+[2025-10-25T11:02:52.557Z] [BACKEND] undefined
+[2025-10-25T11:03:22.551Z] [BACKEND] undefined
+[2025-10-25T11:03:22.558Z] [BACKEND] undefined
+[2025-10-25T11:03:52.552Z] [BACKEND] undefined
+[2025-10-25T11:03:52.557Z] [BACKEND] undefined
+[2025-10-25T11:04:22.551Z] [BACKEND] undefined
+[2025-10-25T11:04:22.556Z] [BACKEND] undefined
+[2025-10-25T11:04:52.551Z] [BACKEND] undefined
+[2025-10-25T11:04:52.557Z] [BACKEND] undefined
+[2025-10-25T11:05:22.551Z] [BACKEND] undefined
+[2025-10-25T11:05:22.556Z] [BACKEND] undefined
+[2025-10-25T11:05:52.550Z] [BACKEND] undefined
+[2025-10-25T11:05:52.555Z] [BACKEND] undefined
+[2025-10-25T11:06:22.550Z] [BACKEND] undefined
+[2025-10-25T11:06:22.557Z] [BACKEND] undefined
+[2025-10-25T11:06:52.551Z] [BACKEND] undefined
+[2025-10-25T11:06:52.555Z] [BACKEND] undefined
+[2025-10-25T11:07:22.550Z] [BACKEND] undefined
+[2025-10-25T11:07:22.555Z] [BACKEND] undefined
+[2025-10-25T11:07:52.550Z] [BACKEND] undefined
+[2025-10-25T11:07:52.553Z] [BACKEND] undefined
+[2025-10-25T11:08:22.549Z] [BACKEND] undefined
+[2025-10-25T11:08:22.555Z] [BACKEND] undefined
+[2025-10-25T11:08:52.549Z] [BACKEND] undefined
+[2025-10-25T11:08:52.555Z] [BACKEND] undefined
+[2025-10-25T11:09:22.549Z] [BACKEND] undefined
+[2025-10-25T11:09:22.556Z] [BACKEND] undefined
+[2025-10-25T11:09:52.547Z] [BACKEND] undefined
+[2025-10-25T11:09:52.553Z] [BACKEND] undefined
+[2025-10-25T11:10:22.549Z] [BACKEND] undefined
+[2025-10-25T11:10:22.554Z] [BACKEND] undefined
+[2025-10-25T11:10:52.549Z] [BACKEND] undefined
+[2025-10-25T11:10:52.554Z] [BACKEND] undefined
+[2025-10-25T11:11:22.548Z] [BACKEND] undefined
+[2025-10-25T11:11:22.552Z] [BACKEND] undefined
+[2025-10-25T11:11:52.548Z] [BACKEND] undefined
+[2025-10-25T11:11:52.553Z] [BACKEND] undefined
+[2025-10-25T11:12:22.549Z] [BACKEND] undefined
+[2025-10-25T11:12:22.554Z] [BACKEND] undefined
+[2025-10-25T11:12:52.548Z] [BACKEND] undefined
+[2025-10-25T11:12:52.553Z] [BACKEND] undefined
+[2025-10-25T11:13:22.547Z] [BACKEND] undefined
+[2025-10-25T11:13:22.552Z] [BACKEND] undefined
+[2025-10-25T11:13:52.547Z] [BACKEND] undefined
+[2025-10-25T11:13:52.552Z] [BACKEND] undefined
+[2025-10-25T11:14:22.547Z] [BACKEND] undefined
+[2025-10-25T11:14:22.550Z] [BACKEND] undefined
+[2025-10-25T11:14:52.547Z] [BACKEND] undefined
+[2025-10-25T11:14:52.552Z] [BACKEND] undefined
+[2025-10-25T11:15:22.547Z] [BACKEND] undefined
+[2025-10-25T11:15:22.553Z] [BACKEND] undefined
+[2025-10-25T11:15:52.546Z] [BACKEND] undefined
+[2025-10-25T11:15:52.552Z] [BACKEND] undefined
+[2025-10-25T11:16:22.547Z] [BACKEND] undefined
+[2025-10-25T11:16:22.551Z] [BACKEND] undefined
+[2025-10-25T11:16:52.547Z] [BACKEND] undefined
+[2025-10-25T11:16:52.552Z] [BACKEND] undefined
+[2025-10-25T11:17:22.547Z] [BACKEND] undefined
+[2025-10-25T11:17:22.552Z] [BACKEND] undefined
+[2025-10-25T11:17:52.546Z] [BACKEND] undefined
+[2025-10-25T11:17:52.553Z] [BACKEND] undefined
+[2025-10-25T11:18:22.543Z] [BACKEND] undefined
+[2025-10-25T11:18:22.551Z] [BACKEND] undefined
+[2025-10-25T11:18:52.543Z] [BACKEND] undefined
+[2025-10-25T11:18:52.546Z] [BACKEND] undefined
+[2025-10-25T11:19:22.545Z] [BACKEND] undefined
+[2025-10-25T11:19:22.548Z] [BACKEND] undefined
+[2025-10-25T11:19:52.545Z] [BACKEND] undefined
+[2025-10-25T11:19:52.549Z] [BACKEND] undefined
+[2025-10-25T11:20:22.545Z] [BACKEND] undefined
+[2025-10-25T11:20:22.550Z] [BACKEND] undefined
+[2025-10-25T11:20:52.545Z] [BACKEND] undefined
+[2025-10-25T11:20:52.550Z] [BACKEND] undefined
+[2025-10-25T11:21:22.544Z] [BACKEND] undefined
+[2025-10-25T11:21:22.549Z] [BACKEND] undefined
+[2025-10-25T11:21:52.543Z] [BACKEND] undefined
+[2025-10-25T11:21:52.546Z] [BACKEND] undefined
+[2025-10-25T11:22:22.544Z] [BACKEND] undefined
+[2025-10-25T11:22:22.549Z] [BACKEND] undefined
+[2025-10-25T11:22:52.544Z] [BACKEND] undefined
+[2025-10-25T11:22:52.548Z] [BACKEND] undefined
+[2025-10-25T11:23:22.544Z] [BACKEND] undefined
+[2025-10-25T11:23:22.549Z] [BACKEND] undefined
+[2025-10-25T11:23:52.543Z] [BACKEND] undefined
+[2025-10-25T11:23:52.546Z] [BACKEND] undefined
+[2025-10-25T11:24:22.543Z] [BACKEND] undefined
+[2025-10-25T11:24:22.548Z] [BACKEND] undefined
+[2025-10-25T11:24:52.543Z] [BACKEND] undefined
+[2025-10-25T11:24:52.549Z] [BACKEND] undefined
+[2025-10-25T11:25:22.542Z] [BACKEND] undefined
+[2025-10-25T11:25:22.547Z] [BACKEND] undefined
+[2025-10-25T11:25:52.543Z] [BACKEND] undefined
+[2025-10-25T11:25:52.548Z] [BACKEND] undefined
+[2025-10-25T11:26:22.542Z] [BACKEND] undefined
+[2025-10-25T11:26:22.547Z] [BACKEND] undefined
+[2025-10-25T11:26:52.541Z] [BACKEND] undefined
+[2025-10-25T11:26:52.547Z] [BACKEND] undefined
+[2025-10-25T11:27:22.542Z] [BACKEND] undefined
+[2025-10-25T11:27:22.545Z] [BACKEND] undefined
+[2025-10-25T11:27:52.542Z] [BACKEND] undefined
+[2025-10-25T11:27:52.548Z] [BACKEND] undefined
+[2025-10-25T11:28:22.542Z] [BACKEND] undefined
+[2025-10-25T11:28:22.547Z] [BACKEND] undefined
+[2025-10-25T11:28:52.542Z] [BACKEND] undefined
+[2025-10-25T11:28:52.547Z] [BACKEND] undefined
+[2025-10-25T11:29:22.538Z] [BACKEND] undefined
+[2025-10-25T11:29:22.542Z] [BACKEND] undefined
+[2025-10-25T11:29:52.540Z] [BACKEND] undefined
+[2025-10-25T11:29:52.545Z] [BACKEND] undefined
+[2025-10-25T11:30:22.539Z] [BACKEND] undefined
+[2025-10-25T11:30:22.544Z] [BACKEND] undefined
+[2025-10-25T11:30:34.403Z] [INFO] App activated
+[2025-10-25T11:30:51.388Z] [BACKEND] undefined
+[2025-10-25T11:30:51.435Z] [BACKEND] undefined
+[2025-10-25T11:30:52.535Z] [BACKEND] undefined
+[2025-10-25T11:30:52.537Z] [BACKEND] undefined
+[2025-10-25T11:31:21.554Z] [BACKEND] undefined
+[2025-10-25T11:31:21.559Z] [BACKEND] undefined
+[2025-10-25T11:31:22.417Z] [BACKEND] undefined
+[2025-10-25T11:31:22.422Z] [BACKEND] undefined
+[2025-10-25T11:31:51.551Z] [BACKEND] undefined
+[2025-10-25T11:31:51.556Z] [BACKEND] undefined
+[2025-10-25T11:31:52.417Z] [BACKEND] undefined
+[2025-10-25T11:31:52.423Z] [BACKEND] undefined
+[2025-10-25T11:32:21.551Z] [BACKEND] undefined
+[2025-10-25T11:32:21.558Z] [BACKEND] undefined
+[2025-10-25T11:32:22.416Z] [BACKEND] undefined
+[2025-10-25T11:32:22.422Z] [BACKEND] undefined
+[2025-10-25T11:32:51.550Z] [BACKEND] undefined
+[2025-10-25T11:32:51.555Z] [BACKEND] undefined
+[2025-10-25T11:32:52.416Z] [BACKEND] undefined
+[2025-10-25T11:32:52.423Z] [BACKEND] undefined
+[2025-10-25T11:33:21.549Z] [BACKEND] undefined
+[2025-10-25T11:33:21.553Z] [BACKEND] undefined
+[2025-10-25T11:33:22.415Z] [BACKEND] undefined
+[2025-10-25T11:33:22.420Z] [BACKEND] undefined
+[2025-10-25T11:33:51.548Z] [BACKEND] undefined
+[2025-10-25T11:33:51.551Z] [BACKEND] undefined
+[2025-10-25T11:33:52.413Z] [BACKEND] undefined
+[2025-10-25T11:33:52.422Z] [BACKEND] undefined
+[2025-10-25T11:34:21.551Z] [BACKEND] undefined
+[2025-10-25T11:34:21.557Z] [BACKEND] undefined
+[2025-10-25T11:34:22.414Z] [BACKEND] undefined
+[2025-10-25T11:34:22.419Z] [BACKEND] undefined
+[2025-10-25T11:34:52.414Z] [BACKEND] undefined
+[2025-10-25T11:34:52.420Z] [BACKEND] undefined
+[2025-10-25T11:35:22.415Z] [BACKEND] undefined
+[2025-10-25T11:35:22.421Z] [BACKEND] undefined
+[2025-10-25T11:35:22.544Z] [BACKEND] undefined
+[2025-10-25T11:35:22.547Z] [BACKEND] undefined
+[2025-10-25T11:35:52.414Z] [BACKEND] undefined
+[2025-10-25T11:35:52.420Z] [BACKEND] undefined
+[2025-10-25T11:36:22.414Z] [BACKEND] undefined
+[2025-10-25T11:36:22.422Z] [BACKEND] undefined
+[2025-10-25T11:36:23.543Z] [BACKEND] undefined
+[2025-10-25T11:36:23.545Z] [BACKEND] undefined
+[2025-10-25T11:36:52.411Z] [BACKEND] undefined
+[2025-10-25T11:36:52.417Z] [BACKEND] undefined
+[2025-10-25T11:37:22.412Z] [BACKEND] undefined
+[2025-10-25T11:37:22.417Z] [BACKEND] undefined
+[2025-10-25T11:37:24.547Z] [BACKEND] undefined
+[2025-10-25T11:37:24.553Z] [BACKEND] undefined
+[2025-10-25T11:37:52.412Z] [BACKEND] undefined
+[2025-10-25T11:37:52.420Z] [BACKEND] undefined
+[2025-10-25T11:38:22.412Z] [BACKEND] undefined
+[2025-10-25T11:38:22.418Z] [BACKEND] undefined
+[2025-10-25T11:38:25.544Z] [BACKEND] undefined
+[2025-10-25T11:38:25.547Z] [BACKEND] undefined
+[2025-10-25T11:38:52.411Z] [BACKEND] undefined
+[2025-10-25T11:38:52.418Z] [BACKEND] undefined
+[2025-10-25T11:39:22.410Z] [BACKEND] undefined
+[2025-10-25T11:39:22.416Z] [BACKEND] undefined
+[2025-10-25T11:39:25.540Z] [BACKEND] undefined
+[2025-10-25T11:39:25.544Z] [BACKEND] undefined
+[2025-10-25T11:39:52.409Z] [BACKEND] undefined
+[2025-10-25T11:39:52.414Z] [BACKEND] undefined
+[2025-10-25T11:40:22.409Z] [BACKEND] undefined
+[2025-10-25T11:40:22.414Z] [BACKEND] undefined
+[2025-10-25T11:40:25.542Z] [BACKEND] undefined
+[2025-10-25T11:40:25.545Z] [BACKEND] undefined
+[2025-10-25T11:40:52.409Z] [BACKEND] undefined
+[2025-10-25T11:40:52.415Z] [BACKEND] undefined
+[2025-10-25T11:41:22.409Z] [BACKEND] undefined
+[2025-10-25T11:41:22.416Z] [BACKEND] undefined
+[2025-10-25T11:41:25.541Z] [BACKEND] undefined
+[2025-10-25T11:41:25.548Z] [BACKEND] undefined
+[2025-10-25T11:41:52.408Z] [BACKEND] undefined
+[2025-10-25T11:41:52.414Z] [BACKEND] undefined
+[2025-10-25T11:42:16.448Z] [INFO] Backend process exited with code null and signal SIGTERM
+[2025-10-25T11:42:16.450Z] [ERROR] Backend server stopped unexpectedly with code null
+[2025-10-25T11:48:25.270Z] [INFO] App activated
+[2025-10-25T11:48:31.448Z] [INFO] App before-quit event triggered
+[2025-10-25T11:48:31.448Z] [INFO] Starting cleanup process...
+[2025-10-25T11:48:31.448Z] [INFO] Terminating backend process...
+[2025-10-25T11:48:33.454Z] [WARNING] Force killing backend process
+[2025-10-25T11:48:33.455Z] [INFO] All cleanup tasks completed - allowing app to quit
+[2025-10-25T11:48:33.669Z] [INFO] Main window closed
+[2025-10-25T11:48:33.677Z] [INFO] App will quit event triggered
+[2025-10-25T11:58:55.494Z] [INFO] Starting Sophon app in development mode
+[2025-10-25T11:58:55.495Z] [INFO] App is packaged: false
+[2025-10-25T11:58:55.495Z] [INFO] Current working directory: /Users/a./Projects/Web/pos
+[2025-10-25T11:58:55.495Z] [INFO] App path: /Users/a./Projects/Web/pos
+[2025-10-25T11:58:55.495Z] [INFO] Resources path: N/A
+[2025-10-25T11:58:55.562Z] [INFO] Electron app ready event triggered
+[2025-10-25T11:58:55.562Z] [INFO] Platform: darwin
+[2025-10-25T11:58:55.562Z] [INFO] Architecture: arm64
+[2025-10-25T11:58:55.562Z] [INFO] Electron version: 37.7.1
+[2025-10-25T11:58:55.563Z] [INFO] Node version: 22.20.0
+[2025-10-25T11:58:55.563Z] [INFO] Running in development mode
+[2025-10-25T11:58:55.563Z] [INFO] Development mode: creating window immediately
+[2025-10-25T11:58:55.563Z] [INFO] Creating browser window...
+[2025-10-25T11:58:55.660Z] [INFO] Loading frontend from: http://localhost:5173/
+[2025-10-25T11:58:55.660Z] [INFO] Frontend ready status: false
+[2025-10-25T11:58:55.672Z] [INFO] DevTools opened for development mode
+[2025-10-25T11:58:55.672Z] [INFO] Browser window created successfully
+[2025-10-25T11:58:55.672Z] [INFO] Starting backend server...
+[2025-10-25T11:58:55.672Z] [INFO] Starting backend server...
+[2025-10-25T11:58:55.672Z] [INFO] Backend path: /Users/a./Projects/Web/pos/backend/index.js
+[2025-10-25T11:58:55.672Z] [INFO] Backend directory: /Users/a./Projects/Web/pos/backend
+[2025-10-25T11:58:55.673Z] [INFO] Backend package: sophon-backend v1.0.0
+[2025-10-25T11:58:55.673Z] [INFO] CORS dependency listed: ^2.8.5
+[2025-10-25T11:58:55.673Z] [INFO] Spawning backend process with NODE_ENV: development
+[2025-10-25T11:58:55.674Z] [INFO] Backend process spawned with PID: 92078
+[2025-10-25T11:58:55.706Z] [BACKEND] [INFO] Running as backend process, skipping Electron initialization entirely
+[2025-10-25T11:58:55.707Z] [BACKEND] [INFO] Environment flags - BACKEND_DIR: [33mtrue[39m IS_BACKEND_PROCESS: [33mtrue[39m SKIP_SINGLE_INSTANCE_LOCK: [33mfalse[39m
+[2025-10-25T11:58:55.711Z] [BACKEND] [dotenv@17.2.3] injecting env (6) from .env -- tip: 📡 add observability to secrets: https://dotenvx.com/ops
+[2025-10-25T11:58:55.976Z] [BACKEND] Backend starting with PORT: 3021
+process.env.PORT: 3021
+[2025-10-25T11:58:55.976Z] [BACKEND] Initializing database...
+[2025-10-25T11:58:55.984Z] [BACKEND] Database path: /Users/a./Projects/Web/pos/backend/data/db/database.sqlite
+[2025-10-25T11:58:55.989Z] [BACKEND] Connected to the SQLite database via better-sqlite3.
+[2025-10-25T11:58:55.994Z] [BACKEND] Database tables already exist.
+[2025-10-25T11:58:55.994Z] [BACKEND] Database initialized successfully
+[2025-10-25T11:58:55.994Z] [BACKEND] Networking migrations already applied.
+[2025-10-25T11:58:56.024Z] [BACKEND_ERROR] Route registration error: Cannot find module '/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/bcrypt@5.1.1_encoding@0.1.13/node_modules/bcrypt/lib/binding/napi-v3/bcrypt_lib.node'
+Require stack:
+- /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/bcrypt@5.1.1_encoding@0.1.13/node_modules/bcrypt/bcrypt.js
+- /Users/a./Projects/Web/pos/backend/routes/authRoutes.js
+- /Users/a./Projects/Web/pos/backend/index.js
+[2025-10-25T11:58:56.024Z] [ERROR] Backend startup failed in development mode
+Error: Backend startup failed: Route registration error: Cannot find module '/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/bcrypt@5.1.1_encoding@0.1.13/node_modules/bcrypt/lib/binding/napi-v3/bcrypt_lib.node'
+Require stack:
+- /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/bcrypt@5.1.1_encoding@0.1.13/node_modules/bcrypt/bcrypt.js
+- /Users/a./Projects/Web/pos/backend/routes/authRoutes.js
+- /Users/a./Projects/Web/pos/backend/index.js
+    at Socket.<anonymous> (/Users/a./Projects/Web/pos/main.js:594:20)
+    at Socket.emit (node:events:519:28)
+    at addChunk (node:internal/streams/readable:561:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+    at Readable.push (node:internal/streams/readable:392:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+[2025-10-25T11:58:56.024Z] [INFO] Application startup completed successfully
+[2025-10-25T11:58:56.025Z] [BACKEND] Backend server running on http://0.0.0.0:3021
+[2025-10-25T11:58:56.025Z] [BACKEND] Backend ready on port 3021
+[2025-10-25T11:58:56.025Z] [INFO] Backend is ready and listening on port 3021
+[2025-10-25T11:58:56.025Z] [BACKEND] Initializing Network Manager...
+[2025-10-25T11:58:56.026Z] [BACKEND] Network config loaded: {
+  autoDiscovery: [33mtrue[39m,
+  autoSync: [33mtrue[39m,
+  masterElection: [33mtrue[39m,
+  conflictResolution: [32m'last-write-wins'[39m,
+  server: {
+    port: [32m'3003'[39m,
+    host: [32m'0.0.0.0'[39m,
+    maxConnections: [33m100[39m,
+    timeout: [33m30000[39m
+  },
+  discovery: {
+    serviceName: [32m'sophon-pos'[39m,
+    serviceType: [32m'http'[39m,
+    port: [32m'3003'[39m,
+    announceInterval: [33m5000[39m,
+    discoveryTimeout: [33m10000[39m,
+    maxPeers: [33m10[39m
+  },
+  sync: {
+    interval: [33m30000[39m,
+    batchSize: [33m100[39m,
+    retryAttempts: [33m3[39m,
+    retryDelay: [33m5000[39m,
+    conflictResolution: [32m'last-write-wins'[39m
+  },
+  websocket: {
+    pingTimeout: [33m60000[39m,
+    pingInterval: [33m25000[39m,
+    maxHttpBufferSize: [33m1000000[39m,
+    cors: { origin: [33mtrue[39m, credentials: [33mtrue[39m }
+  },
+  security: {
+    jwtSecret: [32m'2ad0d2133b0a59ee14bc5ffb45307efd6b2da25bd7038dfa4479d0d8b0f52cafe19201b2e8864a472eae5d1282247842888cff32d779a2bfd735a248e228153a'[39m,
+    tokenExpiration: [32m'24h'[39m,
+    enablePeerAuth: [33mtrue[39m
+  },
+  monitoring: {
+    healthCheckInterval: [33m10000[39m,
+    connectionTimeout: [33m5000[39m,
+    maxFailedChecks: [33m3[39m
+  },
+  debug: { enableNetworkLogs: [33mtrue[39m, logLevel: [32m'info'[39m, enableMetrics: [33mtrue[39m }
+}
+[2025-10-25T11:58:56.027Z] [BACKEND] WebSocket server initialized
+[2025-10-25T11:58:56.045Z] [BACKEND] Network Discovery initialized for instance: 388a9da8ba78335e5f064fef5c7d93cb632bf2d28b82241a852d1994587547a8
+[2025-10-25T11:58:56.045Z] [BACKEND] Sync Engine initialized - Mode: Slave
+[2025-10-25T11:58:56.046Z] [BACKEND] Started advertising Sophon service: Sophon-out-388a9da8-536045
+[2025-10-25T11:58:56.046Z] [BACKEND] Started discovering Sophon services on network
+[2025-10-25T11:58:56.046Z] [BACKEND] Network discovery started
+Network Manager initialized successfully - Master: false
+Networking system initialized successfully
+[2025-10-25T11:58:57.436Z] [INFO] Window content ready, showing window
+[2025-10-25T11:58:57.466Z] [BACKEND] [90mundefined[39m
+[2025-10-25T11:58:57.490Z] [BACKEND] [90mundefined[39m
+[2025-10-25T11:59:02.707Z] [BACKEND] [90mundefined[39m
+[2025-10-25T11:59:02.761Z] [BACKEND] [90mundefined[39m
+[2025-10-25T11:59:19.010Z] [BACKEND] [90mundefined[39m
+[2025-10-25T11:59:19.087Z] [BACKEND] [90mundefined[39m
+[2025-10-25T11:59:27.525Z] [BACKEND] [90mundefined[39m
+[2025-10-25T11:59:27.528Z] [BACKEND] [90mundefined[39m
+[2025-10-25T11:59:49.527Z] [BACKEND] [90mundefined[39m
+[2025-10-25T11:59:49.532Z] [BACKEND] [90mundefined[39m
+[2025-10-25T11:59:57.436Z] [BACKEND] [90mundefined[39m
+[2025-10-25T11:59:57.439Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:00:19.526Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:00:19.530Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:00:27.435Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:00:27.440Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:00:38.096Z] [INFO] App activated
+[2025-10-25T12:00:49.522Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:00:49.524Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:00:57.530Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:00:57.535Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:01:19.522Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:01:19.524Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:01:27.524Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:01:27.528Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:01:49.526Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:01:49.530Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:01:57.525Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:01:57.532Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:02:17.690Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NTg0NzY0OTcsImV4cCI6MTc1ODU2Mjg5N30.8z8eUAgGKSG6Gibt1utQSr_4-tKp6LTXr2TFoYw4N-s
+[2025-10-25T12:02:17.759Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NTg0NzY0OTcsImV4cCI6MTc1ODU2Mjg5N30.8z8eUAgGKSG6Gibt1utQSr_4-tKp6LTXr2TFoYw4N-s
+[2025-10-25T12:02:19.526Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:02:19.529Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:02:27.434Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:02:27.438Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:02:44.272Z] [INFO] App activated
+[2025-10-25T12:02:47.691Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NTg0NzY0OTcsImV4cCI6MTc1ODU2Mjg5N30.8z8eUAgGKSG6Gibt1utQSr_4-tKp6LTXr2TFoYw4N-s
+[2025-10-25T12:02:47.699Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NTg0NzY0OTcsImV4cCI6MTc1ODU2Mjg5N30.8z8eUAgGKSG6Gibt1utQSr_4-tKp6LTXr2TFoYw4N-s
+[2025-10-25T12:02:49.524Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:02:49.530Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:02:57.486Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:02:57.490Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:03:17.738Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NTg0NzY0OTcsImV4cCI6MTc1ODU2Mjg5N30.8z8eUAgGKSG6Gibt1utQSr_4-tKp6LTXr2TFoYw4N-s
+[2025-10-25T12:03:17.746Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NTg0NzY0OTcsImV4cCI6MTc1ODU2Mjg5N30.8z8eUAgGKSG6Gibt1utQSr_4-tKp6LTXr2TFoYw4N-s
+[2025-10-25T12:03:19.571Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:03:19.576Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:03:27.566Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:03:27.567Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:03:47.742Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NTg0NzY0OTcsImV4cCI6MTc1ODU2Mjg5N30.8z8eUAgGKSG6Gibt1utQSr_4-tKp6LTXr2TFoYw4N-s
+[2025-10-25T12:03:47.747Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NTg0NzY0OTcsImV4cCI6MTc1ODU2Mjg5N30.8z8eUAgGKSG6Gibt1utQSr_4-tKp6LTXr2TFoYw4N-s
+[2025-10-25T12:03:57.568Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:03:57.572Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:04:18.575Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NTg0NzY0OTcsImV4cCI6MTc1ODU2Mjg5N30.8z8eUAgGKSG6Gibt1utQSr_4-tKp6LTXr2TFoYw4N-s
+[2025-10-25T12:04:18.584Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NTg0NzY0OTcsImV4cCI6MTc1ODU2Mjg5N30.8z8eUAgGKSG6Gibt1utQSr_4-tKp6LTXr2TFoYw4N-s
+[2025-10-25T12:04:20.573Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:04:20.579Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:04:27.478Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:04:27.484Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:04:48.577Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NTg0NzY0OTcsImV4cCI6MTc1ODU2Mjg5N30.8z8eUAgGKSG6Gibt1utQSr_4-tKp6LTXr2TFoYw4N-s
+[2025-10-25T12:04:48.582Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NTg0NzY0OTcsImV4cCI6MTc1ODU2Mjg5N30.8z8eUAgGKSG6Gibt1utQSr_4-tKp6LTXr2TFoYw4N-s
+[2025-10-25T12:04:57.477Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:04:57.480Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:05:18.574Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NTg0NzY0OTcsImV4cCI6MTc1ODU2Mjg5N30.8z8eUAgGKSG6Gibt1utQSr_4-tKp6LTXr2TFoYw4N-s
+[2025-10-25T12:05:18.582Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NTg0NzY0OTcsImV4cCI6MTc1ODU2Mjg5N30.8z8eUAgGKSG6Gibt1utQSr_4-tKp6LTXr2TFoYw4N-s
+[2025-10-25T12:05:21.568Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:05:21.574Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:05:27.476Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:05:27.480Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:05:48.574Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NTg0NzY0OTcsImV4cCI6MTc1ODU2Mjg5N30.8z8eUAgGKSG6Gibt1utQSr_4-tKp6LTXr2TFoYw4N-s
+[2025-10-25T12:05:48.581Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NTg0NzY0OTcsImV4cCI6MTc1ODU2Mjg5N30.8z8eUAgGKSG6Gibt1utQSr_4-tKp6LTXr2TFoYw4N-s
+[2025-10-25T12:05:57.476Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:05:57.480Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:06:17.736Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NTg0NzY0OTcsImV4cCI6MTc1ODU2Mjg5N30.8z8eUAgGKSG6Gibt1utQSr_4-tKp6LTXr2TFoYw4N-s
+[2025-10-25T12:06:17.741Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NTg0NzY0OTcsImV4cCI6MTc1ODU2Mjg5N30.8z8eUAgGKSG6Gibt1utQSr_4-tKp6LTXr2TFoYw4N-s
+[2025-10-25T12:06:22.579Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:06:22.583Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:06:27.476Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:06:27.482Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:06:48.572Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NTg0NzY0OTcsImV4cCI6MTc1ODU2Mjg5N30.8z8eUAgGKSG6Gibt1utQSr_4-tKp6LTXr2TFoYw4N-s
+[2025-10-25T12:06:48.580Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NTg0NzY0OTcsImV4cCI6MTc1ODU2Mjg5N30.8z8eUAgGKSG6Gibt1utQSr_4-tKp6LTXr2TFoYw4N-s
+[2025-10-25T12:06:57.477Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:06:57.484Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:07:18.571Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NTg0NzY0OTcsImV4cCI6MTc1ODU2Mjg5N30.8z8eUAgGKSG6Gibt1utQSr_4-tKp6LTXr2TFoYw4N-s
+[2025-10-25T12:07:18.577Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NTg0NzY0OTcsImV4cCI6MTc1ODU2Mjg5N30.8z8eUAgGKSG6Gibt1utQSr_4-tKp6LTXr2TFoYw4N-s
+[2025-10-25T12:07:23.565Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:07:23.569Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:07:27.475Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:07:27.478Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:07:41.722Z] [INFO] App before-quit event triggered
+[2025-10-25T12:07:41.723Z] [INFO] Starting cleanup process...
+[2025-10-25T12:07:41.723Z] [INFO] Terminating backend process...
+[2025-10-25T12:14:12.472Z] [INFO] Starting Sophon app in development mode
+[2025-10-25T12:14:12.472Z] [INFO] App is packaged: false
+[2025-10-25T12:14:12.472Z] [INFO] Current working directory: /Users/a./Projects/Web/pos
+[2025-10-25T12:14:12.472Z] [INFO] App path: /Users/a./Projects/Web/pos
+[2025-10-25T12:14:12.472Z] [INFO] Resources path: N/A
+[2025-10-25T12:14:12.524Z] [INFO] Electron app ready event triggered
+[2025-10-25T12:14:12.524Z] [INFO] Platform: darwin
+[2025-10-25T12:14:12.524Z] [INFO] Architecture: arm64
+[2025-10-25T12:14:12.524Z] [INFO] Electron version: 37.7.1
+[2025-10-25T12:14:12.524Z] [INFO] Node version: 22.20.0
+[2025-10-25T12:14:12.524Z] [INFO] Running in development mode
+[2025-10-25T12:14:12.524Z] [INFO] Development mode: creating window immediately
+[2025-10-25T12:14:12.525Z] [INFO] Creating browser window...
+[2025-10-25T12:14:12.596Z] [INFO] Loading frontend from: http://localhost:5173/
+[2025-10-25T12:14:12.596Z] [INFO] Frontend ready status: false
+[2025-10-25T12:14:12.604Z] [INFO] DevTools opened for development mode
+[2025-10-25T12:14:12.604Z] [INFO] Browser window created successfully
+[2025-10-25T12:14:12.604Z] [INFO] Starting backend server...
+[2025-10-25T12:14:12.605Z] [INFO] Starting backend server...
+[2025-10-25T12:14:12.605Z] [INFO] Backend path: /Users/a./Projects/Web/pos/backend/index.js
+[2025-10-25T12:14:12.605Z] [INFO] Backend directory: /Users/a./Projects/Web/pos/backend
+[2025-10-25T12:14:12.605Z] [INFO] Backend package: sophon-backend v1.0.0
+[2025-10-25T12:14:12.605Z] [INFO] CORS dependency listed: ^2.8.5
+[2025-10-25T12:14:12.606Z] [INFO] Spawning backend process with NODE_ENV: development
+[2025-10-25T12:14:12.607Z] [INFO] Backend process spawned with PID: 95515
+[2025-10-25T12:14:12.638Z] [BACKEND] [INFO] Running as backend process, skipping Electron initialization entirely
+[2025-10-25T12:14:12.638Z] [BACKEND] [INFO] Environment flags - BACKEND_DIR: [33mtrue[39m IS_BACKEND_PROCESS: [33mtrue[39m SKIP_SINGLE_INSTANCE_LOCK: [33mfalse[39m
+[2025-10-25T12:14:12.642Z] [BACKEND] [dotenv@17.2.3] injecting env (6) from .env -- tip: 🔄 add secrets lifecycle management: https://dotenvx.com/ops
+[2025-10-25T12:14:12.925Z] [BACKEND] Backend starting with PORT: 3021
+process.env.PORT: 3021
+[2025-10-25T12:14:12.926Z] [BACKEND] Initializing database...
+[2025-10-25T12:14:12.930Z] [BACKEND] Database path: /Users/a./Projects/Web/pos/backend/data/db/database.sqlite
+[2025-10-25T12:14:12.937Z] [BACKEND] Connected to the SQLite database via better-sqlite3.
+[2025-10-25T12:14:12.946Z] [BACKEND] Database tables already exist.
+[2025-10-25T12:14:12.946Z] [BACKEND] Database initialized successfully
+Networking migrations already applied.
+[2025-10-25T12:14:12.982Z] [BACKEND_ERROR] Route registration error: Cannot find module '/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/bcrypt@5.1.1_encoding@0.1.13/node_modules/bcrypt/lib/binding/napi-v3/bcrypt_lib.node'
+Require stack:
+- /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/bcrypt@5.1.1_encoding@0.1.13/node_modules/bcrypt/bcrypt.js
+- /Users/a./Projects/Web/pos/backend/routes/authRoutes.js
+- /Users/a./Projects/Web/pos/backend/index.js
+[2025-10-25T12:14:12.982Z] [ERROR] Backend startup failed in development mode
+Error: Backend startup failed: Route registration error: Cannot find module '/Users/a./Projects/Web/pos/backend/node_modules/.pnpm/bcrypt@5.1.1_encoding@0.1.13/node_modules/bcrypt/lib/binding/napi-v3/bcrypt_lib.node'
+Require stack:
+- /Users/a./Projects/Web/pos/backend/node_modules/.pnpm/bcrypt@5.1.1_encoding@0.1.13/node_modules/bcrypt/bcrypt.js
+- /Users/a./Projects/Web/pos/backend/routes/authRoutes.js
+- /Users/a./Projects/Web/pos/backend/index.js
+    at Socket.<anonymous> (/Users/a./Projects/Web/pos/main.js:594:20)
+    at Socket.emit (node:events:519:28)
+    at addChunk (node:internal/streams/readable:561:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+    at Readable.push (node:internal/streams/readable:392:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+[2025-10-25T12:14:12.982Z] [INFO] Application startup completed successfully
+[2025-10-25T12:14:12.983Z] [BACKEND] Backend server running on http://0.0.0.0:3021
+[2025-10-25T12:14:12.983Z] [BACKEND] Backend ready on port 3021
+[2025-10-25T12:14:12.983Z] [INFO] Backend is ready and listening on port 3021
+[2025-10-25T12:14:12.983Z] [BACKEND] Initializing Network Manager...
+[2025-10-25T12:14:12.984Z] [BACKEND] Network config loaded: {
+  autoDiscovery: [33mtrue[39m,
+  autoSync: [33mtrue[39m,
+  masterElection: [33mtrue[39m,
+  conflictResolution: [32m'last-write-wins'[39m,
+  server: {
+    port: [32m'3003'[39m,
+    host: [32m'0.0.0.0'[39m,
+    maxConnections: [33m100[39m,
+    timeout: [33m30000[39m
+  },
+  discovery: {
+    serviceName: [32m'sophon-pos'[39m,
+    serviceType: [32m'http'[39m,
+    port: [32m'3003'[39m,
+    announceInterval: [33m5000[39m,
+    discoveryTimeout: [33m10000[39m,
+    maxPeers: [33m10[39m
+  },
+  sync: {
+    interval: [33m30000[39m,
+    batchSize: [33m100[39m,
+    retryAttempts: [33m3[39m,
+    retryDelay: [33m5000[39m,
+    conflictResolution: [32m'last-write-wins'[39m
+  },
+  websocket: {
+    pingTimeout: [33m60000[39m,
+    pingInterval: [33m25000[39m,
+    maxHttpBufferSize: [33m1000000[39m,
+    cors: { origin: [33mtrue[39m, credentials: [33mtrue[39m }
+  },
+  security: {
+    jwtSecret: [32m'2ad0d2133b0a59ee14bc5ffb45307efd6b2da25bd7038dfa4479d0d8b0f52cafe19201b2e8864a472eae5d1282247842888cff32d779a2bfd735a248e228153a'[39m,
+    tokenExpiration: [32m'24h'[39m,
+    enablePeerAuth: [33mtrue[39m
+  },
+  monitoring: {
+    healthCheckInterval: [33m10000[39m,
+    connectionTimeout: [33m5000[39m,
+    maxFailedChecks: [33m3[39m
+  },
+  debug: { enableNetworkLogs: [33mtrue[39m, logLevel: [32m'info'[39m, enableMetrics: [33mtrue[39m }
+}
+[2025-10-25T12:14:12.985Z] [BACKEND] WebSocket server initialized
+[2025-10-25T12:14:13.017Z] [BACKEND] Network Discovery initialized for instance: 388a9da8ba78335e5f064fef5c7d93cb632bf2d28b82241a852d1994587547a8
+[2025-10-25T12:14:13.017Z] [BACKEND] Sync Engine initialized - Mode: Slave
+[2025-10-25T12:14:13.017Z] [BACKEND] Started advertising Sophon service: Sophon-out-388a9da8-453017
+[2025-10-25T12:14:13.017Z] [BACKEND] Started discovering Sophon services on network
+[2025-10-25T12:14:13.017Z] [BACKEND] Network discovery started
+Network Manager initialized successfully - Master: false
+Networking system initialized successfully
+[2025-10-25T12:14:14.349Z] [INFO] Window content ready, showing window
+[2025-10-25T12:14:14.391Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:14:14.409Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:14:33.516Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:14:44.347Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:14:44.352Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:15:03.588Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:15:03.597Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:15:14.349Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:15:14.356Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:15:33.666Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:15:33.671Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:15:44.562Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:15:44.569Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:16:03.774Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:16:03.783Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:16:14.565Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:16:14.573Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:16:33.875Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:16:33.884Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:16:44.559Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:16:44.563Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:17:03.987Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:17:04.006Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:17:14.560Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:17:14.569Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:17:34.022Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:17:34.031Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:18:25.562Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:18:25.568Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:18:41.430Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:18:41.438Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:19:25.632Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:19:25.637Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:19:49.702Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:19:49.712Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:19:51.261Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:19:51.266Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:20:14.632Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:20:14.639Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:20:21.373Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:20:21.381Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:20:44.631Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:20:44.637Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:21:06.417Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:21:06.437Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:21:14.632Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:21:14.636Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:21:44.630Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:21:44.635Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:22:04.468Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:22:04.480Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:22:25.631Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:22:25.637Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:23:05.501Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:23:05.509Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:23:25.629Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:23:25.636Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:24:16.524Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:24:16.531Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:24:25.631Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:24:25.638Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:25:25.633Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:25:25.639Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:26:25.632Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:26:25.636Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:26:37.230Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:26:37.237Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:27:25.636Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:27:25.640Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:27:49.754Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:27:49.764Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:28:25.629Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:28:25.634Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:29:25.629Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:29:25.634Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:30:25.629Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:30:25.635Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:31:25.630Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:31:25.635Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:32:25.629Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:32:25.634Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:33:25.632Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:33:25.638Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:34:25.628Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:34:25.633Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:35:25.625Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:35:25.631Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:36:25.623Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:36:25.633Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:37:25.625Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:37:25.632Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:38:25.621Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:38:25.634Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:39:25.619Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:39:25.624Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:40:25.618Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:40:25.624Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:41:25.618Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:41:25.624Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:42:25.621Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:42:25.623Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:43:25.617Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:43:25.622Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:44:16.736Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:44:16.741Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:44:44.614Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:44:44.621Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:45:14.616Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:45:14.621Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:45:44.616Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:45:44.621Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:46:20.319Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:46:20.323Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:46:44.398Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:46:44.402Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:47:14.618Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:47:14.627Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:47:44.614Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:47:44.620Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:48:25.615Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:48:25.621Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:49:25.616Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:49:25.620Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:50:25.615Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:50:25.621Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:51:07.208Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:51:07.221Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:51:10.934Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:51:10.945Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:51:14.432Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:51:14.436Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:51:41.048Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:51:41.056Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:51:44.446Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:51:44.452Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:52:14.445Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:52:14.448Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:52:18.843Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:52:18.852Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:52:44.449Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:52:44.455Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:53:08.856Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:53:08.864Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:53:14.448Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:53:14.453Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:53:44.662Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:53:44.666Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:54:10.155Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:54:10.165Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:54:14.662Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:54:14.667Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:55:25.663Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:55:25.668Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:56:25.661Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:56:25.666Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:56:31.560Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:56:31.576Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:57:09.883Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:57:09.894Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T12:57:25.662Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:57:25.669Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:58:25.663Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:58:25.668Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:59:25.662Z] [BACKEND] [90mundefined[39m
+[2025-10-25T12:59:25.665Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:00:25.663Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:00:25.668Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:01:25.662Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:01:25.667Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:02:25.662Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:02:25.668Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:03:25.661Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:03:25.666Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:04:25.661Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:04:25.665Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:05:25.663Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:05:25.668Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:06:25.661Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:06:25.665Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:07:25.421Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:07:25.423Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:08:25.423Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:08:25.428Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:09:25.421Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:09:25.427Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:10:25.421Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:10:25.426Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:11:25.419Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:11:25.424Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:12:25.417Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:12:25.422Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:13:25.415Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:13:25.418Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:14:25.415Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:14:25.420Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:15:25.413Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:15:25.418Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:16:25.412Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:16:25.417Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:17:25.409Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:17:25.413Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:18:25.403Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:18:25.405Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:19:25.407Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:19:25.413Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:20:25.405Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:20:25.408Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:21:25.406Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:21:25.411Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:22:25.404Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:22:25.409Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:23:25.562Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:23:25.566Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:24:25.560Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:24:25.564Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:25:25.560Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:25:25.564Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:26:25.559Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:26:25.562Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:27:25.561Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:27:25.568Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:28:25.559Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:28:25.564Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:29:25.560Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:29:25.565Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:30:25.559Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:30:25.565Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:31:25.556Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:31:25.560Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:32:25.557Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:32:25.563Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:33:25.558Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:33:25.563Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:34:25.554Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:34:25.558Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:35:25.554Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:35:25.557Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:36:25.555Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:36:25.559Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:37:25.553Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:37:25.556Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:38:25.554Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:38:25.559Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:39:25.584Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:39:25.589Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:40:25.586Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:40:25.590Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:41:25.589Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:41:25.595Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:42:25.595Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:42:25.598Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:43:25.587Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:43:25.592Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:44:25.586Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:44:25.591Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:45:25.587Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:45:25.592Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:46:25.584Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:46:25.587Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:47:25.587Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:47:25.593Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:48:25.584Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:48:25.589Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:49:25.583Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:49:25.587Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:50:25.584Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:50:25.589Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:51:25.582Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:51:25.586Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:52:25.583Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:52:25.587Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:53:25.584Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:53:25.591Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:54:25.581Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:54:25.584Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:55:25.669Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:55:25.675Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:56:25.667Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:56:25.671Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:57:25.669Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:57:25.675Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:58:25.671Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:58:25.676Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:59:25.670Z] [BACKEND] [90mundefined[39m
+[2025-10-25T13:59:25.675Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:00:25.668Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:00:25.672Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:01:25.670Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:01:25.675Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:02:25.667Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:02:25.670Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:03:25.669Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:03:25.674Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:04:25.669Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:04:25.672Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:05:25.668Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:05:25.672Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:06:25.670Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:06:25.676Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:07:25.669Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:07:25.675Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:08:25.670Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:08:25.676Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:09:25.672Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:09:25.677Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:10:25.669Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:10:25.672Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:11:25.682Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:11:25.686Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:12:25.684Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:12:25.688Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:13:22.703Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:13:22.707Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:13:44.685Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:13:44.690Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:13:59.074Z] [INFO] App before-quit event triggered
+[2025-10-25T14:13:59.074Z] [INFO] Starting cleanup process...
+[2025-10-25T14:13:59.074Z] [INFO] Terminating backend process...
+[2025-10-25T14:14:29.124Z] [INFO] Starting Sophon app in development mode
+[2025-10-25T14:14:29.125Z] [INFO] App is packaged: false
+[2025-10-25T14:14:29.125Z] [INFO] Current working directory: /Users/a./Projects/Web/pos
+[2025-10-25T14:14:29.125Z] [INFO] App path: /Users/a./Projects/Web/pos
+[2025-10-25T14:14:29.125Z] [INFO] Resources path: N/A
+[2025-10-25T14:14:29.156Z] [INFO] Electron app ready event triggered
+[2025-10-25T14:14:29.156Z] [INFO] Platform: darwin
+[2025-10-25T14:14:29.156Z] [INFO] Architecture: arm64
+[2025-10-25T14:14:29.156Z] [INFO] Electron version: 37.7.1
+[2025-10-25T14:14:29.156Z] [INFO] Node version: 22.20.0
+[2025-10-25T14:14:29.156Z] [INFO] Running in development mode
+[2025-10-25T14:14:29.156Z] [INFO] Development mode: creating window immediately
+[2025-10-25T14:14:29.156Z] [INFO] Creating browser window...
+[2025-10-25T14:14:29.205Z] [INFO] Loading frontend from: http://localhost:5173/
+[2025-10-25T14:14:29.205Z] [INFO] Frontend ready status: false
+[2025-10-25T14:14:29.209Z] [INFO] DevTools opened for development mode
+[2025-10-25T14:14:29.209Z] [INFO] Browser window created successfully
+[2025-10-25T14:14:29.209Z] [INFO] Starting backend server...
+[2025-10-25T14:14:29.209Z] [INFO] Starting backend server...
+[2025-10-25T14:14:29.209Z] [INFO] Backend path: /Users/a./Projects/Web/pos/backend/index.js
+[2025-10-25T14:14:29.209Z] [INFO] Backend directory: /Users/a./Projects/Web/pos/backend
+[2025-10-25T14:14:29.210Z] [INFO] Backend package: sophon-backend v1.0.0
+[2025-10-25T14:14:29.211Z] [INFO] CORS dependency listed: ^2.8.5
+[2025-10-25T14:14:29.211Z] [INFO] Spawning backend process with NODE_ENV: development
+[2025-10-25T14:14:29.212Z] [INFO] Backend process spawned with PID: 5014
+[2025-10-25T14:14:29.242Z] [BACKEND] [INFO] Running as backend process, skipping Electron initialization entirely
+[2025-10-25T14:14:29.242Z] [BACKEND] [INFO] Environment flags - BACKEND_DIR: [33mtrue[39m IS_BACKEND_PROCESS: [33mtrue[39m SKIP_SINGLE_INSTANCE_LOCK: [33mfalse[39m
+[2025-10-25T14:14:29.247Z] [BACKEND] [dotenv@17.2.3] injecting env (6) from .env -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+[2025-10-25T14:14:29.533Z] [BACKEND] Backend starting with PORT: 3021
+process.env.PORT: 3021
+[2025-10-25T14:14:29.534Z] [BACKEND] Initializing database...
+[2025-10-25T14:14:29.537Z] [BACKEND] Database path: /Users/a./Projects/Web/pos/backend/data/db/database.sqlite
+[2025-10-25T14:14:29.543Z] [BACKEND] Connected to the SQLite database via better-sqlite3.
+[2025-10-25T14:14:29.550Z] [BACKEND] Database tables already exist.
+[2025-10-25T14:14:29.550Z] [BACKEND] Database initialized successfully
+[2025-10-25T14:14:29.551Z] [BACKEND] Networking migrations already applied.
+[2025-10-25T14:14:30.173Z] [INFO] Window content ready, showing window
+[2025-10-25T14:14:30.745Z] [BACKEND] Registered full route set with DB
+Backend server running on http://0.0.0.0:3021
+Backend ready on port 3021
+[2025-10-25T14:14:30.746Z] [INFO] Backend is ready and listening on port 3021
+[2025-10-25T14:14:30.746Z] [INFO] Backend server started and is listening on port 3021
+[2025-10-25T14:14:30.746Z] [INFO] Application startup completed successfully
+[2025-10-25T14:14:30.746Z] [BACKEND] Initializing Network Manager...
+[2025-10-25T14:14:30.747Z] [BACKEND] Network config loaded: {
+  autoDiscovery: [33mtrue[39m,
+  autoSync: [33mtrue[39m,
+  masterElection: [33mtrue[39m,
+  conflictResolution: [32m'last-write-wins'[39m,
+  server: {
+    port: [32m'3003'[39m,
+    host: [32m'0.0.0.0'[39m,
+    maxConnections: [33m100[39m,
+    timeout: [33m30000[39m
+  },
+  discovery: {
+    serviceName: [32m'sophon-pos'[39m,
+    serviceType: [32m'http'[39m,
+    port: [32m'3003'[39m,
+    announceInterval: [33m5000[39m,
+    discoveryTimeout: [33m10000[39m,
+    maxPeers: [33m10[39m
+  },
+  sync: {
+    interval: [33m30000[39m,
+    batchSize: [33m100[39m,
+    retryAttempts: [33m3[39m,
+    retryDelay: [33m5000[39m,
+    conflictResolution: [32m'last-write-wins'[39m
+  },
+  websocket: {
+    pingTimeout: [33m60000[39m,
+    pingInterval: [33m25000[39m,
+    maxHttpBufferSize: [33m1000000[39m,
+    cors: { origin: [33mtrue[39m, credentials: [33mtrue[39m }
+  },
+  security: {
+    jwtSecret: [32m'2ad0d2133b0a59ee14bc5ffb45307efd6b2da25bd7038dfa4479d0d8b0f52cafe19201b2e8864a472eae5d1282247842888cff32d779a2bfd735a248e228153a'[39m,
+    tokenExpiration: [32m'24h'[39m,
+    enablePeerAuth: [33mtrue[39m
+  },
+  monitoring: {
+    healthCheckInterval: [33m10000[39m,
+    connectionTimeout: [33m5000[39m,
+    maxFailedChecks: [33m3[39m
+  },
+  debug: { enableNetworkLogs: [33mtrue[39m, logLevel: [32m'info'[39m, enableMetrics: [33mtrue[39m }
+}
+[2025-10-25T14:14:30.748Z] [BACKEND] WebSocket server initialized
+[2025-10-25T14:14:30.770Z] [BACKEND] Network Discovery initialized for instance: 388a9da8ba78335e5f064fef5c7d93cb632bf2d28b82241a852d1994587547a8
+[2025-10-25T14:14:30.770Z] [BACKEND] Sync Engine initialized - Mode: Slave
+[2025-10-25T14:14:30.771Z] [BACKEND] Started advertising Sophon service: Sophon-out-388a9da8-670770
+[2025-10-25T14:14:30.771Z] [BACKEND] Started discovering Sophon services on network
+[2025-10-25T14:14:30.771Z] [BACKEND] Network discovery started
+Network Manager initialized successfully - Master: false
+Networking system initialized successfully
+[2025-10-25T14:14:38.357Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:14:38.395Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:15:08.356Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:15:08.358Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:15:36.149Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T14:15:36.438Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T14:15:38.531Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T14:15:38.647Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T14:15:38.649Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T14:15:38.662Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T14:15:38.663Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjA4NjU2NjksImV4cCI6MTc2MDk1MjA2OX0.QtodeCsiP042rJOAoTub3dUUPNVgx-6El8Z50FuPG5w
+[2025-10-25T14:15:38.680Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:15:38.683Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:16:01.277Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjE0MDE3NTgsImV4cCI6MTc2MTQ4ODE1OH0.ON0UFPObwHDEjDFwSOm1syY16v6VSdm-zIw0lXzoQto
+[2025-10-25T14:16:01.297Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjE0MDE3NTgsImV4cCI6MTc2MTQ4ODE1OH0.ON0UFPObwHDEjDFwSOm1syY16v6VSdm-zIw0lXzoQto
+[2025-10-25T14:16:01.298Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjE0MDE3NTgsImV4cCI6MTc2MTQ4ODE1OH0.ON0UFPObwHDEjDFwSOm1syY16v6VSdm-zIw0lXzoQto
+[2025-10-25T14:16:03.030Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjE0MDE3NTgsImV4cCI6MTc2MTQ4ODE1OH0.ON0UFPObwHDEjDFwSOm1syY16v6VSdm-zIw0lXzoQto
+[2025-10-25T14:16:03.032Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjE0MDE3NTgsImV4cCI6MTc2MTQ4ODE1OH0.ON0UFPObwHDEjDFwSOm1syY16v6VSdm-zIw0lXzoQto
+[2025-10-25T14:16:03.034Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjE0MDE3NTgsImV4cCI6MTc2MTQ4ODE1OH0.ON0UFPObwHDEjDFwSOm1syY16v6VSdm-zIw0lXzoQto
+[2025-10-25T14:16:08.360Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:16:08.365Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:16:22.787Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjE0MDE3NTgsImV4cCI6MTc2MTQ4ODE1OH0.ON0UFPObwHDEjDFwSOm1syY16v6VSdm-zIw0lXzoQto
+[2025-10-25T14:16:22.789Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjE0MDE3NTgsImV4cCI6MTc2MTQ4ODE1OH0.ON0UFPObwHDEjDFwSOm1syY16v6VSdm-zIw0lXzoQto
+[2025-10-25T14:16:33.060Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjE0MDE3NTgsImV4cCI6MTc2MTQ4ODE1OH0.ON0UFPObwHDEjDFwSOm1syY16v6VSdm-zIw0lXzoQto
+[2025-10-25T14:16:38.686Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:16:38.693Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:17:03.148Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjE0MDE3NTgsImV4cCI6MTc2MTQ4ODE1OH0.ON0UFPObwHDEjDFwSOm1syY16v6VSdm-zIw0lXzoQto
+[2025-10-25T14:17:08.684Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:17:08.687Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:17:33.253Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjE0MDE3NTgsImV4cCI6MTc2MTQ4ODE1OH0.ON0UFPObwHDEjDFwSOm1syY16v6VSdm-zIw0lXzoQto
+[2025-10-25T14:17:38.367Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:17:38.373Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:18:03.363Z] [BACKEND] eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImNvbXBhbnkiLCJpYXQiOjE3NjE0MDE3NTgsImV4cCI6MTc2MTQ4ODE1OH0.ON0UFPObwHDEjDFwSOm1syY16v6VSdm-zIw0lXzoQto
+[2025-10-25T14:18:08.359Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:18:08.363Z] [BACKEND] [90mundefined[39m
+[2025-10-25T14:18:32.624Z] [INFO] App before-quit event triggered
+[2025-10-25T14:18:32.625Z] [INFO] Starting cleanup process...
+[2025-10-25T14:18:32.625Z] [INFO] Terminating backend process...

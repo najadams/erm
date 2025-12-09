@@ -1,0 +1,124 @@
+'use client';
+
+import React from 'react';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import Paper from '@mui/material/Paper';
+import Chip from '@mui/material/Chip';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import DescriptionIcon from '@mui/icons-material/Description';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import { useRouter } from 'next/navigation';
+import type { Record } from '@/types';
+
+// Mock data removed
+
+const StatusChip = ({ status }: { status: Record['status'] }) => {
+  const colors = {
+    active: 'primary',
+    archived: 'default',
+    pending_review: 'warning',
+    verified: 'success',
+  } as const;
+
+  const labels = {
+    active: 'Active',
+    archived: 'Archived',
+    pending_review: 'Pending',
+    verified: 'Verified',
+  };
+
+  return (
+    <Chip
+      label={labels[status as keyof typeof labels] || status}
+      color={colors[status as keyof typeof colors] || 'default'}
+      variant="outlined"
+      size="small"
+      icon={status === 'verified' ? <CheckCircleOutlineIcon /> : undefined}
+      sx={{ fontWeight: 600 }}
+    />
+  );
+};
+
+export default function RecentRecords() {
+  const router = useRouter();
+  const [records, setRecords] = React.useState<Record[]>([]);
+
+  React.useEffect(() => {
+    fetch('/api/records')
+      .then(res => res.json())
+      .then(data => {
+        // Take top 5 for recent
+        if (Array.isArray(data)) {
+            setRecords(data.slice(0, 5));
+        }
+      })
+      .catch(err => console.error('Failed to fetch records', err));
+  }, []);
+  
+  return (
+    <Box>
+      <Typography variant="h5" fontWeight="bold" sx={{ mb: 3 }}>
+        Recent Documents
+      </Typography>
+      <Paper sx={{ width: '100%', mb: 2, overflow: 'hidden', borderRadius: 3 }}>
+        {/* Header Row */}
+        <Box sx={{ p: 2, bgcolor: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center' }}>
+          <Box sx={{ width: '40%', fontWeight: 600, color: 'text.secondary', fontSize: '0.875rem' }}>Document Name</Box>
+          <Box sx={{ width: '25%', fontWeight: 600, color: 'text.secondary', fontSize: '0.875rem' }}>Category</Box>
+          <Box sx={{ width: '20%', fontWeight: 600, color: 'text.secondary', fontSize: '0.875rem' }}>Date</Box>
+          <Box sx={{ width: '15%', fontWeight: 600, color: 'text.secondary', fontSize: '0.875rem' }}>Status</Box>
+        </Box>
+        
+        {/* Data Rows */}
+        {records.length === 0 ? (
+            <Box sx={{ p: 3, textAlign: 'center', color: 'text.secondary' }}>
+                {records === null ? 'Loading...' : 'No records found. Upload one!'}
+            </Box>
+        ) : (
+            records.map((record) => (
+            <Box 
+                key={record.id} 
+                sx={{ 
+                p: 2, 
+                borderBottom: '1px solid #f1f5f9', 
+                display: 'flex', 
+                alignItems: 'center',
+                '&:hover': { bgcolor: '#f8fafc', cursor: 'pointer' }, 
+                transition: 'background-color 0.2s' 
+                }}
+                onClick={() => router.push(`/records/${record.id}`)}
+            >
+                <Box sx={{ width: '40%', display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Box
+                    sx={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 2,
+                    bgcolor: record.fileType === 'pdf' ? '#ffe4e6' : '#e0f2fe',
+                    color: record.fileType === 'pdf' ? '#f43f5e' : '#0ea5e9',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    }}
+                >
+                    {record.fileType === 'pdf' ? <PictureAsPdfIcon /> : <DescriptionIcon />}
+                </Box>
+                <Typography fontWeight="500" color="text.primary">{record.title}</Typography>
+                </Box>
+                <Box sx={{ width: '25%' }}>
+                <Chip label={record.category} size="small" sx={{ bgcolor: 'secondary.light', color: 'white', fontWeight: 600 }} />
+                </Box>
+                <Box sx={{ width: '20%', color: 'text.secondary', fontSize: '0.875rem' }}>
+                {new Date(record.createdAt).toLocaleDateString()}
+                </Box>
+                <Box sx={{ width: '15%' }}>
+                <StatusChip status={record.status} />
+                </Box>
+            </Box>
+            ))
+        )}
+      </Paper>
+    </Box>
+  );
+}

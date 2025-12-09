@@ -1,65 +1,123 @@
-import Image from "next/image";
+'use client';
+
+import React, { useState } from 'react';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import Grid from '@mui/material/Grid';
+import Button from '@mui/material/Button';
+import Paper from '@mui/material/Paper';
+import InputBase from '@mui/material/InputBase';
+import IconButton from '@mui/material/IconButton';
+import SearchIcon from '@mui/icons-material/Search';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import FolderIcon from '@mui/icons-material/Folder';
+import ScheduleIcon from '@mui/icons-material/Schedule';
+
+import Sidebar from '@/components/layout/Sidebar';
+import StatsCard from '@/components/ui/StatsCard';
+import RecentRecords from '@/components/dashboard/RecentRecords';
+import UploadRecordModal from '@/components/dashboard/UploadRecordModal';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const router = useRouter();
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/records?q=${encodeURIComponent(searchQuery)}`);
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
+      <Sidebar />
+
+      {/* Main Content */}
+      <Box component="main" sx={{ flexGrow: 1, p: 4, overflow: 'auto' }}>
+        {/* Header */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 5 }}>
+          <Box>
+            <Typography variant="h4" fontWeight="bold" color="text.primary">
+              Dashboard
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              Welcome back, User. Here&apos;s what&apos;s happening.
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Paper
+              component="form"
+              onSubmit={handleSearch}
+              sx={{
+                p: '2px 4px',
+                display: 'flex',
+                alignItems: 'center',
+                width: 300,
+                borderRadius: 2,
+                bgcolor: 'background.paper',
+              }}
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+              <IconButton sx={{ p: '10px' }} aria-label="search" onClick={handleSearch}>
+                <SearchIcon />
+              </IconButton>
+              <InputBase 
+                sx={{ ml: 1, flex: 1 }} 
+                placeholder="Search records..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </Paper>
+            <Button 
+              variant="contained" 
+              color="secondary" 
+              startIcon={<CloudUploadIcon />}
+              onClick={() => setUploadModalOpen(true)}
             >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+              Upload Record
+            </Button>
+          </Box>
+        </Box>
+
+        {/* Stats Cards */}
+        <Grid container spacing={4} sx={{ mb: 5 }}>
+          <Grid item xs={12} sm={4}>
+            <StatsCard 
+              title="Total Records" 
+              value="1,248" 
+              icon={<FolderIcon fontSize="large" color="secondary" />} 
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <StatsCard 
+              title="Recent Uploads" 
+              value="24" 
+              icon={<CloudUploadIcon fontSize="large" color="info" />} 
+            />
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <StatsCard 
+              title="Pending Review" 
+              value="5" 
+              icon={<ScheduleIcon fontSize="large" color="warning" />} 
+            />
+          </Grid>
+        </Grid>
+
+        {/* Recent Records Table */}
+        <RecentRecords />
+
+        {/* Upload Modal */}
+        <UploadRecordModal 
+          open={uploadModalOpen} 
+          onClose={() => setUploadModalOpen(false)} 
+          onUploadSuccess={() => {
+            console.log('Refresh list...');
+          }} 
+        />
+      </Box>
+    </Box>
   );
 }
