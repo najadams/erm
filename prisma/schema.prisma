@@ -12,10 +12,20 @@ model User {
   email     String   @unique
   password  String   // Hashed password
   name      String?
-  role      String   @default("STAFF") // ADMIN, STAFF
+  role      String   @default("USER") // ADMIN, USER, AUDITOR
   createdAt DateTime @default(now())
   records   Record[]
   auditLogs AuditLog[]
+  groups    Group[]
+}
+
+model Group {
+  id        String   @id @default(uuid())
+  name      String
+  type      String   // DEPARTMENT, TEAM, PROJECT
+  users     User[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Record {
@@ -42,4 +52,13 @@ model AuditLog {
   userId    String
   user      User     @relation(fields: [userId], references: [id])
   timestamp DateTime @default(now())
+}
+
+model AccessRequest {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  reason    String
+  status    String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  createdAt DateTime @default(now())
 }

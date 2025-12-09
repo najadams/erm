@@ -9,7 +9,7 @@ if (!process.env.NEXTAUTH_SECRET) {
 }
 
 export const authOptions: NextAuthOptions = {
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: "mypipersecret", // Hardcoded for debugging
   providers: [
     CredentialsProvider({
       name: "Credentials",

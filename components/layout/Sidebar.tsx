@@ -9,12 +9,15 @@ import DescriptionIcon from '@mui/icons-material/Description';
 import ArchiveIcon from '@mui/icons-material/Archive';
 import ShareIcon from '@mui/icons-material/Share';
 import SettingsIcon from '@mui/icons-material/Settings';
+import PeopleIcon from '@mui/icons-material/People'; // Added for User Management
 
 const NAV_ITEMS = [
   { label: 'Dashboard', icon: <FolderIcon />, href: '/', active: true },
   { label: 'All Records', icon: <DescriptionIcon />, href: '/records', active: false },
   { label: 'Shared with Me', icon: <ShareIcon />, href: '/records?filter=shared', active: false },
   { label: 'Archived', icon: <ArchiveIcon />, href: '/records?filter=archived', active: false },
+  { label: 'User Management', icon: <PeopleIcon />, href: '/admin/users', active: false }, // Added for Admin
+  { label: 'Groups', icon: <FolderIcon />, href: '/admin/groups', active: false }, // Added for Admin
   { label: 'Settings', icon: <SettingsIcon />, href: '/settings', active: false },
 ];
 

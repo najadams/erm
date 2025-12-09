@@ -1,0 +1,87 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { prisma } from '@/lib/prisma';
+import bcrypt from 'bcryptjs';
+
+// Helper to check admin
+async function isAdmin() {
+  const session = await getServerSession(authOptions);
+  return session?.user && (session.user as any).role === 'ADMIN';
+}
+
+export async function GET(request: NextRequest) {
+  if (!await isAdmin()) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+
+  try {
+    const users = await prisma.user.findMany({
+       select: { id: true, name: true, email: true, role: true, createdAt: true, groups: true },
+       orderBy: { createdAt: 'desc' }
+    });
+    return NextResponse.json(users);
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  if (!await isAdmin()) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+
+  try {
+    const body = await request.json();
+    const { email, name, password, role, groupIds } = body;
+
+    if (!email || !password || !name) {
+      return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await prisma.user.create({
+      data: {
+        email,
+        name,
+        password: hashedPassword,
+        role: role || 'USER',
+        groups: groupIds ? {
+            connect: groupIds.map((id: string) => ({ id }))
+        } : undefined
+      },
+    });
+
+    const { password: _, ...userWithoutPassword } = user;
+    return NextResponse.json(userWithoutPassword, { status: 201 });
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+    if (!await isAdmin()) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+
+    try {
+        const body = await request.json();
+        const { id, role, groupIds } = body;
+        
+        if (!id) return NextResponse.json({ error: 'Missing User ID' }, {status: 400});
+
+        const updateData: any = {};
+        if (role) updateData.role = role;
+        if (groupIds) {
+            updateData.groups = {
+                set: groupIds.map((gid: string) => ({ id: gid }))
+            };
+        }
+
+        const user = await prisma.user.update({
+            where: { id },
+            data: updateData,
+            include: { groups: true }
+        });
+        
+        const { password: _, ...safeUser } = user;
+        return NextResponse.json(safeUser);
+    } catch (error) {
+        return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
+    }
+}

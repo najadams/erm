@@ -119,9 +119,14 @@ export default function LoginPage() {
               </Stack>
             </Box>
             
-            <Typography variant="body2" align="center" sx={{ mt: 4, color: 'text.secondary' }}>
-              Contact administrator if you forgot your password.
-            </Typography>
+            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
+              <Typography color="text.secondary" component="span">
+                No account? <a href="/request-access" style={{ color: '#0ea5e9', textDecoration: 'none' }}>Request Access</a>
+              </Typography>
+              <Typography color="text.secondary" component="span">
+                Forgot password?
+              </Typography>
+            </Box>
           </Paper>
         </Container>
       </Box>
