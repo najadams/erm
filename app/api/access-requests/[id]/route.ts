@@ -9,11 +9,11 @@ async function isAdmin() {
   return session?.user && (session.user as any).role === 'ADMIN';
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!await isAdmin()) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
 
   try {
-    const { id } = params;
+    const { id } = await params;
     const { status } = await request.json(); // APPROVED or REJECTED
 
     if (!['APPROVED', 'REJECTED'].includes(status)) {
