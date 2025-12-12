@@ -33,6 +33,7 @@ import Checkbox from '@mui/material/Checkbox';
 interface Group {
   id: string;
   name: string;
+  type: string;
 }
 
 interface User {

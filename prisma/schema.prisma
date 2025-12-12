@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -43,6 +43,28 @@ model Record {
   userId      String
   user        User     @relation(fields: [userId], references: [id])
   auditLogs   AuditLog[]
+  history     RecordHistory[]
+}
+
+model RecordHistory {
+  id          String   @id @default(uuid())
+  recordId    String
+  record      Record   @relation(fields: [recordId], references: [id])
+  
+  // Copied fields
+  title       String
+  description String?
+  fileUrl     String
+  fileType    String
+  category    String
+  tags        String   // JSON string of tags
+  status      String
+  
+  // Version metadata
+  version     Int
+  changedBy   String?  // Optional: User ID who made the change
+  changedAt   DateTime @default(now())
+  changeReason String?
 }
 
 model AuditLog {

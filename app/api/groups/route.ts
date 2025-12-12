@@ -4,6 +4,8 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from '@/lib/prisma';
 import { hasPermission, PERMISSIONS } from '@/lib/permissions';
 
+export const dynamic = 'force-dynamic';
+
 async function canManage(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const userRole = (session?.user as any)?.role;

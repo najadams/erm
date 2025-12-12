@@ -3,13 +3,11 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
-// Debugging Secret
-if (!process.env.NEXTAUTH_SECRET) {
-  console.error("⚠️ NEXTAUTH_SECRET is not set in environment variables!");
-}
+export const dynamic = 'force-dynamic';
 
 export const authOptions: NextAuthOptions = {
-  secret: "mypipersecret", // Hardcoded for debugging
+  // Require the secret to come from env; NextAuth will error if missing
+  secret: process.env.NEXTAUTH_SECRET,
   providers: [
     CredentialsProvider({
       name: "Credentials",

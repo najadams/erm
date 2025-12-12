@@ -22,6 +22,8 @@ import StatsCards from '@/components/dashboard/StatsCards';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 
+export const dynamic = 'force-dynamic';
+
 export default function Dashboard() {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
