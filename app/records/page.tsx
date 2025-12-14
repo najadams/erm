@@ -14,6 +14,7 @@ import Sidebar from '@/components/layout/Sidebar';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import DescriptionIcon from '@mui/icons-material/Description';
 import type { Record } from '@/types';
+import AdvancedSearch from '@/components/AdvancedSearch';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,17 +23,29 @@ function RecordsContent() {
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get('q') || '';
   
-  const [searchQuery, setSearchQuery] = useState(initialQuery);
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  /* State */
+  const [filters, setFilters] = useState({
+      q: initialQuery,
+      status: '',
+      groupId: '',
+      startDate: '',
+      endDate: '',
+      tag: '',
+      uploader: ''
+  });
   const [records, setRecords] = useState<Record[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Debounce search or just fetch on effect
+  // Fetch records when filters change
   React.useEffect(() => {
     setLoading(true);
     const params = new URLSearchParams();
-    if (searchQuery) params.set('q', searchQuery);
-    if (statusFilter) params.set('status', statusFilter);
+    if (filters.q) params.set('q', filters.q);
+    if (filters.status) params.set('status', filters.status);
+    if (filters.groupId) params.set('groupId', filters.groupId);
+    if (filters.tag) params.set('tag', filters.tag);
+    if (filters.startDate) params.set('startDate', filters.startDate);
+    if (filters.endDate) params.set('endDate', filters.endDate);
 
     fetch(`/api/records?${params.toString()}`)
       .then(res => res.json())
@@ -46,7 +59,7 @@ function RecordsContent() {
       })
       .catch(err => console.error('Failed to fetch records', err))
       .finally(() => setLoading(false));
-  }, [searchQuery, statusFilter]);
+  }, [filters]);
 
   return (
     <Box component="main" sx={{ flexGrow: 1, p: 4, overflow: 'auto' }}>
@@ -55,38 +68,10 @@ function RecordsContent() {
           All Records
         </Typography>
         
-        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
-          {/* Search Bar */}
-          <Paper
-            component="form"
-            onSubmit={(e) => e.preventDefault()}
-            sx={{ p: '2px 4px', display: 'flex', alignItems: 'center', width: 400, borderRadius: 2 }}
-          >
-            <IconButton sx={{ p: '10px' }} aria-label="search">
-              <SearchIcon />
-            </IconButton>
-            <InputBase 
-              sx={{ ml: 1, flex: 1 }} 
-              placeholder="Search by name or category..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </Paper>
-
-          {/* Filters */}
-          <Box sx={{ display: 'flex', gap: 1 }}>
-             {['verified', 'pending_review', 'active', 'archived'].map((status) => (
-               <Chip 
-                 key={status}
-                 label={status.replace('_', ' ')}
-                 onClick={() => setStatusFilter(statusFilter === status ? null : status)}
-                 variant={statusFilter === status ? 'filled' : 'outlined'}
-                 color={statusFilter === status ? 'secondary' : 'default'}
-                 sx={{ textTransform: 'capitalize' }}
-               />
-             ))}
-          </Box>
-        </Stack>
+        <AdvancedSearch 
+           initialValues={{ q: initialQuery }}
+           onSearch={(newFilters) => setFilters(newFilters)} 
+        />
       </Box>
 
       {/* Results */}
@@ -160,7 +145,7 @@ function RecordsContent() {
 
 export default function RecordsPage() {
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
+    <Box sx={{ display: 'flex', height: '100dvh', overflow: 'hidden', bgcolor: 'background.default' }}>
       <Sidebar />
       <Suspense fallback={<Box p={4}>Loading...</Box>}>
         <RecordsContent />

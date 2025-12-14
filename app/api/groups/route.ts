@@ -14,7 +14,11 @@ async function canManage(req: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  if (!await canManage(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  // Allow all authenticated users to view groups for filtering
+
 
   try {
     const groups = await prisma.group.findMany({

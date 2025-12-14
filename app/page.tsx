@@ -47,7 +47,7 @@ export default function Dashboard() {
   };
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
+    <Box sx={{ display: 'flex', height: '100dvh', overflow: 'hidden', bgcolor: 'background.default' }}>
       <Sidebar />
 
       {/* Main Content */}
@@ -59,10 +59,11 @@ export default function Dashboard() {
               Dashboard
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              Welcome back, User. Here&apos;s what&apos;s happening.
+              Welcome back. Here&apos;s what&apos;s happening.
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', gap: 2 }}>
+            {/* Search Redirect */}
             <Paper
               component="form"
               onSubmit={handleSearch}
@@ -85,6 +86,13 @@ export default function Dashboard() {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </Paper>
+             <Button 
+              variant="outlined" 
+              onClick={() => router.push('/records')}
+              sx={{ whiteSpace: 'nowrap' }}
+            >
+              Advanced Search
+            </Button>
             <Button 
               variant="contained" 
               color="secondary" 

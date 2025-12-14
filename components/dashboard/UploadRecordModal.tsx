@@ -28,14 +28,26 @@ export default function UploadRecordModal({ open, onClose, onUploadSuccess }: Up
     category: '',
     description: '',
     tags: '',
+    visibility: 'PUBLIC',
+    groupId: '',
   });
   const [loading, setLoading] = useState(false);
+  const [groups, setGroups] = useState<{ id: string; name: string }[]>([]);
+
+  // Fetch groups
+  React.useEffect(() => {
+    fetch('/api/groups').then(res => res.json()).then(data => {
+      if (Array.isArray(data)) setGroups(data);
+    }).catch(err => console.error('Failed to load groups', err));
+  }, []);
 
   // Reset form when opening
   React.useEffect(() => {
     if (open) {
       setFile(null);
-      setFormData({ title: '', category: '', description: '', tags: '' });
+      setFile(null);
+      setFormData({ title: '', category: '', description: '', tags: '', visibility: 'PUBLIC', groupId: '' });
+      setLoading(false);
       setLoading(false);
     }
   }, [open]);
@@ -59,7 +71,10 @@ export default function UploadRecordModal({ open, onClose, onUploadSuccess }: Up
     data.append('title', formData.title);
     data.append('category', formData.category);
     data.append('description', formData.description);
+    data.append('description', formData.description);
     data.append('tags', formData.tags);
+    data.append('visibility', formData.visibility);
+    if (formData.groupId) data.append('groupId', formData.groupId);
 
     try {
       const res = await fetch('/api/records', {
@@ -153,6 +168,37 @@ export default function UploadRecordModal({ open, onClose, onUploadSuccess }: Up
             value={formData.tags}
             onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
           />
+          
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <TextField
+              select
+              label="Visibility"
+              fullWidth
+              value={formData.visibility}
+              onChange={(e) => setFormData({ ...formData, visibility: e.target.value })}
+            >
+              <MenuItem value="PUBLIC">Public</MenuItem>
+              <MenuItem value="PRIVATE">Private (Only Me)</MenuItem>
+              <MenuItem value="GROUP">Group Restricted</MenuItem>
+            </TextField>
+
+            {formData.visibility === 'GROUP' && (
+              <TextField
+                select
+                label="Select Group"
+                fullWidth
+                value={formData.groupId}
+                onChange={(e) => setFormData({ ...formData, groupId: e.target.value })}
+                required
+              >
+                {groups.map((group) => (
+                  <MenuItem key={group.id} value={group.id}>
+                    {group.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+            )}
+          </Box>
         </Box>
       </DialogContent>
       <DialogActions sx={{ p: 3 }}>
