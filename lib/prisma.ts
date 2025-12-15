@@ -1,9 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 
 const prismaClientSingleton = () => {
-  return new PrismaClient({
-    adapter: undefined, // or add adapter if using Accelerate
-  });
+  return new PrismaClient();
 };
 
 declare global {
@@ -12,4 +10,6 @@ declare global {
 
 const prisma = globalThis.prisma ?? prismaClientSingleton();
 
-export default prisma;
+export { prisma };
+
+if (process.env.NODE_ENV !== 'production') globalThis.prisma = prisma;

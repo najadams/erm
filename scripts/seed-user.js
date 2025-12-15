@@ -8,6 +8,7 @@ async function main() {
   const password = 'password123';
   const hashedPassword = await bcrypt.hash(password, 10);
 
+  console.log('--- Starting Verification ---', hashedPassword);
   const user = await prisma.user.upsert({
     where: { email },
     update: {},

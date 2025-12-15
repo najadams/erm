@@ -4,6 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -16,6 +17,12 @@ model User {
   records   Record[]
   auditLogs AuditLog[]
   groups    Group[]
+  
+  // New: Account Expiry
+  accountExpiresAt DateTime?
+
+  // New: Shared Records (Many-to-Many)
+  sharedRecords Record[] @relation("UserSharedRecords")
 }
 
 model Group {
@@ -23,7 +30,11 @@ model Group {
   name      String
   type      String   // DEPARTMENT, TEAM, PROJECT
   users     User[]
-  records   Record[]
+  records   Record[] // Original Owner-Group Relation
+  
+  // New: Shared Records (Many-to-Many)
+  sharedRecords Record[] @relation("GroupSharedRecords")
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -36,7 +47,7 @@ model Record {
   fileType    String
   category    String
   tags        String   // JSON string of tags
-  status      String   @default("ACTIVE") // ACTIVE, ARCHIVED, VERIFIED, PENDING
+  status      String   @default("ACTIVE") // ACTIVE, ARCHIVED, VERIFIED, PENDING, LEGAL_HOLD
   version     Int      @default(1)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -45,8 +56,22 @@ model Record {
   groupId     String?
   group       Group?   @relation(fields: [groupId], references: [id])
   visibility  String   @default("PUBLIC") // PUBLIC, PRIVATE, GROUP
+
   auditLogs   AuditLog[]
   history     RecordHistory[]
+
+  // New: Shared Lists
+  sharedWithGroups Group[] @relation("GroupSharedRecords")
+  sharedWithUsers  User[]  @relation("UserSharedRecords")
+
+  // Upload Form Requirement Fields
+  checksum         String?  // SHA-256 for version detection
+  documentType     String?  // e.g. "Invoice", "Contract"
+  department       String?  // e.g. "HR", "Legal"
+  effectiveDate    DateTime?
+  retentionPeriod  String?  // e.g. "7 years"
+  isLegalHold      Boolean  @default(false)
+  requiresApproval Boolean  @default(false)
 }
 
 model RecordHistory {

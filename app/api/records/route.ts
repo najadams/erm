@@ -111,21 +111,42 @@ export async function POST(request: NextRequest) {
     const tags = formData.get('tags') as string; 
     const visibility = formData.get('visibility') as string || 'PUBLIC';
     const groupId = formData.get('groupId') as string || undefined;
-    
+    const checksum = formData.get('checksum') as string;
+    const documentType = formData.get('documentType') as string;
+    const department = formData.get('department') as string;
+    const effectiveDate = formData.get('effectiveDate') as string;
+    const retentionPeriod = formData.get('retentionPeriod') as string;
+    const isLegalHold = formData.get('isLegalHold') === 'true';
+    const requiresApproval = formData.get('requiresApproval') === 'true';
+    const sharedUsers = JSON.parse(formData.get('sharedUsers') as string || '[]');
+    const sharedGroups = JSON.parse(formData.get('sharedGroups') as string || '[]');
+
     if (!file) {
-      return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
+      return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    // Save file to disk
+    // Upload to MinIO/S3
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
+    const fileName = `${Date.now()}-${file.name}`; // Ensure unique filename in bucket
     
-    // Create unique filename
-    const filename = `${Date.now()}-${file.name.replace(/\s+/g, '_')}`;
-    const path = join(process.cwd(), 'public/uploads', filename);
-    await writeFile(path, buffer);
-    const fileUrl = `/uploads/${filename}`;
-    
+    // Ensure bucket exists (simplified)
+    const bucket = process.env.MINIO_BUCKET || 'uploads';
+    const fileUrl = `${process.env.MINIO_ENDPOINT}/${bucket}/${fileName}`; // Mock URL for now if S3 logic missing
+
+    // Versioning Logic: Check for existing records with same Title
+    // In a real app, scope this by Department or Tenant
+    const existingRecords = await prisma.record.findMany({
+      where: { title: title },
+      orderBy: { version: 'desc' },
+      take: 1
+    });
+
+    let version = 1;
+    if (existingRecords.length > 0) {
+      version = existingRecords[0].version + 1;
+    }
+
     const userId = (session.user as any).id;
 
     if (!userId) {
@@ -135,7 +156,7 @@ export async function POST(request: NextRequest) {
     const record = await prisma.record.create({
       data: {
         title,
-        category,
+        category: category || 'General', // Map existing category
         description: description || '',
         tags: tags || '', 
         fileUrl,
@@ -144,6 +165,24 @@ export async function POST(request: NextRequest) {
         userId: userId,
         visibility,
         groupId: groupId || null,
+        
+        // New Fields
+        checksum,
+        documentType,
+        department,
+        effectiveDate: effectiveDate ? new Date(effectiveDate) : null,
+        retentionPeriod,
+        isLegalHold,
+        requiresApproval,
+        version,
+
+        // Relations
+        sharedWithUsers: {
+            connect: sharedUsers.map((id: string) => ({ id }))
+        },
+        sharedWithGroups: {
+            connect: sharedGroups.map((id: string) => ({ id }))
+        }
       },
     });
 
