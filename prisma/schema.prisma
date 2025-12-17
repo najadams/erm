@@ -8,93 +8,281 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String   // Hashed password
-  name      String?
-  role      String   @default("USER") // ADMIN, USER, AUDITOR
-  createdAt DateTime @default(now())
-  records   Record[]
-  auditLogs AuditLog[]
-  groups    Group[]
+  id               String    @id @default(uuid())
+  email            String    @unique
+  password         String // Hashed password
+  name             String?
+  role             String    @default("USER") // ADMIN, USER, AUDITOR, RECORDS_MANAGER
+  createdAt        DateTime  @default(now())
   
+  // Relations
+  records          Record[]  // Records owned by user
+  auditLogs        AuditLog[]
+  groups           Group[]
+  uploadedVersions RecordVersion[] // Versions uploaded by user
+  createdClassifications ClassificationNode[] // Classifications created by user
+
   // New: Account Expiry
   accountExpiresAt DateTime?
 
-  // New: Shared Records (Many-to-Many)
+  // 2FA Fields
+  otp        String?
+  otpExpires DateTime?
+
+  // Shared Records
   sharedRecords Record[] @relation("UserSharedRecords")
+  
+  // Record Access
+  accessPermissions RecordAccess[]
 }
 
 model Group {
   id        String   @id @default(uuid())
   name      String
-  type      String   // DEPARTMENT, TEAM, PROJECT
+  type      String // DEPARTMENT, TEAM, PROJECT
   users     User[]
-  records   Record[] // Original Owner-Group Relation
   
-  // New: Shared Records (Many-to-Many)
+  // Relations
   sharedRecords Record[] @relation("GroupSharedRecords")
   
+  // Record Access
+  accessPermissions RecordAccess[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-model Record {
-  id          String   @id @default(uuid())
-  title       String
-  description String?
-  fileUrl     String
-  fileType    String
-  category    String
-  tags        String   // JSON string of tags
-  status      String   @default("ACTIVE") // ACTIVE, ARCHIVED, VERIFIED, PENDING, LEGAL_HOLD
-  version     Int      @default(1)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
-  groupId     String?
-  group       Group?   @relation(fields: [groupId], references: [id])
-  visibility  String   @default("PUBLIC") // PUBLIC, PRIVATE, GROUP
+// ---------------------------------------------------------
+// NEW ORGANIZATION & CLASSIFICATION SCHEMA
+// ---------------------------------------------------------
 
-  auditLogs   AuditLog[]
-  history     RecordHistory[]
-
-  // New: Shared Lists
-  sharedWithGroups Group[] @relation("GroupSharedRecords")
-  sharedWithUsers  User[]  @relation("UserSharedRecords")
-
-  // Upload Form Requirement Fields
-  checksum         String?  // SHA-256 for version detection
-  documentType     String?  // e.g. "Invoice", "Contract"
-  department       String?  // e.g. "HR", "Legal"
-  effectiveDate    DateTime?
-  retentionPeriod  String?  // e.g. "7 years"
-  isLegalHold      Boolean  @default(false)
-  requiresApproval Boolean  @default(false)
+model Organization {
+  id          String           @id @default(uuid())
+  name        String
+  status      String           @default("ACTIVE") // ACTIVE, SUSPENDED
+  departments Department[]
+  categories  RecordCategory[]
+  classificationNodes ClassificationNode[] // New dynamic classification tree
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 }
 
-model RecordHistory {
-  id          String   @id @default(uuid())
-  recordId    String
-  record      Record   @relation(fields: [recordId], references: [id])
+model Department {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  code           String
+  parentId       String?
+  parent         Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
+  children       Department[] @relation("DepartmentHierarchy")
+  records        Record[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model RecordCategory {
+  id                    String       @id @default(uuid())
+  organizationId        String
+  organization          Organization @relation(fields: [organizationId], references: [id])
+  name                  String
+  description           String?
+  defaultRetentionYears Int?
+  defaultVisibility     String       @default("PRIVATE") // PRIVATE, DEPARTMENT, ORG
+  recordTypes           RecordType[]
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+}
+
+model RecordType {
+  id                String               @id @default(uuid())
+  categoryId        String
+  category          RecordCategory       @relation(fields: [categoryId], references: [id])
+  name              String
+  code              String
+  description       String?
+  versioningEnabled Boolean              @default(true)
+  approvalRequired  Boolean              @default(false)
+  retentionYears    Int?
+  isActive          Boolean              @default(true)
   
-  // Copied fields
-  title       String
-  description String?
-  fileUrl     String
-  fileType    String
-  category    String
-  tags        String   // JSON string of tags
-  status      String
-  groupId     String?
-  visibility  String   @default("PUBLIC")
+  metadataFields    RecordTypeMetadata[]
+  records           Record[]
   
-  // Version metadata
-  version     Int
-  changedBy   String?  // Optional: User ID who made the change
-  changedAt   DateTime @default(now())
-  changeReason String?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+}
+
+// ---------------------------------------------------------
+// DYNAMIC METADATA ENGINE
+// ---------------------------------------------------------
+
+model MetadataField {
+  id              String               @id @default(uuid())
+  name            String               @unique // e.g. "invoice_number"
+  label           String               // e.g. "Invoice Number"
+  dataType        String               // text, number, date, enum, etc.
+  required        Boolean              @default(false)
+  searchable      Boolean              @default(false)
+  validationRules String?              // JSON string
+  enumValues      String?              // JSON string
+  
+  recordTypes     RecordTypeMetadata[]
+  recordValues    RecordMetadata[]
+  templateFields  TemplateField[]     // New: used in dynamic templates
+}
+
+model RecordTypeMetadata {
+  id              String        @id @default(uuid())
+  recordTypeId    String
+  recordType      RecordType    @relation(fields: [recordTypeId], references: [id])
+  metadataFieldId String
+  metadataField   MetadataField @relation(fields: [metadataFieldId], references: [id])
+  displayOrder    Int           @default(0)
+  editable        Boolean       @default(true)
+}
+
+model RecordMetadata {
+  id              String        @id @default(uuid())
+  recordId        String
+  record          Record        @relation(fields: [recordId], references: [id])
+  metadataFieldId String
+  metadataField   MetadataField @relation(fields: [metadataFieldId], references: [id])
+  value           String        // Stores value or JSON string
+}
+
+// ---------------------------------------------------------
+// DYNAMIC 3-LEVEL CLASSIFICATION SYSTEM
+// ---------------------------------------------------------
+
+model ClassificationNode {
+  id             String                @id @default(uuid())
+  organizationId String
+  organization   Organization          @relation(fields: [organizationId], references: [id])
+  name           String
+  level          Int                   // 1, 2, or 3
+  parentId       String?
+  parent         ClassificationNode?   @relation("ClassificationHierarchy", fields: [parentId], references: [id])
+  children       ClassificationNode[]  @relation("ClassificationHierarchy")
+  code           String?
+  isLeaf         Boolean               @default(false) // true only for level 3
+  isActive       Boolean               @default(true)
+  createdById    String
+  createdBy      User                  @relation(fields: [createdById], references: [id])
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  
+  // Relations
+  templates      MetadataTemplate[]
+  records        Record[]
+  
+  @@index([organizationId])
+  @@index([parentId])
+  @@index([level])
+}
+
+model MetadataTemplate {
+  id                  String         @id @default(uuid())
+  classificationNodeId String        // Must be Level 3 (isLeaf = true)
+  classificationNode  ClassificationNode @relation(fields: [classificationNodeId], references: [id])
+  name                String        // e.g. "Vendor Invoice Template"
+  version             Int            @default(1)
+  isActive            Boolean        @default(true)
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  
+  // Relations
+  templateFields      TemplateField[]
+  // Note: Records are queried via classificationNodeId + templateVersion, not direct relation
+  
+  @@unique([classificationNodeId, version])
+  @@index([classificationNodeId])
+}
+
+model TemplateField {
+  id              String           @id @default(uuid())
+  templateId      String
+  template        MetadataTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  metadataFieldId String
+  metadataField   MetadataField   @relation(fields: [metadataFieldId], references: [id])
+  required        Boolean          @default(false)
+  displayOrder    Int              @default(0)
+  editable        Boolean          @default(true)
+  
+  @@unique([templateId, metadataFieldId])
+  @@index([templateId])
+}
+
+// ---------------------------------------------------------
+// CORE RECORD & VERSIONING
+// ---------------------------------------------------------
+
+model Record {
+  id            String   @id @default(uuid())
+  recordTypeId  String?  // Legacy field - kept for backward compatibility
+  recordType    RecordType? @relation(fields: [recordTypeId], references: [id])
+  
+  // New dynamic classification fields
+  classificationNodeId String?  // FK to Level 3 ClassificationNode
+  classificationNode   ClassificationNode? @relation(fields: [classificationNodeId], references: [id])
+  templateVersion      Int?     // Version of template used at creation
+  // Note: Template is queried via classificationNodeId + templateVersion, not direct FK
+  
+  departmentId  String?
+  department    Department? @relation(fields: [departmentId], references: [id])
+  
+  title         String
+  ownerUserId   String?  // Renamed from userId to match spec, but keeping mapping if convenient? No, let's use ownerUserId to match spec.
+  user          User?    @relation(fields: [ownerUserId], references: [id])
+  
+  status        String   @default("DRAFT") // DRAFT, ACTIVE, ARCHIVED
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relations
+  metadata      RecordMetadata[]
+  versions      RecordVersion[]
+  auditLogs     AuditLog[]
+  access        RecordAccess[]
+
+  // Legacy/Convenience relations for existing code (Optional, but might break if removed abruptly. 
+  // For this Refactor, I am FOLLOWING THE SPEC which removes them. 
+  // I will map shared lists via RecordAccess or keep them for now?)
+  // The spec says RecordAccess for permissions. I will comment out legacy shared lists to enforce new usage or keep them as "Shortcuts"?
+  // The user prompt implies a full replacement. I will implement RecordAccess.
+  
+  // Keeping these for now to minimize compile errors in unconnected parts, 
+  // but they should be migrated to RecordAccess logic eventually.
+  sharedWithGroups Group[] @relation("GroupSharedRecords")
+  sharedWithUsers  User[]  @relation("UserSharedRecords")
+}
+
+model RecordVersion {
+  id            String   @id @default(uuid())
+  recordId      String
+  record        Record   @relation(fields: [recordId], references: [id])
+  versionNumber Int
+  filePath      String
+  fileType      String
+  checksum      String?
+  uploadedById  String?
+  uploadedBy    User?    @relation(fields: [uploadedById], references: [id])
+  createdAt     DateTime @default(now()) // uploaded_at
+  changeNote    String?
+}
+
+model RecordAccess {
+  id            String    @id @default(uuid())
+  recordId      String
+  record        Record    @relation(fields: [recordId], references: [id])
+  principalType String    // "USER" or "GROUP"
+  userId        String?
+  user          User?     @relation(fields: [userId], references: [id])
+  groupId       String?
+  group         Group?    @relation(fields: [groupId], references: [id])
+  permission    String    // VIEW, DOWNLOAD, UPLOAD_VERSION
+  expiresAt     DateTime?
 }
 
 model AuditLog {
@@ -105,6 +293,10 @@ model AuditLog {
   userId    String
   user      User     @relation(fields: [userId], references: [id])
   timestamp DateTime @default(now())
+  
+  // Spec fields
+  oldValue  String? // JSON
+  newValue  String? // JSON
 }
 
 model AccessRequest {

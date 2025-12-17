@@ -166,7 +166,7 @@ export default function AdminUsersPage() {
   if (loading) return <Box p={4}>Loading...</Box>;
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
+    <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden', bgcolor: 'background.default' }}>
       <Sidebar />
       <Box component="main" sx={{ flexGrow: 1, p: 4, overflow: 'auto' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>

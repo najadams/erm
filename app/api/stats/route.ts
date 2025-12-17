@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
         pendingRetention
     ] = await Promise.all([
         prisma.record.count(),
-        prisma.record.count({ where: { userId } }),
+        prisma.record.count({ where: { ownerUserId: userId } }),
         prisma.record.count({ where: { createdAt: { gte: startOfMonth } } }),
         prisma.record.count({ where: { status: 'PENDING' } }) // Proxy for retention/cleanup
     ]);

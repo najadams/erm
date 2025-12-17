@@ -1,0 +1,242 @@
+Dynamic 3-Level Classification Model (User-Defined)
+
+Overview
+- Goal: Allow organizations to define their own 3-level classification hierarchy and attach metadata and rules at the deepest level, without hard-coding categories or changing schema per customer.
+- Core idea: Replace fixed `Category → RecordType → Metadata` with a configurable `Level 1 → Level 2 → Level 3 → Metadata + Rules` model.
+
+Examples
+- Finance
+  └── Accounts Payable
+      └── Vendor Invoice
+
+- HR
+  └── Recruitment
+      └── Offer Letter
+
+Each Level 3 node becomes a **Record Template**.
+
+Benefits (If Guardrails Are Added)
+- Maximum flexibility
+- Strong multi-tenant support
+- No schema changes per customer
+- Configurable per department or group
+
+Risk: Without structure and constraints, the system can become messy and non-compliant.
+Principle: **Constrain what users can do, not how they do it.**
+
+--------------------------------------------------
+1️⃣ Classification Model (Single Table, Tree-Based)
+--------------------------------------------------
+
+Use a single hierarchical table instead of three separate tables.
+
+`ClassificationNode`
+- `id` (PK)
+- `organization_id` (FK)
+- `name`
+- `level` (1, 2, or 3)
+- `parent_id` (FK → ClassificationNode)
+- `code` (optional)
+- `is_leaf` (boolean, true only for level 3)
+- `is_active`
+- `created_by` (FK)
+- `created_at`
+
+Logical rules for levels:
+- Level 1 → root node (no parent, or parent null)
+- Level 2 → child of a Level 1 node
+- Level 3 → child of a Level 2 node
+- Max depth = 3
+- Prevent cycles in the tree
+
+Only `is_leaf = true` (Level 3) can accept uploads.
+
+--------------------------------------------------
+2️⃣ Metadata Templates (Attached to Level 3 Only)
+--------------------------------------------------
+
+`MetadataTemplate`
+- `id` (PK)
+- `classification_node_id` (FK, must be Level 3)
+- `name` (e.g. "Vendor Invoice Template")
+- `version` (integer)
+- `is_active`
+
+Notes
+- Templates are attached only to Level 3 classification nodes.
+- Enables template evolution over time (versioning).
+- Old records keep their original template version.
+
+--------------------------------------------------
+3️⃣ Metadata Field Definitions (Reusable)
+--------------------------------------------------
+
+`MetadataField`
+- `id` (PK)
+- `name`
+- `label`
+- `data_type`
+- `validation_rules` (JSON)
+- `searchable` (boolean)
+
+Notes
+- Fields are reusable across multiple templates.
+- Validation and search behavior live here centrally.
+
+--------------------------------------------------
+4️⃣ Template ↔ Field Mapping
+--------------------------------------------------
+
+`TemplateField`
+- `id` (PK)
+- `template_id` (FK → MetadataTemplate)
+- `metadata_field_id` (FK → MetadataField)
+- `required` (boolean)
+- `display_order`
+- `editable` (boolean)
+
+Notes
+- Defines the actual shape and behavior of a template instance.
+- Enables ordering, required/optional flags, and editability per field.
+
+--------------------------------------------------
+5️⃣ Record Entity (Generic, Tied to Node + Version)
+--------------------------------------------------
+
+`Record`
+- `id` (PK)
+- `classification_node_id` (FK, must be Level 3)
+- `template_version` (integer)
+- `title`
+- `owner_user_id` (FK)
+- `status`
+- `created_at`
+
+Notes
+- Each record is permanently tied to:
+  - The Level 3 classification node used at creation.
+  - The specific template version used at creation.
+
+--------------------------------------------------
+6️⃣ Record Metadata (Key-Value per Field)
+--------------------------------------------------
+
+`RecordMetadata`
+- `record_id` (FK → Record)
+- `metadata_field_id` (FK → MetadataField)
+- `value`
+
+Notes
+- Structure is unchanged from a typical generic metadata store.
+- Enables querying by field and maintaining history via template/version.
+
+--------------------------------------------------
+7️⃣ Admin UX – How Classifications Are Configured
+--------------------------------------------------
+
+Admin Workflow
+1. Create Level 1 node (e.g. "Finance").
+2. Add Level 2 under it (e.g. "Accounts Payable").
+3. Add Level 3 under Level 2 (e.g. "Vendor Invoice").
+4. Attach to Level 3:
+   - Metadata template (via Template ↔ Field mapping)
+   - Retention rules
+   - Access defaults
+   - Versioning rules
+
+Rules
+- Only Level 3 nodes can have templates and accept uploads.
+- Prevent deletion of nodes that have:
+  - Child nodes, or
+  - Associated records.
+
+--------------------------------------------------
+8️⃣ Upload Flow (Dynamic & Safe)
+--------------------------------------------------
+
+User Flow
+1. User selects classification path:
+   - Level 1 → Level 2 → Level 3.
+2. System fetches the **active metadata template** for the chosen Level 3 node.
+3. System renders the metadata form dynamically based on the template fields.
+4. User uploads file and fills out metadata.
+5. Backend:
+   - Validates metadata using `validation_rules` from `MetadataField` and `TemplateField`.
+   - Stores file in MinIO (or configured storage).
+   - Saves `Record` with `classification_node_id` + `template_version`.
+   - Saves `RecordMetadata` rows for each field.
+
+Key Guarantees
+- Classification is explicit and enforced.
+- Metadata structure is controlled and versioned.
+- Each record is bound to the template used at creation.
+
+--------------------------------------------------
+9️⃣ Guardrails (Required for Safety & Compliance)
+--------------------------------------------------
+
+1) Role Restrictions
+- Only the following roles can create classifications and modify templates:
+  - System Admin
+  - Records Manager
+- Regular users and non-governance roles can **use** classifications but cannot change them.
+
+2) Template Versioning
+- Never mutate templates in place for existing records.
+- When metadata structure changes:
+  - Increment template `version`.
+  - New uploads use the new version.
+  - Existing records remain tied to their original version.
+
+3) Naming & Depth Enforcement
+- Enforce max depth of 3 levels at the database and application layers.
+- Prevent cycles and invalid parent/child relationships.
+- Prevent deleting nodes that:
+  - Have child nodes, or
+  - Are referenced by any records.
+
+4) Default Templates
+- Ship the system with sensible defaults, e.g.:
+  - HR
+  - Finance
+  - Legal
+- Allow admins to customize, extend, or deactivate these per organization.
+
+--------------------------------------------------
+🔐 Governance & Compliance Impact
+--------------------------------------------------
+
+This model strongly supports:
+- ISO 15489
+- MoReq
+- Government ERMS
+- Legal discovery and auditability
+
+Because:
+- Classifications are explicit and managed.
+- Metadata is controlled via templates and field definitions.
+- Templates are immutable per record (through versioning), preserving historical accuracy.
+
+--------------------------------------------------
+🧠 Hardcoded vs Dynamic Model – Comparison
+--------------------------------------------------
+
+- Flexibility
+  - Hardcoded: Low
+  - Dynamic: High
+
+- Multi-tenant
+  - Hardcoded: Poor
+  - Dynamic: Excellent
+
+- Compliance
+  - Hardcoded: Medium
+  - Dynamic: High
+
+- Admin effort
+  - Hardcoded: Low
+  - Dynamic: Medium (but manageable with good UX and defaults)
+
+- Long-term scalability
+  - Hardcoded: ❌
+  - Dynamic: ✅

@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-erm}
       POSTGRES_DB: ${POSTGRES_DB:-erm}
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -65,7 +65,7 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://erm:erm@postgres:5432/erm}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://minio:9000}
       MINIO_BUCKET: ${MINIO_BUCKET:-uploads}
@@ -87,7 +87,7 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/erm}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
     command: ["npx", "prisma", "studio", "--hostname", "0.0.0.0"]
 
   nginx:

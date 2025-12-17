@@ -10,16 +10,21 @@
     "db:generate": "prisma generate"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.952.0",
+    "@aws-sdk/s3-request-presigner": "^3.952.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^7.3.6",
+    "@mui/lab": "^7.0.1-beta.20",
     "@mui/material": "^7.3.6",
     "@mui/material-nextjs": "^7.3.6",
     "@prisma/client": "^5.22.0",
+    "@types/nodemailer": "^7.0.4",
     "bcryptjs": "^3.0.3",
     "date-fns": "^4.1.0",
     "next": "16.0.7",
     "next-auth": "^4.24.13",
+    "nodemailer": "^7.0.11",
     "react": "19.2.0",
     "react-dom": "19.2.0"
   },

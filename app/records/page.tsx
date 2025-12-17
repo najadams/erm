@@ -18,6 +18,8 @@ import AdvancedSearch from '@/components/AdvancedSearch';
 
 export const dynamic = 'force-dynamic';
 
+const CATEGORIES = ['Finance', 'HR', 'Engineering', 'Marketing', 'Legal', 'Operations'];
+
 function RecordsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -31,10 +33,27 @@ function RecordsContent() {
       startDate: '',
       endDate: '',
       tag: '',
-      uploader: ''
+      uploader: '',
+      recordTypeId: ''
   });
   const [records, setRecords] = useState<Record[]>([]);
+  const [recordTypes, setRecordTypes] = useState<any[]>([]); // Flat list or grouped
   const [loading, setLoading] = useState(false);
+
+  // Fetch Record Types for Filter
+  React.useEffect(() => {
+    fetch('/api/record-types')
+      .then(res => res.json())
+      .then(data => {
+        // Flatten for simple dropdown
+        const flatTypes: any[] = [];
+        data.forEach((cat: any) => {
+            if (cat.recordTypes) flatTypes.push(...cat.recordTypes);
+        });
+        setRecordTypes(flatTypes);
+      })
+      .catch(err => console.error('Failed to load types', err));
+  }, []);
 
   // Fetch records when filters change
   React.useEffect(() => {
@@ -46,6 +65,7 @@ function RecordsContent() {
     if (filters.tag) params.set('tag', filters.tag);
     if (filters.startDate) params.set('startDate', filters.startDate);
     if (filters.endDate) params.set('endDate', filters.endDate);
+    if (filters.recordTypeId) params.set('recordTypeId', filters.recordTypeId);
 
     fetch(`/api/records?${params.toString()}`)
       .then(res => res.json())
@@ -68,9 +88,23 @@ function RecordsContent() {
           All Records
         </Typography>
         
+        {/* Simple Type Filter (Can be moved to AdvancedSearch later) */}
+        <Box sx={{ mb: 3, display: 'flex', gap: 2 }}>
+            <Box component="select" 
+                value={filters.recordTypeId}
+                onChange={(e: any) => setFilters({...filters, recordTypeId: e.target.value})}
+                sx={{ p: 1, paddingRight: 4, borderRadius: 1, borderColor: '#ccc' }}
+            >
+                <option value="">All Types</option>
+                {recordTypes.map(t => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+            </Box>
+        </Box>
+
         <AdvancedSearch 
            initialValues={{ q: initialQuery }}
-           onSearch={(newFilters) => setFilters(newFilters)} 
+           onSearch={(newFilters) => setFilters(prev => ({ ...prev, ...newFilters }))} 
         />
       </Box>
 
@@ -79,7 +113,7 @@ function RecordsContent() {
         {/* Header Row */}
         <Box sx={{ p: 2, bgcolor: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center' }}>
           <Box sx={{ width: '40%', fontWeight: 600, color: 'text.secondary' }}>Document Name</Box>
-          <Box sx={{ width: '25%', fontWeight: 600, color: 'text.secondary' }}>Category</Box>
+          <Box sx={{ width: '25%', fontWeight: 600, color: 'text.secondary' }}>Type</Box>
           <Box sx={{ width: '20%', fontWeight: 600, color: 'text.secondary' }}>Date</Box>
           <Box sx={{ width: '15%', fontWeight: 600, color: 'text.secondary' }}>Status</Box>
         </Box>
@@ -91,7 +125,7 @@ function RecordsContent() {
             No records found.
           </Box>
         ) : (
-          records.map((record) => (
+          records.map((record: any) => (
             <Box 
               key={record.id} 
               sx={{ 
@@ -110,19 +144,31 @@ function RecordsContent() {
                     width: 40,
                     height: 40,
                     borderRadius: 2,
-                    bgcolor: record.fileType === 'pdf' ? '#ffe4e6' : '#e0f2fe',
-                    color: record.fileType === 'pdf' ? '#f43f5e' : '#0ea5e9',
+                    bgcolor: record.versions?.[0]?.fileType === 'pdf' ? '#ffe4e6' : '#e0f2fe',
+                    color: record.versions?.[0]?.fileType === 'pdf' ? '#f43f5e' : '#0ea5e9',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
                 >
-                  {record.fileType === 'pdf' ? <PictureAsPdfIcon /> : <DescriptionIcon />}
+                  {record.versions?.[0]?.fileType === 'pdf' ? <PictureAsPdfIcon /> : <DescriptionIcon />}
                 </Box>
-                <Typography fontWeight="500">{record.title}</Typography>
+                <Box>
+                    <Typography fontWeight="500">{record.title}</Typography>
+                    {/* Show first metadata value as snippet if available */}
+                    {record.metadata?.[0] && (
+                        <Typography variant="caption" color="text.secondary">
+                           {record.metadata[0].metadataField?.label}: {record.metadata[0].value}
+                        </Typography>
+                    )}
+                </Box>
               </Box>
               <Box sx={{ width: '25%' }}>
-                 <Chip label={record.category} size="small" sx={{ bgcolor: 'secondary.light', color: 'white', fontWeight: 600 }} />
+                 <Chip 
+                    label={record.recordType?.name || 'General'} 
+                    size="small" 
+                    sx={{ bgcolor: 'secondary.light', color: 'white', fontWeight: 600 }} 
+                 />
               </Box>
               <Box sx={{ width: '20%', color: 'text.secondary' }}>
                 {new Date(record.createdAt).toLocaleDateString()}

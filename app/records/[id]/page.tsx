@@ -7,13 +7,16 @@ import Button from '@mui/material/Button';
 import Paper from '@mui/material/Paper';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
-import TextField from '@mui/material/TextField';
+import Divider from '@mui/material/Divider';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import DownloadIcon from '@mui/icons-material/Download';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import EditIcon from '@mui/icons-material/Edit';
-import SaveIcon from '@mui/icons-material/Save';
-import CancelIcon from '@mui/icons-material/Cancel';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+
 import { useRouter, useParams } from 'next/navigation';
 import Sidebar from '@/components/layout/Sidebar';
 
@@ -23,14 +26,6 @@ export default function RecordDetailsPage() {
   const id = params?.id as string;
   const [record, setRecord] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
-  const [isEditingMetadata, setIsEditingMetadata] = React.useState(false);
-  const [saving, setSaving] = React.useState(false);
-  const [editForm, setEditForm] = React.useState({
-    title: '',
-    description: '',
-    category: '',
-    tags: ''
-  });
 
   React.useEffect(() => {
     if (id) {
@@ -39,73 +34,11 @@ export default function RecordDetailsPage() {
             if (!res.ok) throw new Error('Not found');
             return res.json();
         })
-        .then(data => {
-            // Transform tags if string
-            if (typeof data.tags === 'string' && data.tags.length > 0) {
-                data.tags = data.tags.split(',').map((t: string) => t.trim());
-            } else if (!Array.isArray(data.tags)) {
-                data.tags = [];
-            }
-            setRecord(data);
-        })
+        .then(data => setRecord(data))
         .catch(() => setRecord(null))
         .finally(() => setLoading(false));
     }
   }, [id]);
-
-  const handleEditMetadata = () => {
-    setEditForm({
-      title: record.title,
-      description: record.description || '',
-      category: record.category,
-      tags: Array.isArray(record.tags) ? record.tags.join(', ') : ''
-    });
-    setIsEditingMetadata(true);
-  };
-
-  const handleCancelEdit = () => {
-    setIsEditingMetadata(false);
-    setEditForm({ title: '', description: '', category: '', tags: '' });
-  };
-
-  const handleSaveMetadata = async () => {
-    if (!editForm.title.trim()) {
-      alert('Title is required');
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const response = await fetch(`/api/records/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: editForm.title.trim(),
-          description: editForm.description.trim(),
-          category: editForm.category.trim(),
-          tags: editForm.tags.split(',').map(t => t.trim()).filter(t => t).join(',')
-        })
-      });
-
-      if (!response.ok) throw new Error('Failed to save');
-
-      const updatedRecord = await response.json();
-      
-      // Transform tags for display
-      if (typeof updatedRecord.tags === 'string' && updatedRecord.tags.length > 0) {
-        updatedRecord.tags = updatedRecord.tags.split(',').map((t: string) => t.trim());
-      } else if (!Array.isArray(updatedRecord.tags)) {
-        updatedRecord.tags = [];
-      }
-      
-      setRecord(updatedRecord);
-      setIsEditingMetadata(false);
-    } catch (error) {
-      alert('Failed to save metadata. Please try again.');
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const handleDelete = async () => {
     if (confirm('Are you sure you want to delete this record?')) {
@@ -116,6 +49,10 @@ export default function RecordDetailsPage() {
 
   if (loading) return <Box sx={{ p: 4, textAlign: 'center' }}>Loading...</Box>;
   if (!record) return <Box sx={{ p: 4, textAlign: 'center' }}>Record not found.</Box>;
+
+  // Get current version file
+  const currentVersion = record.versions?.[0];
+  const downloadUrl = currentVersion?.filePath || '#';
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -148,178 +85,102 @@ export default function RecordDetailsPage() {
                 />
               </Box>
               <Typography color="text.secondary">
+                Type: <strong>{record.recordType?.name || 'General'}</strong> • 
                 Uploaded by <strong style={{ color: '#0f172a' }}>{record.user?.name || 'Unknown'}</strong> on {new Date(record.createdAt).toLocaleDateString()}
               </Typography>
             </Box>
             
             <Box sx={{ display: 'flex', gap: 2 }}>
-              {!isEditingMetadata ? (
-                <>
-                  <Button variant="outlined" startIcon={<EditIcon />} onClick={handleEditMetadata}>
-                    Edit Metadata
-                  </Button>
-                  <Button 
-                    variant="contained" 
-                    color="secondary" 
-                    startIcon={<DownloadIcon />}
-                    href={record.fileUrl}
-                    target="_blank"
-                  >
-                    Download
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button 
-                    variant="outlined" 
-                    startIcon={<CancelIcon />} 
-                    onClick={handleCancelEdit}
-                    disabled={saving}
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    variant="contained" 
-                    startIcon={<SaveIcon />} 
-                    onClick={handleSaveMetadata}
-                    disabled={saving}
-                  >
-                    {saving ? 'Saving...' : 'Save'}
-                  </Button>
-                </>
-              )}
+               <Button 
+                 variant="contained" 
+                 color="secondary" 
+                 startIcon={<DownloadIcon />}
+                 href={downloadUrl}
+                 target="_blank"
+               >
+                 Download File
+               </Button>
             </Box>
           </Box>
         </Box>
 
-        {/* content layout using Stack instead of Grid for safety */}
+        {/* Content Layout */}
         <Stack direction={{ xs: 'column', lg: 'row' }} spacing={4}>
           
-          {/* Main Preview Area */}
-          <Box sx={{ flex: 2 }}>
-            <Paper sx={{ p: 4, minHeight: 600, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', bgcolor: '#f1f5f9', border: '2px dashed #cbd5e1' }}>
-              <Typography variant="h6" color="text.secondary" fontWeight="bold">
-                Document Preview
+          {/* Main Info */}
+          <Box sx={{ flex: 2, display: 'flex', flexDirection: 'column', gap: 3 }}>
+            
+            {/* Dynamic Metadata Card */}
+             <Paper sx={{ p: 3 }}>
+              <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
+                Record Details
               </Typography>
-              <Typography color="text.secondary">
-                {record.fileType}
-              </Typography>
-              <Button sx={{ mt: 2 }} href={record.fileUrl} target="_blank">
-                Open in new tab
-              </Button>
-            </Paper>
-          </Box>
-
-          {/* Sidebar Metadata */}
-          <Box sx={{ flex: 1 }}>
-            <Paper sx={{ 
-              p: 3, 
-              mb: 3,
-              ...(isEditingMetadata && {
-                border: '2px solid',
-                borderColor: 'primary.main',
-                bgcolor: 'primary.50'
-              })
-            }}>
-              <Typography variant="h6" fontWeight="bold" sx={{ mb: 3 }}>
-                Metadata {isEditingMetadata && '(Editing)'}
-              </Typography>
+              <Divider sx={{ mb: 2 }} />
               
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-                {isEditingMetadata ? (
-                  <>
-                    <TextField
-                      label="Title"
-                      value={editForm.title}
-                      onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                      fullWidth
-                      required
-                      size="small"
-                      InputProps={{
-                        onFocus: (e) => e.target.select()
-                      }}
-                    />
-                    
-                    <TextField
-                      label="Category"
-                      value={editForm.category}
-                      onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
-                      fullWidth
-                      size="small"
-                      InputProps={{
-                        onFocus: (e) => e.target.select()
-                      }}
-                    />
-                    
-                    <TextField
-                      label="Description"
-                      value={editForm.description}
-                      onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                      fullWidth
-                      multiline
-                      rows={3}
-                      size="small"
-                      InputProps={{
-                        onFocus: (e) => e.target.select()
-                      }}
-                    />
-                    
-                    <TextField
-                      label="Tags (comma-separated)"
-                      value={editForm.tags}
-                      onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })}
-                      fullWidth
-                      size="small"
-                      placeholder="e.g., report, financial, 2024"
-                      InputProps={{
-                        onFocus: (e) => e.target.select()
-                      }}
-                    />
-                  </>
-                ) : (
-                  <>
-                    <Box>
-                      <Typography variant="caption" color="text.secondary" fontWeight="bold">CATEGORY</Typography>
-                      <Typography fontWeight="500">{record.category}</Typography>
-                    </Box>
-                    
-                    <Box>
-                      <Typography variant="caption" color="text.secondary" fontWeight="bold">DESCRIPTION</Typography>
-                      <Typography variant="body2" sx={{ lineHeight: 1.6 }}>{record.description || 'No description'}</Typography>
-                    </Box>
-
-                    <Box>
-                      <Typography variant="caption" color="text.secondary" fontWeight="bold">TAGS</Typography>
-                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 0.5 }}>
-                        {Array.isArray(record.tags) && record.tags.length > 0 ? (
-                          record.tags.map((tag: string) => (
-                            <Chip key={tag} label={tag} size="small" sx={{ bgcolor: 'secondary.light', color: 'white', fontWeight: 600 }} />
-                          ))
-                        ) : (
-                          <Typography variant="body2" color="text.secondary">No tags</Typography>
-                        )}
-                      </Box>
-                    </Box>
-
-                    <Box>
-                      <Typography variant="caption" color="text.secondary" fontWeight="bold">FILE INFO</Typography>
-                      <Typography variant="body2">{record.fileType.toUpperCase()}</Typography>
-                    </Box>
-                  </>
-                )}
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 3 }}>
+                 {/* Standard Fields */}
+                 <Box>
+                    <Typography variant="caption" color="text.secondary" fontWeight="bold">DESCRIPTION</Typography>
+                    <Typography>{record.description || '-'}</Typography>
+                 </Box>
+                 
+                 {/* Dynamic Fields */}
+                 {record.metadata?.map((meta: any) => (
+                   <Box key={meta.id}>
+                      <Typography variant="caption" color="text.secondary" fontWeight="bold">
+                        {meta.metadataField?.label.toUpperCase()}
+                      </Typography>
+                      <Typography>{meta.value}</Typography>
+                   </Box>
+                 ))}
               </Box>
             </Paper>
 
+            {/* Version History */}
+            <Paper sx={{ p: 3 }}>
+               <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>Version History</Typography>
+               <Table size="small">
+                 <TableHead>
+                   <TableRow>
+                     <TableCell>Version</TableCell>
+                     <TableCell>Date</TableCell>
+                     <TableCell>Uploaded By</TableCell>
+                     <TableCell align="right">Action</TableCell>
+                   </TableRow>
+                 </TableHead>
+                 <TableBody>
+                   {record.versions?.map((v: any) => (
+                     <TableRow key={v.id}>
+                       <TableCell>v{v.versionNumber}</TableCell>
+                       <TableCell>{new Date(v.createdAt).toLocaleDateString()}</TableCell>
+                       <TableCell>{v.uploadedBy?.name}</TableCell>
+                       <TableCell align="right">
+                         <Button size="small" href={v.filePath} target="_blank">Download</Button>
+                       </TableCell>
+                     </TableRow>
+                   ))}
+                   {(!record.versions || record.versions.length === 0) && (
+                     <TableRow><TableCell colSpan={4} align="center">No versions found</TableCell></TableRow>
+                   )}
+                 </TableBody>
+               </Table>
+            </Paper>
+
+          </Box>
+
+          {/* Sidebar */}
+          <Box sx={{ flex: 1 }}>
             <Paper sx={{ p: 3 }}>
               <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
                 Actions
               </Typography>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                <Button variant="outlined" color="primary" fullWidth disabled={isEditingMetadata}>Request Verification</Button>
-                <Button variant="outlined" color="error" fullWidth onClick={handleDelete} disabled={isEditingMetadata}>Delete Record</Button>
+                <Button variant="outlined" color="primary" fullWidth>Request Verification</Button>
+                <Button variant="outlined" color="error" fullWidth onClick={handleDelete}>Delete Record</Button>
               </Box>
             </Paper>
           </Box>
+
         </Stack>
       </Box>
     </Box>

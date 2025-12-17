@@ -7,12 +7,13 @@ export const dynamic = 'force-dynamic';
 
 import { getAccessibleRecordsClause } from '@/lib/access';
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "../auth/[...nextauth]/route";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { s3Client, BUCKET_NAME, getPublicUrl } from "@/lib/s3";
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
   
-  // Enforce authentication
   if (!session || !session.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -22,31 +23,36 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get('status');
   const groupId = searchParams.get('groupId') || searchParams.get('department');
   const uploaderId = searchParams.get('uploader');
-  const tag = searchParams.get('tag'); // Single tag filter
+  const tag = searchParams.get('tag'); 
   const startDate = searchParams.get('startDate');
   const endDate = searchParams.get('endDate');
+  const recordTypeId = searchParams.get('recordTypeId');
+  const classificationNodeId = searchParams.get('classificationNodeId');
 
   // 1. Build Search/Filter Clause
   const filters: any[] = [];
 
-  // Text Search
   if (q) {
     filters.push({
       OR: [
         { title: { contains: q, mode: 'insensitive' } },
         { description: { contains: q, mode: 'insensitive' } },
-        { tags: { contains: q, mode: 'insensitive' } }, // Simple string match on JSON
+        // Search in metadata values
+        { 
+            metadata: { 
+                some: { value: { contains: q, mode: 'insensitive' } } 
+            } 
+        }
       ]
     });
   }
 
-  // Exact Filters
   if (status) filters.push({ status });
   if (groupId) filters.push({ groupId });
-  if (uploaderId) filters.push({ userId: uploaderId });
-  if (tag) filters.push({ tags: { contains: tag } }); // Approximate match
-
-  // Date Range
+  if (uploaderId) filters.push({ ownerUserId: uploaderId });
+  if (recordTypeId) filters.push({ recordTypeId });
+  if (classificationNodeId) filters.push({ classificationNodeId });
+  
   if (startDate || endDate) {
     const dateFilter: any = {};
     if (startDate) dateFilter.gte = new Date(startDate);
@@ -54,16 +60,12 @@ export async function GET(request: NextRequest) {
     filters.push({ createdAt: dateFilter });
   }
 
-  // 2. Build Access Control Clause
-  // Cast session.user.id because types might be loose
+  // 2. Access Control
   const accessClause = await getAccessibleRecordsClause((session.user as any).id);
-
   if (accessClause.id === 'nothing') {
-     // User invalid or something went wrong with permissions
      return NextResponse.json({ error: 'Permission Check Failed' }, { status: 403 });
   }
 
-  // 3. Combine All
   const where = {
     AND: [
       ...filters,
@@ -77,18 +79,23 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
       include: {
         user: { select: { name: true, email: true } },
-        group: { select: { name: true } }
+        recordType: { select: { name: true, code: true } },
+        classificationNode: {
+          include: {
+            parent: {
+              include: {
+                parent: true
+              }
+            }
+          }
+        },
+        metadata: {
+            include: { metadataField: true }
+        }
       }
     });
 
-    // Map result to include uploader name in a flatter structure if needed, or just return as is
-    const enrichedRecords = records.map(record => ({
-      ...record,
-      uploaderName: record.user?.name || record.user?.email || 'Unknown',
-      groupName: record.group?.name
-    }));
-
-    return NextResponse.json(enrichedRecords);
+    return NextResponse.json(records);
   } catch (error: any) {
     console.error('Search API Error:', error);
     return NextResponse.json({ error: 'Failed to fetch records', details: error.message }, { status: 500 });
@@ -104,91 +111,163 @@ export async function POST(request: NextRequest) {
 
   try {
     const formData = await request.formData();
+    
+    // Core Fields
     const file = formData.get('file') as File;
     const title = formData.get('title') as string;
-    const category = formData.get('category') as string;
-    const description = formData.get('description') as string;
-    const tags = formData.get('tags') as string; 
-    const visibility = formData.get('visibility') as string || 'PUBLIC';
+    const recordTypeId = formData.get('recordTypeId') as string | null;
+    const classificationNodeId = formData.get('classificationNodeId') as string | null;
+    const templateVersion = formData.get('templateVersion') as string | null;
+    const departmentId = formData.get('departmentId') as string || undefined;
     const groupId = formData.get('groupId') as string || undefined;
-    const checksum = formData.get('checksum') as string;
-    const documentType = formData.get('documentType') as string;
-    const department = formData.get('department') as string;
-    const effectiveDate = formData.get('effectiveDate') as string;
-    const retentionPeriod = formData.get('retentionPeriod') as string;
-    const isLegalHold = formData.get('isLegalHold') === 'true';
-    const requiresApproval = formData.get('requiresApproval') === 'true';
-    const sharedUsers = JSON.parse(formData.get('sharedUsers') as string || '[]');
-    const sharedGroups = JSON.parse(formData.get('sharedGroups') as string || '[]');
+    
+    // Dynamic Metadata (JSON string)
+    const rawMetadata = formData.get('metadata') as string;
+    const metadataValues = JSON.parse(rawMetadata || '{}');
 
-    if (!file) {
-      return NextResponse.json({ error: 'No file provided' }, { status: 400 });
+    // Validation - support both old (recordTypeId) and new (classificationNodeId) systems
+    if (!file || !title) {
+      return NextResponse.json({ error: 'Missing required fields: file and title' }, { status: 400 });
     }
 
-    // Upload to MinIO/S3
+    if (!recordTypeId && !classificationNodeId) {
+      return NextResponse.json({ error: 'Either recordTypeId or classificationNodeId is required' }, { status: 400 });
+    }
+
+    // If using new classification system, validate template version
+    if (classificationNodeId && !templateVersion) {
+      return NextResponse.json({ error: 'templateVersion is required when using classificationNodeId' }, { status: 400 });
+    }
+
+    // Validate classification node exists and is Level 3
+    if (classificationNodeId) {
+      const node = await prisma.classificationNode.findUnique({
+        where: { id: classificationNodeId }
+      });
+      if (!node) {
+        return NextResponse.json({ error: 'Classification node not found' }, { status: 404 });
+      }
+      if (node.level !== 3 || !node.isLeaf) {
+        return NextResponse.json({ error: 'Classification node must be Level 3 (leaf node)' }, { status: 400 });
+      }
+      if (!node.isActive) {
+        return NextResponse.json({ error: 'Classification node is not active' }, { status: 400 });
+      }
+
+      // Validate template exists
+      const template = await prisma.metadataTemplate.findFirst({
+        where: {
+          classificationNodeId,
+          version: parseInt(templateVersion!)
+        },
+        include: {
+          templateFields: true
+        }
+      });
+      if (!template) {
+        return NextResponse.json({ error: 'Template not found' }, { status: 404 });
+      }
+      if (!template.isActive) {
+        return NextResponse.json({ error: 'Template is not active' }, { status: 400 });
+      }
+
+      // Validate required fields
+      const requiredFields = template.templateFields.filter(tf => tf.required);
+      const missingFields = requiredFields.filter(tf => !metadataValues[tf.metadataFieldId]);
+      if (missingFields.length > 0) {
+        const fieldNames = await prisma.metadataField.findMany({
+          where: { id: { in: missingFields.map(tf => tf.metadataFieldId) } },
+          select: { label: true }
+        });
+        return NextResponse.json({
+          error: `Missing required fields: ${fieldNames.map(f => f.label).join(', ')}`
+        }, { status: 400 });
+      }
+    }
+
+    // Upload File (MinIO/S3)
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    const fileName = `${Date.now()}-${file.name}`; // Ensure unique filename in bucket
+    const fileName = `${Date.now()}-${file.name.replace(/\s+/g, '_')}`;
     
-    // Ensure bucket exists (simplified)
-    const bucket = process.env.MINIO_BUCKET || 'uploads';
-    const fileUrl = `${process.env.MINIO_ENDPOINT}/${bucket}/${fileName}`; // Mock URL for now if S3 logic missing
+    // Put to Bucket
+    await s3Client.send(new PutObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: fileName,
+        Body: buffer,
+        ContentType: file.type,
+    }));
 
-    // Versioning Logic: Check for existing records with same Title
-    // In a real app, scope this by Department or Tenant
-    const existingRecords = await prisma.record.findMany({
-      where: { title: title },
-      orderBy: { version: 'desc' },
-      take: 1
-    });
-
-    let version = 1;
-    if (existingRecords.length > 0) {
-      version = existingRecords[0].version + 1;
-    }
+    // Generate URL (for localhost access)
+    const fileUrl = getPublicUrl(fileName);
 
     const userId = (session.user as any).id;
 
-    if (!userId) {
-         return NextResponse.json({ error: 'User ID missing in session' }, { status: 500 });
-    }
-
-    const record = await prisma.record.create({
-      data: {
-        title,
-        category: category || 'General', // Map existing category
-        description: description || '',
-        tags: tags || '', 
-        fileUrl,
-        fileType: file.name.split('.').pop() || 'unknown',
-        status: 'active',
-        userId: userId,
-        visibility,
-        groupId: groupId || null,
-        
-        // New Fields
-        checksum,
-        documentType,
-        department,
-        effectiveDate: effectiveDate ? new Date(effectiveDate) : null,
-        retentionPeriod,
-        isLegalHold,
-        requiresApproval,
-        version,
-
-        // Relations
-        sharedWithUsers: {
-            connect: sharedUsers.map((id: string) => ({ id }))
-        },
-        sharedWithGroups: {
-            connect: sharedGroups.map((id: string) => ({ id }))
+    // Transactional Create
+    const result = await prisma.$transaction(async (tx) => {
+      
+      // 1. Create Record Container
+      const record = await tx.record.create({
+        data: {
+          title,
+          status: 'ACTIVE',
+          ...(recordTypeId && { recordTypeId }), // Legacy support
+          ...(classificationNodeId && {
+            classificationNodeId,
+            templateVersion: templateVersion ? parseInt(templateVersion) : undefined,
+          }),
+          departmentId, // Optional
+          ownerUserId: userId,
         }
-      },
+      });
+
+      // 2. Create Initial Version
+      await tx.recordVersion.create({
+        data: {
+          recordId: record.id,
+          versionNumber: 1,
+          filePath: fileUrl,
+          fileType: file.type || 'unknown',
+          uploadedById: userId,
+          changeNote: 'Initial Upload'
+        }
+      });
+
+      // 3. Insert Metadata
+      // We expect metadataValues to be { [fieldId]: "value" }
+      const metadataEntries = Object.entries(metadataValues).map(([fieldId, value]) => ({
+        recordId: record.id,
+        metadataFieldId: fieldId,
+        value: String(value)
+      }));
+
+      if (metadataEntries.length > 0) {
+        await tx.recordMetadata.createMany({
+          data: metadataEntries
+        });
+      }
+
+      // 4. Audit Log
+      await tx.auditLog.create({
+        data: {
+          action: 'UPLOAD',
+          recordId: record.id,
+          userId: userId,
+          newValue: JSON.stringify({
+            title,
+            ...(recordTypeId && { recordTypeId }),
+            ...(classificationNodeId && { classificationNodeId, templateVersion })
+          })
+        }
+      });
+
+      return record;
     });
 
-    return NextResponse.json(record);
-  } catch (error) {
+    return NextResponse.json(result);
+
+  } catch (error: any) {
     console.error('Upload Error:', error);
-    return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
+    return NextResponse.json({ error: 'Upload failed', details: error.message }, { status: 500 });
   }
 }

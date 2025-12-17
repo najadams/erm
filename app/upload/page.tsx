@@ -29,7 +29,8 @@ export default function UploadPage() {
     tags: '',
     category: '', // Legacy/Internal
     effectiveDate: '',
-    retentionPeriod: ''
+    retentionPeriod: '',
+    classificationNodeId: ''
   });
 
   const [access, setAccess] = useState({
@@ -134,7 +135,18 @@ export default function UploadPage() {
         Upload Document
       </Typography>
 
-      <FileSelection onFileSelect={handleFileSelect} />
+      <FileSelection 
+        onFileSelect={handleFileSelect} 
+        onClassificationSelect={(node) => {
+            // Update metadata with classification info
+            setMetadata(prev => ({
+                ...prev,
+                classificationNodeId: node.id,
+                // In a real app we would fetch the current template version for this node
+                // For now assuming version 1 or handling that server side
+            }));
+        }} 
+      />
       
       {file && (
         <React.Fragment>

@@ -109,7 +109,7 @@ export default function SettingsPage() {
   const user = session.user as any;
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
+    <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden', bgcolor: 'background.default' }}>
       <Sidebar />
       
       <Box component="main" sx={{ flexGrow: 1, p: 4, overflow: 'auto' }}>
