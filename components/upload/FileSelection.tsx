@@ -11,6 +11,7 @@ import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
+import TextField from '@mui/material/TextField';
 
 
 // Match Prisma ClassificationNode partially
@@ -28,9 +29,11 @@ interface FileSelectionProps {
   // New prop signature
   onClassificationSelect?: (node: ClassificationNode & { template?: any }) => void;
   existingFileError?: string | null;
+  description?: string;
+  onDescriptionChange?: (value: string) => void;
 }
 
-export default function FileSelection({ onFileSelect, onClassificationSelect }: FileSelectionProps) {
+export default function FileSelection({ onFileSelect, onClassificationSelect, description = '', onDescriptionChange }: FileSelectionProps) {
   const [dragActive, setDragActive] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -224,7 +227,8 @@ export default function FileSelection({ onFileSelect, onClassificationSelect }: 
           cursor: 'pointer',
           transition: 'all 0.2s',
           opacity: selectedLevel3 ? 1 : 0.5,
-          pointerEvents: selectedLevel3 ? 'auto' : 'none'
+          pointerEvents: selectedLevel3 ? 'auto' : 'none',
+          mb: 4
         }}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
@@ -267,6 +271,20 @@ export default function FileSelection({ onFileSelect, onClassificationSelect }: 
           </React.Fragment>
         )}
       </Paper>
+
+      <Typography variant="h6" gutterBottom>3. Description</Typography>
+      <Box sx={{ mb: 2 }}>
+        <TextField
+          label="File Description"
+          multiline
+          rows={3}
+          fullWidth
+          value={description}
+          onChange={(e) => onDescriptionChange && onDescriptionChange(e.target.value)}
+          placeholder="Enter a brief description of the file content..."
+          disabled={!selectedLevel3}
+        />
+      </Box>
     </Box>
   );
 }

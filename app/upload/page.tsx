@@ -14,6 +14,8 @@ import AccessControl from '@/components/upload/AccessControl';
 import ComplianceControl from '@/components/upload/ComplianceControl';
 import ReviewConfirm from '@/components/upload/ReviewConfirm';
 
+import Sidebar from '@/components/layout/Sidebar';
+
 export default function UploadPage() {
   const router = useRouter();
   const [uploading, setUploading] = useState(false);
@@ -25,6 +27,7 @@ export default function UploadPage() {
   const [metadata, setMetadata] = useState({
     type: '',
     title: '',
+    description: '', // Added description
     department: '',
     tags: '',
     category: '', // Legacy/Internal
@@ -150,68 +153,75 @@ export default function UploadPage() {
   };
 
   return (
-    <Container maxWidth="md" sx={{ py: 4 }}>
-      <Button 
-        startIcon={<ArrowBackIcon />} 
-        onClick={() => router.push('/')}
-        sx={{ mb: 2 }}
-      >
-        Back to Dashboard
-      </Button>
-      
-      <Typography variant="h4" fontWeight="bold" sx={{ mb: 4 }}>
-        Upload Document
-      </Typography>
+    <Box sx={{ display: 'flex', height: '100dvh', overflow: 'hidden', bgcolor: 'background.default' }}>
+      <Sidebar />
+      <Box component="main" sx={{ flexGrow: 1, p: 4, overflow: 'auto' }}>
+        <Container maxWidth="md">
+          <Button 
+            startIcon={<ArrowBackIcon />} 
+            onClick={() => router.push('/')}
+            sx={{ mb: 2 }}
+          >
+            Back to Dashboard
+          </Button>
+          
+          <Typography variant="h4" fontWeight="bold" sx={{ mb: 4 }}>
+            Upload Document
+          </Typography>
 
-      <FileSelection 
-        onFileSelect={handleFileSelect} 
-        onClassificationSelect={(nodeWithTemplate) => {
-            // Update metadata with classification info
-            setMetadata(prev => ({
-                ...prev,
-                classificationNodeId: nodeWithTemplate.id,
-            }));
-            
-            // Check for template
-            if (nodeWithTemplate.template) {
-                console.log('Selected Template:', nodeWithTemplate.template);
-                setTemplate(nodeWithTemplate.template);
-                setDynamicValues({}); // Reset values when template changes
-            } else {
-                setTemplate(null);
-            }
-        }} 
-      />
-      
-      {file && (
-        <React.Fragment>
-            <DocumentMetadata 
-                data={metadata} 
-                onChange={handleMetadataChange} 
-                versionInfo={versionInfo}
-                template={template}
-                dynamicValues={dynamicValues}
-                onDynamicChange={(fieldId, val) => setDynamicValues((prev: any) => ({ ...prev, [fieldId]: val }))}
-            />
-            
-            <AccessControl 
-                data={access} 
-                onChange={handleAccessChange} 
-            />
-            
-            <ComplianceControl 
-                data={compliance} 
-                onChange={handleComplianceChange} 
-            />
-            
-            <ReviewConfirm 
-                data={{ file, metadata, access, compliance, versionInfo }}
-                onCancel={() => router.push('/')}
-                onUpload={handleUpload}
-                uploading={uploading}
-            />
-        </React.Fragment>
-      )}
-    </Container>
+          <FileSelection 
+            onFileSelect={handleFileSelect} 
+            description={metadata.description}
+            onDescriptionChange={(val) => handleMetadataChange('description', val)}
+            onClassificationSelect={(nodeWithTemplate) => {
+                // Update metadata with classification info
+                setMetadata(prev => ({
+                    ...prev,
+                    classificationNodeId: nodeWithTemplate.id,
+                }));
+                
+                // Check for template
+                if (nodeWithTemplate.template) {
+                    console.log('Selected Template:', nodeWithTemplate.template);
+                    setTemplate(nodeWithTemplate.template);
+                    setDynamicValues({}); // Reset values when template changes
+                } else {
+                    setTemplate(null);
+                }
+            }} 
+          />
+          
+          {file && (
+            <React.Fragment>
+                <DocumentMetadata 
+                    data={metadata} 
+                    onChange={handleMetadataChange} 
+                    versionInfo={versionInfo}
+                    template={template}
+                    dynamicValues={dynamicValues}
+                    onDynamicChange={(fieldId, val) => setDynamicValues((prev: any) => ({ ...prev, [fieldId]: val }))}
+                />
+                
+                <AccessControl 
+                    data={access} 
+                    onChange={handleAccessChange} 
+                />
+                
+                <ComplianceControl 
+                    data={compliance} 
+                    onChange={handleComplianceChange} 
+                />
+                
+                <ReviewConfirm 
+                    data={{ file, metadata, access, compliance, versionInfo }}
+                    onCancel={() => router.push('/')}
+                    onUpload={handleUpload}
+                    uploading={uploading}
+                />
+            </React.Fragment>
+          )}
+        </Container>
+      </Box>
+    </Box>
   );
 }

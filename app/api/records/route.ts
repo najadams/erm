@@ -135,10 +135,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Either recordTypeId or classificationNodeId is required' }, { status: 400 });
     }
 
-    // If using new classification system, validate template version
-    if (classificationNodeId && !templateVersion) {
-      return NextResponse.json({ error: 'templateVersion is required when using classificationNodeId' }, { status: 400 });
-    }
+    // If using new classification system, validate template version ONLY if provided
+    // if (classificationNodeId && !templateVersion) {
+    //   return NextResponse.json({ error: 'templateVersion is required when using classificationNodeId' }, { status: 400 });
+    // }
 
     // Validate classification node exists and is Level 3
     if (classificationNodeId) {
@@ -155,34 +155,36 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Classification node is not active' }, { status: 400 });
       }
 
-      // Validate template exists
-      const template = await prisma.metadataTemplate.findFirst({
-        where: {
-          classificationNodeId,
-          version: parseInt(templateVersion!)
-        },
-        include: {
-          templateFields: true
-        }
-      });
-      if (!template) {
-        return NextResponse.json({ error: 'Template not found' }, { status: 404 });
-      }
-      if (!template.isActive) {
-        return NextResponse.json({ error: 'Template is not active' }, { status: 400 });
-      }
-
-      // Validate required fields
-      const requiredFields = template.templateFields.filter(tf => tf.required);
-      const missingFields = requiredFields.filter(tf => !metadataValues[tf.metadataFieldId]);
-      if (missingFields.length > 0) {
-        const fieldNames = await prisma.metadataField.findMany({
-          where: { id: { in: missingFields.map(tf => tf.metadataFieldId) } },
-          select: { label: true }
-        });
-        return NextResponse.json({
-          error: `Missing required fields: ${fieldNames.map(f => f.label).join(', ')}`
-        }, { status: 400 });
+      // Validate template exists IF templateVersion is provided
+      if (templateVersion) {
+          const template = await prisma.metadataTemplate.findFirst({
+            where: {
+              classificationNodeId,
+              version: parseInt(templateVersion)
+            },
+            include: {
+              templateFields: true
+            }
+          });
+          if (!template) {
+            return NextResponse.json({ error: 'Template not found' }, { status: 404 });
+          }
+          if (!template.isActive) {
+            return NextResponse.json({ error: 'Template is not active' }, { status: 400 });
+          }
+    
+          // Validate required fields
+          const requiredFields = template.templateFields.filter(tf => tf.required);
+          const missingFields = requiredFields.filter(tf => !metadataValues[tf.metadataFieldId]);
+          if (missingFields.length > 0) {
+            const fieldNames = await prisma.metadataField.findMany({
+              where: { id: { in: missingFields.map(tf => tf.metadataFieldId) } },
+              select: { label: true }
+            });
+            return NextResponse.json({
+              error: `Missing required fields: ${fieldNames.map(f => f.label).join(', ')}`
+            }, { status: 400 });
+          }
       }
     }
 
