@@ -12,6 +12,11 @@ export interface Record {
   createdAt: string; // ISO Date
   updatedAt: string;
   uploadedBy: string; // User ID
+  
+  // New API Fields
+  referenceNumber?: string;
+  recordType?: { name: string; code?: string };
+  classificationNode?: { name: string; code?: string };
 }
 
 export interface User {

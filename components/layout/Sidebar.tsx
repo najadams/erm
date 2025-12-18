@@ -8,7 +8,7 @@ import Tooltip from '@mui/material/Tooltip';
 import IconButton from '@mui/material/IconButton';
 import FolderIcon from '@mui/icons-material/Folder';
 import DescriptionIcon from '@mui/icons-material/Description';
-import ArchiveIcon from '@mui/icons-material/Archive';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import ShareIcon from '@mui/icons-material/Share';
 import SettingsIcon from '@mui/icons-material/Settings';
 import PeopleIcon from '@mui/icons-material/People';
@@ -35,8 +35,8 @@ interface NavItem {
 const MAIN_NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', icon: <FolderIcon />, href: '/' },
   { label: 'All Records', icon: <DescriptionIcon />, href: '/records' },
-  { label: 'Shared with Me', icon: <ShareIcon />, href: '/records?filter=shared' },
-  { label: 'Archived', icon: <ArchiveIcon />, href: '/records?filter=archived' },
+  {label: "Register New File", icon: <CloudUploadIcon />, href:'/upload'}
+  // { label: 'Archived', icon: <ArchiveIcon />, href: '/records?filter=archived' },
 ];
 
 const ADMIN_NAV_ITEMS: NavItem[] = [

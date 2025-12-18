@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
       OR: [
         { title: { contains: q, mode: 'insensitive' } },
         { description: { contains: q, mode: 'insensitive' } },
+        { referenceNumber: { contains: q, mode: 'insensitive' } },
         // Search in metadata values
         { 
             metadata: { 
@@ -205,7 +206,43 @@ export async function POST(request: NextRequest) {
 
     // Transactional Create
     const result = await prisma.$transaction(async (tx) => {
-      
+
+      let referenceNumber: string | undefined = undefined;
+
+      // Generate Reference Number if using 3-Level Classification
+      if (classificationNodeId) {
+        // Fetch full hierarchy to build code
+        // We need L3 (this node), L2 (parent), and L1 (grandparent)
+        // Note: We need to fetch it within the transaction? 
+        // No, we can fetch, but we MUST increment atomically.
+        // Let's simplified fetching logic since we are in a transaction.
+        
+        // 1. Increment Sequence (and get new value + parentId)
+        const updatedNode = await tx.classificationNode.update({
+          where: { id: classificationNodeId },
+          data: { lastSequenceNumber: { increment: 1 } },
+          include: {
+            parent: {
+              include: {
+                parent: true
+              }
+            }
+          }
+        });
+
+        const l3 = updatedNode;
+        const l2 = l3.parent;
+        const l1 = l2?.parent;
+
+        if (l3 && l2 && l1) {
+             const c1 = l1.code || l1.name.substring(0, 3).toUpperCase();
+             const c2 = l2.code || l2.name.substring(0, 3).toUpperCase();
+             const c3 = l3.code || l3.name.substring(0, 3).toUpperCase();
+             const seq = String(l3.lastSequenceNumber).padStart(4, '0');
+             referenceNumber = `${c1}-${c2}-${c3}-${seq}`;
+        }
+      }
+
       // 1. Create Record Container
       const record = await tx.record.create({
         data: {
@@ -218,6 +255,7 @@ export async function POST(request: NextRequest) {
           }),
           departmentId, // Optional
           ownerUserId: userId,
+          referenceNumber, // Generated ID
         }
       });
 

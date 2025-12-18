@@ -149,7 +149,15 @@ export async function DELETE(
     }
 
     // Prevent deletion if it has records
-    if (template._count.records > 0) {
+    // Check for existing records using this template version
+    const recordCount = await prisma.record.count({
+      where: {
+        classificationNodeId: template.classificationNodeId,
+        templateVersion: template.version
+      }
+    });
+
+    if (recordCount > 0) {
       return NextResponse.json(
         { error: 'Cannot delete template with existing records' },
         { status: 400 }

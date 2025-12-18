@@ -165,7 +165,8 @@ model ClassificationNode {
   parent         ClassificationNode?   @relation("ClassificationHierarchy", fields: [parentId], references: [id])
   children       ClassificationNode[]  @relation("ClassificationHierarchy")
   code           String?
-  isLeaf         Boolean               @default(false) // true only for level 3
+  lastSequenceNumber Int     @default(0) // Tracks the last used sequence for this node (if it's a leaf)
+  isLeaf         Boolean     @default(false) // true only for level 3
   isActive       Boolean               @default(true)
   createdById    String
   createdBy      User                  @relation(fields: [createdById], references: [id])
@@ -235,6 +236,7 @@ model Record {
   ownerUserId   String?  // Renamed from userId to match spec, but keeping mapping if convenient? No, let's use ownerUserId to match spec.
   user          User?    @relation(fields: [ownerUserId], references: [id])
   
+  referenceNumber String?  @unique // Generated: L1-L2-L3-SEQ
   status        String   @default("DRAFT") // DRAFT, ACTIVE, ARCHIVED
   
   createdAt     DateTime @default(now())

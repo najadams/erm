@@ -103,12 +103,53 @@ async function main() {
   // Metadata Fields
   const fields = {}
   const metadataDefs = [
-    { name: 'invoice_number', label: 'Invoice Number', dataType: 'text', required: true, searchable: true },
-    { name: 'invoice_amount', label: 'Amount', dataType: 'number', required: true, searchable: false },
-    { name: 'effective_date', label: 'Effective Date', dataType: 'date', required: true, searchable: true },
-    { name: 'vendor_name', label: 'Vendor Name', dataType: 'text', required: true, searchable: true },
-    { name: 'confidentiality', label: 'Confidentiality Level', dataType: 'enum', enumValues: '["Low", "Medium", "High"]', required: false },
-  ]
+  // ─────────────────────
+  // Core business metadata
+  // ─────────────────────
+  { name: 'invoice_number', label: 'Invoice Number', dataType: 'text', required: true, searchable: true },
+  { name: 'invoice_amount', label: 'Amount', dataType: 'number', required: true, searchable: false },
+  { name: 'currency', label: 'Currency', dataType: 'enum', enumValues: '["GHS", "USD", "EUR"]', required: true, searchable: true },
+  { name: 'vendor_name', label: 'Vendor Name', dataType: 'text', required: true, searchable: true },
+  { name: 'vendor_tax_id', label: 'Vendor Tax ID', dataType: 'text', required: false, searchable: true },
+
+  // ─────────────────────
+  // Date & financial context
+  // ─────────────────────
+  { name: 'issue_date', label: 'Issue Date', dataType: 'date', required: true, searchable: true },
+  { name: 'effective_date', label: 'Effective Date', dataType: 'date', required: true, searchable: true },
+  { name: 'due_date', label: 'Payment Due Date', dataType: 'date', required: false, searchable: true },
+  { name: 'tax_amount', label: 'Tax Amount', dataType: 'number', required: false, searchable: false },
+
+  // ─────────────────────
+  // Classification & linkage
+  // ─────────────────────
+  { name: 'department', label: 'Department', dataType: 'enum', enumValues: '["Finance", "Procurement", "Operations"]', required: true, searchable: true },
+  { name: 'cost_center', label: 'Cost Center', dataType: 'text', required: false, searchable: true },
+  { name: 'purchase_order_number', label: 'PO Number', dataType: 'text', required: false, searchable: true },
+  { name: 'related_contract_id', label: 'Related Contract', dataType: 'text', required: false, searchable: false },
+
+  // ─────────────────────
+  // Record management (ERM-specific)
+  // ─────────────────────
+  { name: 'record_owner', label: 'Record Owner', dataType: 'user', required: true, searchable: false },
+  { name: 'record_status', label: 'Record Status', dataType: 'enum', enumValues: '["Draft", "Active", "Paid", "Archived"]', required: true, searchable: true },
+  { name: 'retention_category', label: 'Retention Category', dataType: 'enum', enumValues: '["Financial-7Y", "Tax-10Y"]', required: true, searchable: false },
+  { name: 'review_date', label: 'Review Date', dataType: 'date', required: false, searchable: false },
+
+  // ─────────────────────
+  // Security & compliance
+  // ─────────────────────
+  { name: 'confidentiality', label: 'Confidentiality Level', dataType: 'enum', enumValues: '["Low", "Medium", "High"]', required: false, searchable: true },
+  { name: 'legal_hold', label: 'Legal Hold', dataType: 'boolean', required: false, searchable: false },
+  { name: 'compliance_tags', label: 'Compliance Tags', dataType: 'multiselect', enumValues: '["VAT", "GRA", "Audit"]', required: false, searchable: true },
+
+  // ─────────────────────
+  // Search & usability
+  // ─────────────────────
+  { name: 'keywords', label: 'Keywords', dataType: 'text', required: false, searchable: true },
+  { name: 'notes', label: 'Notes / Remarks', dataType: 'text', required: false, searchable: false },
+]
+
 
   for (const f of metadataDefs) {
     const field = await prisma.metadataField.upsert({
@@ -180,64 +221,191 @@ async function main() {
     }
   }
 
-  // 5. Create Sample Records
-  
-  // Ex 1: Invoice (Alice)
-  const invRecord = await prisma.record.create({
-    data: {
-      title: 'Q4 Server Payment',
-      status: 'ACTIVE',
-      recordTypeId: recordTypes['INV'].id,
-      departmentId: departments['IT'].id,
-      ownerUserId: alice.id,
-      createdAt: new Date(),
-    }
-  })
-  // Version
-  await prisma.recordVersion.create({
-    data: {
-      recordId: invRecord.id,
-      versionNumber: 1,
-      filePath: '/uploads/inv-2025-001.pdf',
-      fileType: 'application/pdf',
-      uploadedById: alice.id,
-      createdAt: new Date()
-    }
-  })
-  // Metadata
-  await prisma.recordMetadata.createMany({
-    data: [
-      { recordId: invRecord.id, metadataFieldId: fields['invoice_number'].id, value: 'INV-2025-001' },
-      { recordId: invRecord.id, metadataFieldId: fields['invoice_amount'].id, value: '4500.00' },
-      { recordId: invRecord.id, metadataFieldId: fields['vendor_name'].id, value: 'AWS Services' }
-    ]
-  })
+  // 5. Create Dynamic 3-Level Hierarchy & Templates
+  console.log('Creating Classification Hierarchy...')
 
-  // Ex 2: Contract (Bob - HR)
-  const contractRecord = await prisma.record.create({
-    data: {
-      title: 'Employment Agreement - John Doe',
-      status: 'ACTIVE',
-      recordTypeId: recordTypes['CNT'].id,
-      departmentId: departments['HR'].id,
-      ownerUserId: bob.id,
+  // Helper to create node
+  async function createNode(name, level, code, parentId, isLeaf = false) {
+    return prisma.classificationNode.create({
+      data: {
+        organizationId: org.id,
+        name,
+        level,
+        code,
+        parentId,
+        isLeaf,
+        createdById: admin.id
+      }
+    })
+  }
+
+  // Hierarchy Definition
+  const hierarchy = [
+    {
+      name: 'Finance', code: 'FIN',
+      children: [
+        {
+          name: 'Accounts Payable', code: 'AP',
+          children: [
+            { name: 'Vendor Invoice', code: 'INV', fields: ['invoice_number', 'invoice_amount', 'vendor_name', 'currency'] },
+            { name: 'Expense Report', code: 'EXP', fields: ['invoice_amount', 'department'] }
+          ]
+        },
+        {
+          name: 'Taxation', code: 'TAX',
+          children: [
+            { name: 'Tax Return', code: 'RET', fields: ['tax_amount', 'issue_date'] },
+            { name: 'VAT Filing', code: 'VAT', fields: ['tax_amount', 'effective_date', 'compliance_tags'] }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Human Resources', code: 'HR',
+      children: [
+        {
+          name: 'Recruitment', code: 'REC',
+          children: [
+            { name: 'Resume / CV', code: 'CV', fields: ['keywords'] },
+            { name: 'Offer Letter', code: 'OFF', fields: ['effective_date', 'confidentiality'] }
+          ]
+        },
+        {
+          name: 'Employee Files', code: 'EMP',
+          children: [
+            { name: 'Contract', code: 'CNT', fields: ['effective_date', 'renewal_date'] },
+            { name: 'Performance Review', code: 'REV', fields: ['review_date', 'manager_name'] }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Legal', code: 'LEG',
+      children: [
+        {
+          name: 'Corporate', code: 'CORP',
+          children: [
+            { name: 'Board Resolution', code: 'RES', fields: ['issue_date', 'description'] },
+            { name: 'Power of Attorney', code: 'POA', fields: ['effective_date'] }
+          ]
+        }
+      ]
     }
-  })
-  await prisma.recordVersion.create({
-    data: {
-      recordId: contractRecord.id,
-      versionNumber: 1,
-      filePath: '/uploads/contract-jdoe.pdf',
-      fileType: 'application/pdf',
-      uploadedById: bob.id
+  ]
+
+  const leafNodesStore = {} // map code -> node
+
+  for (const l1 of hierarchy) {
+    const node1 = await createNode(l1.name, 1, l1.code, null)
+    
+    if (l1.children) {
+      for (const l2 of l1.children) {
+        const node2 = await createNode(l2.name, 2, l2.code, node1.id)
+        
+        if (l2.children) {
+          for (const l3 of l2.children) {
+            // Level 3 (Leaf)
+            const node3 = await createNode(l3.name, 3, l3.code, node2.id, true)
+            leafNodesStore[l3.code] = node3
+
+            // Create Template for this Leaf
+            const tmpl = await prisma.metadataTemplate.create({
+              data: {
+                classificationNodeId: node3.id,
+                name: `${l3.name} Template`,
+                version: 1,
+              }
+            })
+
+            // Link Fields
+            let order = 1
+            const fieldsToLink = l3.fields || []
+            // Add implicit fields if needed, or just link specified
+            for (const fname of fieldsToLink) {
+              if (fields[fname]) {
+                await prisma.templateField.create({
+                  data: {
+                    templateId: tmpl.id,
+                    metadataFieldId: fields[fname].id,
+                    displayOrder: order++,
+                    required: fields[fname].required // default to field def
+                  }
+                })
+              }
+            }
+          }
+        }
+      }
     }
-  })
-  await prisma.recordMetadata.create({
-      data: { recordId: contractRecord.id, metadataFieldId: fields['confidentiality'].id, value: 'High' }
-  })
+  }
+
+  // 6. Create Sample Records with Reference Numbers
+  // Strategy: Manually construct reference number L1-L2-L3-SEQ
   
-  // Set explicit permissions (optional, relying on logic otherwise)
-  // await prisma.recordAccess.create({...})
+  // Ex 1: Invoice (Alice) -> FIN-AP-INV-0001
+  const invNode = leafNodesStore['INV']
+  if (invNode) {
+    // Update sequence
+    await prisma.classificationNode.update({
+      where: { id: invNode.id },
+      data: { lastSequenceNumber: 1 }
+    })
+
+    const invRecord = await prisma.record.create({
+      data: {
+        title: 'Q4 Server Payment',
+        status: 'ACTIVE',
+        classificationNodeId: invNode.id,
+        templateVersion: 1,
+        // Department vs Dept Node? Use Link to Dept Table
+        departmentId: departments['IT'].id,
+        ownerUserId: alice.id,
+        referenceNumber: 'FIN-AP-INV-0001',
+        createdAt: new Date(),
+      }
+    })
+    
+    await prisma.recordVersion.create({
+      data: {
+        recordId: invRecord.id,
+        versionNumber: 1,
+        filePath: '/uploads/inv-2025-001.pdf',
+        fileType: 'application/pdf',
+        uploadedById: alice.id,
+      }
+    })
+  }
+
+  // Ex 2: Contract (Bob) -> HR-EMP-CNT-0001
+  const cntNode = leafNodesStore['CNT']
+  if (cntNode) {
+     await prisma.classificationNode.update({
+      where: { id: cntNode.id },
+      data: { lastSequenceNumber: 1 }
+    })
+
+    const contractRecord = await prisma.record.create({
+      data: {
+        title: 'Employment Agreement - John Doe',
+        status: 'ACTIVE',
+        classificationNodeId: cntNode.id,
+        templateVersion: 1,
+        departmentId: departments['HR'].id,
+        ownerUserId: bob.id,
+        referenceNumber: 'HR-EMP-CNT-0001',
+      }
+    })
+    
+    await prisma.recordVersion.create({
+      data: {
+        recordId: contractRecord.id,
+        versionNumber: 1,
+        filePath: '/uploads/contract-jdoe.pdf',
+        fileType: 'application/pdf',
+        uploadedById: bob.id
+      }
+    })
+  }
 
   console.log('Seeding finished.')
 }

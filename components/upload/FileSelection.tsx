@@ -20,12 +20,13 @@ export interface ClassificationNode {
   level: number;
   parentId: string | null;
   isLeaf: boolean;
+  templates?: any[]; // Simplified for now
 }
 
 interface FileSelectionProps {
   onFileSelect: (file: File, checksum: string) => void;
   // New prop signature
-  onClassificationSelect?: (node: ClassificationNode) => void;
+  onClassificationSelect?: (node: ClassificationNode & { template?: any }) => void;
   existingFileError?: string | null;
 }
 
@@ -108,7 +109,11 @@ export default function FileSelection({ onFileSelect, onClassificationSelect }: 
     
     if (onClassificationSelect) {
       const node = level3Nodes.find(n => n.id === nodeId);
-      if (node) onClassificationSelect(node);
+      if (node) {
+        // Pass node and potential template
+        const template = node.templates && node.templates.length > 0 ? node.templates[0] : null;
+        onClassificationSelect({ ...node, template });
+      }
     }
   };
 

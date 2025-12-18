@@ -64,9 +64,10 @@ export default function RecentRecords() {
       <Paper sx={{ width: '100%', mb: 2, overflow: 'hidden', borderRadius: 3 }}>
         {/* Header Row */}
         <Box sx={{ p: 2, bgcolor: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center' }}>
-          <Box sx={{ width: '40%', fontWeight: 600, color: 'text.secondary', fontSize: '0.875rem' }}>Document Name</Box>
-          <Box sx={{ width: '25%', fontWeight: 600, color: 'text.secondary', fontSize: '0.875rem' }}>Category</Box>
-          <Box sx={{ width: '20%', fontWeight: 600, color: 'text.secondary', fontSize: '0.875rem' }}>Date</Box>
+          <Box sx={{ width: '30%', fontWeight: 600, color: 'text.secondary', fontSize: '0.875rem' }}>Document Name</Box>
+          <Box sx={{ width: '20%', fontWeight: 600, color: 'text.secondary', fontSize: '0.875rem' }}>Reference</Box>
+          <Box sx={{ width: '20%', fontWeight: 600, color: 'text.secondary', fontSize: '0.875rem' }}>Category</Box>
+          <Box sx={{ width: '15%', fontWeight: 600, color: 'text.secondary', fontSize: '0.875rem' }}>Date</Box>
           <Box sx={{ width: '15%', fontWeight: 600, color: 'text.secondary', fontSize: '0.875rem' }}>Status</Box>
         </Box>
         
@@ -89,7 +90,7 @@ export default function RecentRecords() {
                 }}
                 onClick={() => router.push(`/records/${record.id}`)}
             >
-                <Box sx={{ width: '40%', display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Box sx={{ width: '30%', display: 'flex', alignItems: 'center', gap: 2 }}>
                 <Box
                     sx={{
                     width: 40,
@@ -104,12 +105,23 @@ export default function RecentRecords() {
                 >
                     {record.fileType === 'pdf' ? <PictureAsPdfIcon /> : <DescriptionIcon />}
                 </Box>
-                <Typography fontWeight="500" color="text.primary">{record.title}</Typography>
+                <Box sx={{ overflow: "hidden" }}>
+                  <Typography fontWeight="500" color="text.primary" noWrap>{record.title}</Typography>
                 </Box>
-                <Box sx={{ width: '25%' }}>
-                <Chip label={record.category} size="small" sx={{ bgcolor: 'secondary.light', color: 'white', fontWeight: 600 }} />
                 </Box>
-                <Box sx={{ width: '20%', color: 'text.secondary', fontSize: '0.875rem' }}>
+                <Box sx={{ width: '20%' }}>
+                  <Typography variant="body2" sx={{ fontFamily: 'monospace', color: 'text.primary' }}>
+                    {record.referenceNumber || '-'}
+                  </Typography>
+                </Box>
+                <Box sx={{ width: '20%' }}>
+                  <Chip 
+                    label={record.category || (record.recordType?.name) || (record.classificationNode?.name) || 'Uncategorized'} 
+                    size="small" 
+                    sx={{ bgcolor: 'secondary.light', color: 'white', fontWeight: 600 }} 
+                  />
+                </Box>
+                <Box sx={{ width: '15%', color: 'text.secondary', fontSize: '0.875rem' }}>
                 {new Date(record.createdAt).toLocaleDateString()}
                 </Box>
                 <Box sx={{ width: '15%' }}>

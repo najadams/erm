@@ -44,8 +44,12 @@ export default function UploadPage() {
     requiresApproval: false
   });
 
-  // Mock version info - in real app would verify checksum with API
+  // Mock version info
   const [versionInfo, setVersionInfo] = useState<{ isNewVersion: boolean; version: number } | undefined>(undefined);
+  
+  // Dynamic Metadata State
+  const [template, setTemplate] = useState<any>(null);
+  const [dynamicValues, setDynamicValues] = useState<any>({});
 
   const handleFileSelect = (selectedFile: File, fileChecksum: string) => {
     setFile(selectedFile);
@@ -97,8 +101,32 @@ export default function UploadPage() {
     formData.append('sharedGroups', JSON.stringify(access.sharedGroups));
     
     // Append Compliance
+    // Append Compliance
     formData.append('isLegalHold', String(compliance.isLegalHold));
     formData.append('requiresApproval', String(compliance.requiresApproval));
+
+    // Append Classification & Dynamic Metadata
+    if (template) {
+        formData.append('classificationNodeId', metadata.classificationNodeId);
+        formData.append('templateVersion', template.version.toString());
+        
+        const metadataPayload: any = {};
+        template.templateFields.forEach((tf: any) => {
+          const fieldId = tf.metadataFieldId;
+          const val = dynamicValues[fieldId];
+          if (val !== undefined && val !== null && val !== '') {
+            metadataPayload[fieldId] = val;
+          }
+        });
+        
+        // Merge with legacy if needed, or just send payload
+        formData.append('metadata', JSON.stringify(metadataPayload));
+    } else {
+        // Fallback for legacy static fields
+        formData.append('classificationNodeId', metadata.classificationNodeId);
+        // Map static fields to something? Or just leave as top level fields if API handles them.
+        // Assuming API might look at 'metadata' json now.
+    }
 
     try {
         const res = await fetch('/api/records', {
@@ -137,14 +165,21 @@ export default function UploadPage() {
 
       <FileSelection 
         onFileSelect={handleFileSelect} 
-        onClassificationSelect={(node) => {
+        onClassificationSelect={(nodeWithTemplate) => {
             // Update metadata with classification info
             setMetadata(prev => ({
                 ...prev,
-                classificationNodeId: node.id,
-                // In a real app we would fetch the current template version for this node
-                // For now assuming version 1 or handling that server side
+                classificationNodeId: nodeWithTemplate.id,
             }));
+            
+            // Check for template
+            if (nodeWithTemplate.template) {
+                console.log('Selected Template:', nodeWithTemplate.template);
+                setTemplate(nodeWithTemplate.template);
+                setDynamicValues({}); // Reset values when template changes
+            } else {
+                setTemplate(null);
+            }
         }} 
       />
       
@@ -154,6 +189,9 @@ export default function UploadPage() {
                 data={metadata} 
                 onChange={handleMetadataChange} 
                 versionInfo={versionInfo}
+                template={template}
+                dynamicValues={dynamicValues}
+                onDynamicChange={(fieldId, val) => setDynamicValues((prev: any) => ({ ...prev, [fieldId]: val }))}
             />
             
             <AccessControl 

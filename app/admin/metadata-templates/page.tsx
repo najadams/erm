@@ -389,7 +389,7 @@ export default function MetadataTemplatesPage() {
               <Box sx={{ mt: 2 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                   <Typography variant="subtitle2">Fields</Typography>
-                  <Button size="small" startIcon={<AddIcon />} onClick={handleAddField}>
+                  <Button size="small" startIcon={<AddIcon />} onClick={handleAddField} type="button">
                     Add Field
                   </Button>
                 </Box>

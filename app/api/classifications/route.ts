@@ -54,6 +54,11 @@ export async function GET(request: NextRequest) {
             records: true,
             children: true,
           }
+        },
+        templates: {
+          where: { isActive: true },
+          orderBy: { version: 'desc' },
+          take: 1
         }
       },
       orderBy: [

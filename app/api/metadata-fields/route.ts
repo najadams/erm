@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate dataType
-    const validDataTypes = ['text', 'number', 'date', 'datetime', 'boolean', 'enum', 'email', 'url'];
+    const validDataTypes = ['text', 'number', 'date', 'datetime', 'boolean', 'enum', 'email', 'url', 'user', 'multiselect'];
     if (!validDataTypes.includes(dataType)) {
       return NextResponse.json(
         { error: `Invalid dataType. Must be one of: ${validDataTypes.join(', ')}` },
