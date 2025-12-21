@@ -248,6 +248,11 @@ model Record {
   auditLogs     AuditLog[]
   access        RecordAccess[]
 
+  // Parent/Child Relationship
+  parentId      String?
+  parent        Record?  @relation("RecordHierarchy", fields: [parentId], references: [id])
+  children      Record[] @relation("RecordHierarchy")
+
   // Legacy/Convenience relations for existing code (Optional, but might break if removed abruptly. 
   // For this Refactor, I am FOLLOWING THE SPEC which removes them. 
   // I will map shared lists via RecordAccess or keep them for now?)

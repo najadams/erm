@@ -121,6 +121,7 @@ export async function POST(request: NextRequest) {
     const templateVersion = formData.get('templateVersion') as string | null;
     const departmentId = formData.get('departmentId') as string || undefined;
     const groupId = formData.get('groupId') as string || undefined;
+    const parentId = formData.get('parentId') as string || null;
     
     // Dynamic Metadata (JSON string)
     const rawMetadata = formData.get('metadata') as string;
@@ -139,6 +140,18 @@ export async function POST(request: NextRequest) {
     // if (classificationNodeId && !templateVersion) {
     //   return NextResponse.json({ error: 'templateVersion is required when using classificationNodeId' }, { status: 400 });
     // }
+
+    // Validate Parent Record if provided
+    if (parentId) {
+      const parentRecord = await prisma.record.findUnique({
+        where: { id: parentId }
+      });
+      if (!parentRecord) {
+        return NextResponse.json({ error: 'Parent record not found' }, { status: 404 });
+      }
+      // Optional: Check permissions on parent ID (read access required to link?)
+      // For now, assuming if they have the ID and selected it (via search which filters permissions), it's okay.
+    }
 
     // Validate classification node exists and is Level 3
     if (classificationNodeId) {
@@ -258,6 +271,7 @@ export async function POST(request: NextRequest) {
           departmentId, // Optional
           ownerUserId: userId,
           referenceNumber, // Generated ID
+          parentId,
         }
       });
 

@@ -119,7 +119,9 @@ export default function Sidebar() {
         display: { xs: 'none', md: 'flex' },
         flexDirection: 'column',
         borderRight: '1px solid rgba(255,255,255,0.1)',
-        height: '100%', 
+        height: '100vh',
+        position: 'sticky',
+        top: 0,
         transition: 'width 0.3s ease',
         overflow: 'hidden'
       }}
