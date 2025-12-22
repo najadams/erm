@@ -33,7 +33,12 @@ interface FileSelectionProps {
   onDescriptionChange?: (value: string) => void;
 }
 
+// ... imports
+import { useSession } from 'next-auth/react';
+import Alert from '@mui/material/Alert';
+
 export default function FileSelection({ onFileSelect, onClassificationSelect, description = '', onDescriptionChange }: FileSelectionProps) {
+  const { data: session } = useSession();
   const [dragActive, setDragActive] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -52,6 +57,11 @@ export default function FileSelection({ onFileSelect, onClassificationSelect, de
   const [loadingLevel2, setLoadingLevel2] = useState(false);
   const [loadingLevel3, setLoadingLevel3] = useState(false);
 
+  // Permission Check
+  // Note: We cast session.user to any because strict typing might not have 'role' yet, 
+  // but it is available in the custom session callback.
+  const isAdmin = (session?.user as any)?.role === 'ADMIN';
+
   // Fetch helper
   const fetchNodes = async (level: number, parentId: string | null = null) => {
     const params = new URLSearchParams();
@@ -65,12 +75,14 @@ export default function FileSelection({ onFileSelect, onClassificationSelect, de
 
   // Initial Fetch (Level 1)
   useEffect(() => {
-    setLoadingLevel1(true);
-    fetchNodes(1)
-      .then(data => setLevel1Nodes(data))
-      .catch(err => console.error(err))
-      .finally(() => setLoadingLevel1(false));
-  }, []);
+    if (isAdmin) { // Only fetch if allowed
+        setLoadingLevel1(true);
+        fetchNodes(1)
+        .then(data => setLevel1Nodes(data))
+        .catch(err => console.error(err))
+        .finally(() => setLoadingLevel1(false));
+    }
+  }, [isAdmin]);
 
   // Handlers
   const handleLevel1Change = async (nodeId: string) => {
@@ -107,15 +119,25 @@ export default function FileSelection({ onFileSelect, onClassificationSelect, de
     }
   };
 
-  const handleLevel3Change = (nodeId: string) => {
+  const handleLevel3Change = async (nodeId: string) => {
     setSelectedLevel3(nodeId);
     
     if (onClassificationSelect) {
-      const node = level3Nodes.find(n => n.id === nodeId);
-      if (node) {
-        // Pass node and potential template
-        const template = node.templates && node.templates.length > 0 ? node.templates[0] : null;
-        onClassificationSelect({ ...node, template });
+      // Fetch full details to get Templates with Fields
+      try {
+        const res = await fetch(`/api/classifications/${nodeId}`);
+        if (res.ok) {
+           const fullNode = await res.json();
+           const template = fullNode.templates && fullNode.templates.length > 0 ? fullNode.templates[0] : null;
+           onClassificationSelect({ ...fullNode, template });
+        } else {
+           console.error("Failed to fetch full node details");
+           // Fallback to local item (might miss fields)
+           const node = level3Nodes.find(n => n.id === nodeId);
+           if (node) onClassificationSelect({ ...node, template: null });
+        }
+      } catch (e) {
+        console.error("Error fetching full node details", e);
       }
     }
   };
@@ -160,6 +182,18 @@ export default function FileSelection({ onFileSelect, onClassificationSelect, de
       setDragActive(false);
     }
   }, []);
+
+  if (!session) {
+    return <CircularProgress />;
+  }
+
+  if (!isAdmin) {
+    return (
+        <Alert severity="error" sx={{ mt: 2 }}>
+            Permission Denied: Only Administrators are allowed to upload files via this interface.
+        </Alert>
+    );
+  }
 
   return (
     <Box sx={{ mb: 4 }}>

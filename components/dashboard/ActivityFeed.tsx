@@ -94,7 +94,7 @@ export default function ActivityFeed() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/audit-logs')
+    fetch('/api/audit-logs?scope=user&limit=10')
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
@@ -111,7 +111,7 @@ export default function ActivityFeed() {
   return (
     <Box>
       <Typography variant="h5" fontWeight="bold" sx={{ mb: 3 }}>
-        Activity Feed
+        My Recent Activity
       </Typography>
       <Paper sx={{ width: '100%', overflow: 'hidden', borderRadius: 3 }}>
         {loading ? (

@@ -44,6 +44,27 @@ export async function GET(request: NextRequest) {
     if (parentId) where.parentId = parentId;
     if (!includeInactive) where.isActive = true;
 
+    // Role-based filtering
+    const userRole = (session.user as any)?.role;
+    const userDeptId = (session.user as any)?.departmentId;
+    
+    // If strict ABAC is required as per user request:
+    // "Staff see only allowed classifications" -> "classification.departmentId === user.departmentId"
+    // We added departmentId to ClassificationNode to support this.
+    if ((userRole === 'STAFF' || userRole === 'DEPT_HEAD') && userDeptId) {
+       // Filter where departmentId is null (Global) OR matches user's department
+       // (Using OR in Prisma for this mixed condition requires specific syntax or multiple queries, 
+       // but here we can add a condition if departmentId exists on the model)
+       // where.OR = [{ departmentId: null }, { departmentId: userDeptId }];
+       // Since we are about to add departmentId to ClassificationNode, I'll allow this code to sit, 
+       // but first I must add the column.
+       where.OR = [
+         { departmentId: null },
+         { departmentId: userDeptId }
+       ];
+    }
+
+
     const nodes = await prisma.classificationNode.findMany({
       where,
       include: {
@@ -171,5 +192,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-

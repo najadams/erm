@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from '@/lib/prisma';
-import { ROLES } from '@/lib/permissions';
+import { ROLES, hasPermission } from '@/lib/permissions';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,14 +18,32 @@ export async function GET(request: NextRequest) {
   const userId = user.id;
 
   try {
-    // Determine filtering based on role
+    const searchParams = request.nextUrl.searchParams;
+    const scope = searchParams.get('scope'); // 'user' or undefined
+    const limit = parseInt(searchParams.get('limit') || '50');
+
+    // Security & Scope Logic using Matrix
     const whereClause: any = {};
+    const canViewFull = hasPermission(role, 'AUDIT_VIEW_FULL');
+    const canViewScoped = hasPermission(role, 'AUDIT_VIEW_SCOPED'); // Dept scope placeholder
     
-    // Regular users only see their own actions
-    if (role === ROLES.USER) {
-      whereClause.userId = userId;
+    // 1. If explicitly requesting "my activity" -> Strictly filter by actor
+    if (scope === 'user') {
+        whereClause.userId = userId;
+    } else {
+        // 2. If NO specific scope requested, enforce permissions
+        if (canViewFull) {
+            // Allow all - no filter
+        } else if (canViewScoped) {
+             // TODO: Add Department filtering here when Dept ID available on User
+             // For now, if scoped view allowed but not full, maybe limit to something or fall back to own
+             // Safest fallback for now until Dept implemented:
+             whereClause.userId = userId; 
+        } else {
+             // Default: Force Own View
+             whereClause.userId = userId;
+        }
     }
-    // ADMIN and AUDITOR see all actions (no filter)
 
     const auditLogs = await prisma.auditLog.findMany({
       where: whereClause,
@@ -47,7 +65,7 @@ export async function GET(request: NextRequest) {
       orderBy: {
         timestamp: 'desc'
       },
-      take: 10
+      take: limit
     });
 
     return NextResponse.json(auditLogs);

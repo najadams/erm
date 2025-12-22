@@ -1,38 +1,117 @@
-export type Role = 'ADMIN' | 'USER' | 'AUDITOR' | 'STAFF' | 'RECORDS_MANAGER';
-export type Permission = 'UPLOAD' | 'VIEW' | 'EDIT_METADATA' | 'DELETE' | 'MANAGE_USERS' | 'VIEW_AUDIT_LOGS' | 'MANAGE_CLASSIFICATIONS';
-
 export const ROLES = {
-  ADMIN: 'ADMIN',
   USER: 'USER',
-  AUDITOR: 'AUDITOR',
-  STAFF: 'STAFF', // Legacy support, treats as USER
-  RECORDS_MANAGER: 'RECORDS_MANAGER',
+  CONTRIBUTOR: 'CONTRIBUTOR',
+  APPROVER: 'APPROVER',
+  RECORDS_OFFICER: 'RECORDS_OFFICER',
+  ADMIN: 'ADMIN',
+  AUDITOR: 'AUDITOR'
 } as const;
 
-export const PERMISSIONS: Record<Permission, Permission> = {
-  UPLOAD: 'UPLOAD',
-  VIEW: 'VIEW',
-  EDIT_METADATA: 'EDIT_METADATA',
-  DELETE: 'DELETE',
+export type Role = keyof typeof ROLES;
+
+export const PERMISSIONS = {
+  // Workspace
+  WORKSPACE_UPLOAD_DRAFT: 'WORKSPACE_UPLOAD_DRAFT',
+  WORKSPACE_EDIT_OWN_DRAFT: 'WORKSPACE_EDIT_OWN_DRAFT',
+  WORKSPACE_DELETE_OWN_DRAFT: 'WORKSPACE_DELETE_OWN_DRAFT',
+  SUBMIT_RECORD: 'SUBMIT_RECORD',
+
+  // Verification
+  VIEW_PENDING_SUBMISSIONS: 'VIEW_PENDING_SUBMISSIONS',
+  APPROVE_SUBMISSION: 'APPROVE_SUBMISSION',
+  VERIFY_RECORD: 'VERIFY_RECORD',
+  OVERRIDE_CLASSIFICATION: 'OVERRIDE_CLASSIFICATION',
+
+  // Records
+  VIEW_OFFICIAL_RECORDS: 'VIEW_OFFICIAL_RECORDS',
+  EXPORT_RECORDS: 'EXPORT_RECORDS',
+
+  // Retention
+  APPLY_RETENTION: 'APPLY_RETENTION',
+  PLACE_LEGAL_HOLD: 'PLACE_LEGAL_HOLD',
+  EXECUTE_DISPOSAL: 'EXECUTE_DISPOSAL',
+
+  // Audit
+  AUDIT_VIEW_OWN: 'AUDIT_VIEW_OWN',
+  AUDIT_VIEW_SCOPED: 'AUDIT_VIEW_SCOPED',
+  AUDIT_VIEW_FULL: 'AUDIT_VIEW_FULL',
+  AUDIT_EXPORT: 'AUDIT_EXPORT',
+
+  // Administration
   MANAGE_USERS: 'MANAGE_USERS',
-  VIEW_AUDIT_LOGS: 'VIEW_AUDIT_LOGS',
   MANAGE_CLASSIFICATIONS: 'MANAGE_CLASSIFICATIONS',
+  MANAGE_METADATA: 'MANAGE_METADATA'
+} as const;
+
+export type Permission = keyof typeof PERMISSIONS;
+
+export const ROLE_CAPABILITIES: Record<Role, Permission[]> = {
+  USER: [
+    'WORKSPACE_UPLOAD_DRAFT',
+    'WORKSPACE_EDIT_OWN_DRAFT',
+    'WORKSPACE_DELETE_OWN_DRAFT',
+    'AUDIT_VIEW_OWN'
+  ],
+
+  CONTRIBUTOR: [
+    'WORKSPACE_UPLOAD_DRAFT',
+    'WORKSPACE_EDIT_OWN_DRAFT',
+    'WORKSPACE_DELETE_OWN_DRAFT',
+    'SUBMIT_RECORD',
+    'AUDIT_VIEW_OWN'
+  ],
+
+  APPROVER: [
+    'VIEW_PENDING_SUBMISSIONS',
+    'APPROVE_SUBMISSION',
+    'AUDIT_VIEW_SCOPED'
+  ],
+
+  RECORDS_OFFICER: [
+    'VIEW_PENDING_SUBMISSIONS',
+    'VERIFY_RECORD',
+    'VIEW_OFFICIAL_RECORDS',
+    'APPLY_RETENTION',
+    'PLACE_LEGAL_HOLD',
+    'EXECUTE_DISPOSAL',
+    'AUDIT_VIEW_SCOPED',
+    'MANAGE_CLASSIFICATIONS',
+    'MANAGE_METADATA',
+    'OVERRIDE_CLASSIFICATION' // Added from matrix requirement (implied by "Override classification")
+  ],
+
+  ADMIN: [
+    'AUDIT_VIEW_FULL',
+    'AUDIT_EXPORT',
+    'MANAGE_USERS',
+    'MANAGE_METADATA',
+    'AUDIT_VIEW_OWN' // Implicitly admins should likely see their own too, or full covers it
+  ],
+
+  AUDITOR: [
+    'AUDIT_VIEW_FULL',
+    'AUDIT_EXPORT'
+  ]
 };
 
-const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
-  ADMIN: Object.values(PERMISSIONS),
-  USER: [PERMISSIONS.UPLOAD, PERMISSIONS.VIEW, PERMISSIONS.EDIT_METADATA],
-  STAFF: [PERMISSIONS.UPLOAD, PERMISSIONS.VIEW, PERMISSIONS.EDIT_METADATA], // Mapped to USER
-  AUDITOR: [PERMISSIONS.VIEW, PERMISSIONS.VIEW_AUDIT_LOGS],
-  RECORDS_MANAGER: [PERMISSIONS.UPLOAD, PERMISSIONS.VIEW, PERMISSIONS.EDIT_METADATA, PERMISSIONS.MANAGE_CLASSIFICATIONS],
-};
+// Legacy Role Mapping
+export function mapLegacyRole(roleName: string): Role {
+  const r = (roleName || 'USER').toUpperCase();
+  
+  if (r === 'STAFF') return 'CONTRIBUTOR';
+  if (r === 'DEPT_HEAD') return 'APPROVER';
+  if (r === 'RECORDS_MANAGER') return 'RECORDS_OFFICER';
+  
+  // Check if it's already a valid role
+  if (r in ROLES) return r as Role;
+  
+  return 'USER'; // Default fallback
+}
 
-export function hasPermission(role: string, permission: Permission): boolean {
-  // Normalize role to uppercase to be safe
-  const userRole = (role || 'USER').toUpperCase() as Role;
-  
-  // Check if role exists in config, if not default to no permissions (or minimal)
-  const permissions = ROLE_PERMISSIONS[userRole] || [];
-  
-  return permissions.includes(permission);
+export function hasPermission(
+  rawRole: string,
+  permission: Permission
+): boolean {
+  const role = mapLegacyRole(rawRole);
+  return ROLE_CAPABILITIES[role]?.includes(permission) ?? false;
 }

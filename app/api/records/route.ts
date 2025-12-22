@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { writeFile } from 'fs/promises';
 import { join } from 'path';
+import { hasPermission } from '@/lib/permissions';
 
 export const dynamic = 'force-dynamic';
 
@@ -258,11 +259,36 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // Determine Initial Status based on Role & Permissions
+      const rawUserRole = (session.user as any)?.role;
+      // Note: mapping handled inside hasPermission, but we might want the mapped role for other logic if needed.
+      // But hasPermission takes raw string and maps it internally.
+      
+      const canVerify = hasPermission(rawUserRole, 'VERIFY_RECORD');
+      
+      let initialStatus = 'DRAFT';
+      let verificationBypassed = false;
+
+      if (canVerify) {
+         // If user can verify, allow them to set ACTIVE immediately
+         const formStatus = formData.get('status') as string;
+         if (formStatus && ['DRAFT', 'ACTIVE'].includes(formStatus)) {
+             initialStatus = formStatus;
+         } else {
+             // Default for Verify-capable users (Direct Upload)
+             initialStatus = 'ACTIVE'; 
+         }
+         
+         if (initialStatus === 'ACTIVE') {
+             verificationBypassed = true;
+         }
+      }
+
       // 1. Create Record Container
       const record = await tx.record.create({
         data: {
           title,
-          status: 'ACTIVE',
+          status: initialStatus,
           ...(recordTypeId && { recordTypeId }), // Legacy support
           ...(classificationNodeId && {
             classificationNodeId,
@@ -309,6 +335,8 @@ export async function POST(request: NextRequest) {
           userId: userId,
           newValue: JSON.stringify({
             title,
+            status: initialStatus,
+            verificationBypassed,
             ...(recordTypeId && { recordTypeId }),
             ...(classificationNodeId && { classificationNodeId, templateVersion })
           })

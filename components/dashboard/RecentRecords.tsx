@@ -19,6 +19,8 @@ const StatusChip = ({ status }: { status: Record['status'] }) => {
     archived: 'default',
     pending_review: 'warning',
     verified: 'success',
+    draft: 'info',
+    rejected: 'error',
   } as const;
 
   const labels = {
@@ -26,12 +28,17 @@ const StatusChip = ({ status }: { status: Record['status'] }) => {
     archived: 'Archived',
     pending_review: 'Pending',
     verified: 'Verified',
+    draft: 'Draft',
+    rejected: 'Rejected',
+    active_draft: 'Draft' // Handle casing if needed, but usually lowercase from DB
   };
 
+  const normalizedStatus = (status || 'active').toLowerCase();
+  
   return (
     <Chip
-      label={labels[status as keyof typeof labels] || status}
-      color={colors[status as keyof typeof colors] || 'default'}
+      label={labels[normalizedStatus as keyof typeof labels] || status}
+      color={colors[normalizedStatus as keyof typeof colors] || 'default'}
       variant="outlined"
       size="small"
       icon={status === 'verified' ? <CheckCircleOutlineIcon /> : undefined}

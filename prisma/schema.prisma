@@ -22,6 +22,10 @@ model User {
   uploadedVersions RecordVersion[] // Versions uploaded by user
   createdClassifications ClassificationNode[] // Classifications created by user
 
+  // Department Relation
+  departmentId     String?
+  department       Department? @relation(fields: [departmentId], references: [id])
+
   // New: Account Expiry
   accountExpiresAt DateTime?
 
@@ -77,6 +81,11 @@ model Department {
   parent         Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
   children       Department[] @relation("DepartmentHierarchy")
   records        Record[]
+  
+  // New Relations
+  users          User[]
+  classifications ClassificationNode[]
+  
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 }
@@ -159,6 +168,11 @@ model ClassificationNode {
   id             String                @id @default(uuid())
   organizationId String
   organization   Organization          @relation(fields: [organizationId], references: [id])
+  
+  // Department Scope (Optional - if null, global for organization)
+  departmentId   String?
+  department     Department?           @relation(fields: [departmentId], references: [id])
+  
   name           String
   level          Int                   // 1, 2, or 3
   parentId       String?

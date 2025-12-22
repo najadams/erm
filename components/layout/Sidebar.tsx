@@ -20,6 +20,12 @@ import CategoryIcon from '@mui/icons-material/Category';
 import ArticleIcon from '@mui/icons-material/Article';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import FactCheckIcon from '@mui/icons-material/FactCheck';
+import ArchiveIcon from '@mui/icons-material/Archive';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import GavelIcon from '@mui/icons-material/Gavel';
+import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
+import SecurityIcon from '@mui/icons-material/Security';
 import Collapse from '@mui/material/Collapse';
 
 import { useRouter, usePathname } from 'next/navigation';
@@ -32,40 +38,56 @@ interface NavItem {
   requiresRole?: string[];
 }
 
-const MAIN_NAV_ITEMS: NavItem[] = [
-  { label: 'Dashboard', icon: <FolderIcon />, href: '/' },
-  { label: 'All Records', icon: <DescriptionIcon />, href: '/records' },
-  {label: "Register New File", icon: <CloudUploadIcon />, href:'/upload'}
-  // { label: 'Archived', icon: <ArchiveIcon />, href: '/records?filter=archived' },
+import { ROLES, mapLegacyRole } from '@/lib/permissions';
+
+// ... imports
+
+// Lifecycle Navigation Structure
+const WORKSPACE_NAV: NavItem[] = [
+  { label: 'Dashboard', icon: <FolderIcon />, href: '/' }, 
+  { label: 'My Uploads', icon: <CloudUploadIcon />, href: '/upload/my-uploads' }, 
+  { label: 'Pending Verification', icon: <FactCheckIcon />, href: '/upload/verification', requiresRole: [ROLES.ADMIN, ROLES.RECORDS_OFFICER, ROLES.APPROVER] },
 ];
 
-const ADMIN_NAV_ITEMS: NavItem[] = [
-  { label: 'Classifications', icon: <CategoryIcon />, href: '/admin/classifications', requiresRole: ['ADMIN', 'RECORDS_MANAGER'] },
-  { label: 'Metadata Templates', icon: <ArticleIcon />, href: '/admin/metadata-templates', requiresRole: ['ADMIN', 'RECORDS_MANAGER'] },
-  { label: 'Users', icon: <PeopleIcon />, href: '/admin/users', requiresRole: ['ADMIN'] },
-  { label: 'Groups', icon: <FolderIcon />, href: '/admin/groups', requiresRole: ['ADMIN'] },
+const RECORDS_NAV: NavItem[] = [
+  { label: 'Official Records', icon: <DescriptionIcon />, href: '/records' }, 
+  { label: 'Archives', icon: <ArchiveIcon />, href: '/records/archives' }, 
+];
+
+const GOVERNANCE_NAV: NavItem[] = [
+    { label: 'Retention Schedules', icon: <AccessTimeIcon />, href: '/governance/retention', requiresRole: [ROLES.ADMIN, ROLES.RECORDS_OFFICER] },
+    { label: 'Legal Holds', icon: <GavelIcon />, href: '/governance/legal-holds', requiresRole: [ROLES.ADMIN, ROLES.RECORDS_OFFICER] },
+    { label: 'Disposition Queue', icon: <DeleteSweepIcon />, href: '/governance/disposition', requiresRole: [ROLES.ADMIN, ROLES.RECORDS_OFFICER] },
+];
+
+const ADMIN_NAV: NavItem[] = [
+  { label: 'System Audit Logs', icon: <SecurityIcon />, href: '/admin/audit', requiresRole: [ROLES.ADMIN, ROLES.AUDITOR] }, 
+  { label: 'Classifications', icon: <CategoryIcon />, href: '/admin/classifications', requiresRole: [ROLES.ADMIN, ROLES.RECORDS_OFFICER] },
+  { label: 'Metadata Templates', icon: <ArticleIcon />, href: '/admin/metadata-templates', requiresRole: [ROLES.ADMIN, ROLES.RECORDS_OFFICER] },
+  { label: 'Users & Roles', icon: <PeopleIcon />, href: '/admin/users', requiresRole: [ROLES.ADMIN] },
+  { label: 'Groups', icon: <FolderIcon />, href: '/admin/groups', requiresRole: [ROLES.ADMIN] },
 ];
 
 const SETTINGS_NAV_ITEMS: NavItem[] = [
   { label: 'Settings', icon: <SettingsIcon />, href: '/settings' },
 ];
 
+// ...
+
 export default function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
   const { data: session } = useSession();
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [adminExpanded, setAdminExpanded] = useState(true);
 
-  const userRole = (session?.user as any)?.role || 'USER';
+  // Map legacy/db role to canonical role
+  const userRole = mapLegacyRole((session?.user as any)?.role);
   const sidebarWidth = isCollapsed ? 80 : 280;
 
   const canAccess = (item: NavItem): boolean => {
     if (!item.requiresRole) return true;
     return item.requiresRole.includes(userRole);
   };
-
-  const hasAdminAccess = ADMIN_NAV_ITEMS.some(item => canAccess(item));
 
   const renderNavItem = (item: NavItem) => {
     if (!canAccess(item)) return null;
@@ -154,72 +176,54 @@ export default function Sidebar() {
         minHeight: 0, 
         mb: 2 
       }}>
-        {/* Main Navigation */}
-        {MAIN_NAV_ITEMS.map(renderNavItem)}
+        {/* Workspace Section */}
+        <Box sx={{ mb: 2 }}>
+          {(!isCollapsed) && (
+             <Typography variant="overline" sx={{ px: 3, color: 'rgba(255,255,255,0.5)', fontWeight: 'bold' }}>
+               My Workspace
+             </Typography>
+          )}
+          {WORKSPACE_NAV.map(renderNavItem)}
+        </Box>
 
-        {/* Administration Section */}
-        {hasAdminAccess && !isCollapsed && (
-          <Box sx={{ mt: 2 }}>
-            <Button
-              onClick={() => setAdminExpanded(!adminExpanded)}
-              sx={{
-                justifyContent: 'flex-start',
-                px: 3,
-                py: 1.5,
-                borderRadius: 2,
-                minWidth: 0,
-                color: 'rgba(255,255,255,0.9)',
-                bgcolor: 'rgba(255,255,255,0.05)',
-                '&:hover': {
-                  bgcolor: 'rgba(255,255,255,0.1)',
-                },
-                width: '100%',
-                textTransform: 'none',
-                fontWeight: 'bold',
-              }}
-              startIcon={<AdminPanelSettingsIcon />}
-              endIcon={adminExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-            >
-              Administration
-            </Button>
-            <Collapse in={adminExpanded}>
-              <Box sx={{ pl: 2, pt: 1, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                {ADMIN_NAV_ITEMS.map(renderNavItem)}
-              </Box>
-            </Collapse>
-          </Box>
-        )}
+         {/* Records Section */}
+        <Box sx={{ mb: 2 }}>
+          {(!isCollapsed) && (
+             <Typography variant="overline" sx={{ px: 3, color: 'rgba(255,255,255,0.5)', fontWeight: 'bold' }}>
+               Records Repository
+             </Typography>
+          )}
+          {RECORDS_NAV.map(renderNavItem)}
+        </Box>
 
-        {hasAdminAccess && isCollapsed && (
-          <Box sx={{ mt: 2 }}>
-            {ADMIN_NAV_ITEMS.filter(canAccess).map(item => (
-              <Tooltip title={item.label} placement="right" arrow key={item.label}>
-                <Button
-                  onClick={() => router.push(item.href)}
-                  sx={{
-                    justifyContent: 'center',
-                    px: 1,
-                    py: 1.5,
-                    borderRadius: 2,
-                    minWidth: 0,
-                    color: pathname.startsWith(item.href) ? 'secondary.main' : 'rgba(255,255,255,0.7)',
-                    bgcolor: pathname.startsWith(item.href) ? 'rgba(14, 165, 233, 0.1)' : 'transparent',
-                    '&:hover': {
-                      bgcolor: 'rgba(255,255,255,0.05)',
-                      color: 'white',
-                    },
-                    width: '100%',
-                  }}
-                >
-                  {item.icon}
-                </Button>
-              </Tooltip>
-            ))}
-          </Box>
-        )}
+         {/* Governance Section - Role Based */}
+         {(GOVERNANCE_NAV.some(canAccess)) && (
+            <Box sx={{ mb: 2 }}>
+               {(!isCollapsed) && (
+                  <Typography variant="overline" sx={{ px: 3, color: 'rgba(255,255,255,0.5)', fontWeight: 'bold' }}>
+                    Governance
+                  </Typography>
+               )}
+               {GOVERNANCE_NAV.map(renderNavItem)}
+            </Box>
+         )}
 
+         {/* Administration Section - Role Based */}
+         {(ADMIN_NAV.some(canAccess)) && (
+            <Box sx={{ mb: 2 }}>
+               {(!isCollapsed) && (
+                  <Typography variant="overline" sx={{ px: 3, color: 'rgba(255,255,255,0.5)', fontWeight: 'bold' }}>
+                    Administration
+                  </Typography>
+               )}
+               {ADMIN_NAV.map(renderNavItem)}
+            </Box>
+         )}
+        
         {/* Settings Section */}
-        {SETTINGS_NAV_ITEMS.map(renderNavItem)}
+        <Box sx={{ mt: 'auto' }}>
+            {SETTINGS_NAV_ITEMS.map(renderNavItem)}
+        </Box>
       </Box>
 
       {/* Logout Button Section */}
