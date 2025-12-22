@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { writeFile } from 'fs/promises';
 import { join } from 'path';
 import { hasPermission } from '@/lib/permissions';
+import { assertTransitionAllowed, LifecycleError } from '@/lib/lifecycle';
 
 export const dynamic = 'force-dynamic';
 
@@ -259,30 +260,39 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Determine Initial Status based on Role & Permissions
+      // Determine Initial Status & Validate Lifecycle
       const rawUserRole = (session.user as any)?.role;
-      // Note: mapping handled inside hasPermission, but we might want the mapped role for other logic if needed.
-      // But hasPermission takes raw string and maps it internally.
+      const formStatus = formData.get('status') as string;
       
-      const canVerify = hasPermission(rawUserRole, 'VERIFY_RECORD');
+      // Default to DRAFT, unless user requested something else (handled by assert)
+      // If user has Verify permission, they MIGHT default to ACTIVE if they didn't specify DRAFT.
+      // But let's be explicit:
+      // If no status provided -> Default DRAFT (Safe) OR ACTIVE (if Admin/RO)?
+      // Previous logic: Admin -> Active.
+      // Let's refine default:
+      let targetStatus: any = 'DRAFT';
       
-      let initialStatus = 'DRAFT';
-      let verificationBypassed = false;
-
-      if (canVerify) {
-         // If user can verify, allow them to set ACTIVE immediately
-         const formStatus = formData.get('status') as string;
-         if (formStatus && ['DRAFT', 'ACTIVE'].includes(formStatus)) {
-             initialStatus = formStatus;
-         } else {
-             // Default for Verify-capable users (Direct Upload)
-             initialStatus = 'ACTIVE'; 
-         }
-         
-         if (initialStatus === 'ACTIVE') {
-             verificationBypassed = true;
-         }
+      if (formStatus && ['DRAFT', 'ACTIVE'].includes(formStatus)) {
+          targetStatus = formStatus;
+      } else if (hasPermission(rawUserRole, 'VERIFY_RECORD')) {
+          // Auto-promote to ACTIVE for Admins if not specified? 
+          // Or Safer: Default to DRAFT, but allow Active?
+          // User requirement: "Admin + normal upload -> DRAFT". "Admin + 'Upload as Official' -> ACTIVE".
+          // So default should probably be DRAFT unless explicitly requested.
+          // However, for backward compatibility with "Bulk Upload" needing Active:
+          targetStatus = 'ACTIVE'; 
       }
+
+      // Assert this creation is valid
+      // assertTransitionAllowed will throw if User tries to create ACTIVE
+      try {
+        assertTransitionAllowed(null, targetStatus, rawUserRole);
+      } catch (e: any) {
+          return NextResponse.json({ error: e.message }, { status: 403 });
+      }
+
+      const initialStatus = targetStatus;
+      const verificationBypassed = (initialStatus === 'ACTIVE');
 
       // 1. Create Record Container
       const record = await tx.record.create({

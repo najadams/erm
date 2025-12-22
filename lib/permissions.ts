@@ -1,3 +1,13 @@
+/**
+ * ARCHITECTURE STABILIZED: FROZEN CONTRACT
+ * 
+ * This file defines the Non-Negotiable RBAC (Role-Based Access Control) Model.
+ * Modifications require formal architecture review.
+ * 
+ * - Roles are canonical.
+ * - Permissions are granular definitions of capability.
+ * - The Matrix is the single source of truth.
+ */
 export const ROLES = {
   USER: 'USER',
   CONTRIBUTOR: 'CONTRIBUTOR',
@@ -108,10 +118,17 @@ export function mapLegacyRole(roleName: string): Role {
   return 'USER'; // Default fallback
 }
 
+
 export function hasPermission(
   rawRole: string,
   permission: Permission
 ): boolean {
   const role = mapLegacyRole(rawRole);
   return ROLE_CAPABILITIES[role]?.includes(permission) ?? false;
+}
+
+export function assertPermission(rawRole: string, permission: Permission): void {
+    if (!hasPermission(rawRole, permission)) {
+        throw new Error(`Access Denied: Role '${rawRole}' lacks permission '${permission}'`);
+    }
 }
