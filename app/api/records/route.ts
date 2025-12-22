@@ -343,6 +343,8 @@ export async function POST(request: NextRequest) {
           action: 'UPLOAD',
           recordId: record.id,
           userId: userId,
+          actorRole: rawUserRole,
+          source: 'API',
           newValue: JSON.stringify({
             title,
             status: initialStatus,

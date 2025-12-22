@@ -309,6 +309,10 @@ model RecordAccess {
 model AuditLog {
   id        String   @id @default(uuid())
   action    String
+  actorRole String? // Snapshot of role at time of action
+  source    String   @default("WEB") // WEB, API, SYSTEM
+  ipAddress String?
+  userAgent String?
   recordId  String?
   record    Record?  @relation(fields: [recordId], references: [id])
   userId    String
