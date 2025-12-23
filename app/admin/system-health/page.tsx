@@ -75,7 +75,7 @@ export default function SystemHealthPage() {
 
       {/* KPI Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid xs={12} sm={6} md={3}>
             <Card sx={{ bgcolor: 'primary.main', color: 'white' }}>
                 <CardContent>
                     <Typography variant="overline" sx={{ opacity: 0.8 }}>Total Records</Typography>
@@ -90,7 +90,7 @@ export default function SystemHealthPage() {
             </Card>
         </Grid>
         
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid xs={12} sm={6} md={3}>
             <Card sx={{ bgcolor: stats.pendingVerificationCount > 5 ? 'error.main' : 'warning.main', color: 'white' }}>
                 <CardContent>
                     <Typography variant="overline" sx={{ opacity: 0.8 }}>Pending Verification</Typography>
@@ -105,7 +105,7 @@ export default function SystemHealthPage() {
             </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid xs={12} sm={6} md={3}>
             <Card>
                 <CardContent>
                     <Typography variant="overline" color="text.secondary">Active Users (24h)</Typography>
@@ -120,7 +120,7 @@ export default function SystemHealthPage() {
             </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid xs={12} sm={6} md={3}>
             <Card>
                 <CardContent>
                     <Typography variant="overline" color="text.secondary">Total Activity (24h)</Typography>
@@ -135,7 +135,7 @@ export default function SystemHealthPage() {
 
       <Grid container spacing={3}>
           {/* Status Distribution */}
-          <Grid item xs={12} md={6}>
+          <Grid xs={12} md={6}>
               <Paper sx={{ p: 3, height: '100%' }}>
                   <Typography variant="h6" gutterBottom fontWeight="bold">
                       Record Status Distribution
@@ -161,7 +161,7 @@ export default function SystemHealthPage() {
           </Grid>
 
           {/* Recent Alerts / Security Events */}
-          <Grid item xs={12} md={6}>
+          <Grid xs={12} md={6}>
               <Paper sx={{ p: 3, height: '100%' }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                     <WarningIcon color="error" />
