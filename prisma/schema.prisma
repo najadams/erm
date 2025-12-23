@@ -277,6 +277,56 @@ model Record {
   // but they should be migrated to RecordAccess logic eventually.
   sharedWithGroups Group[] @relation("GroupSharedRecords")
   sharedWithUsers  User[]  @relation("UserSharedRecords")
+
+  // ---------------------------------------------------------
+  // GOVERNANCE & COMPLIANCE
+  // ---------------------------------------------------------
+  
+  retentionPolicyId String?
+  retentionPolicy   RetentionPolicy? @relation(fields: [retentionPolicyId], references: [id])
+  dispositionDate   DateTime?        // Calculated: createdAt + policy.duration
+  
+  isLegalHold       Boolean          @default(false) // Optimized flag
+  legalHolds        RecordLegalHold[]
+}
+
+model RetentionPolicy {
+  id            String   @id @default(uuid())
+  name          String
+  description   String?
+  durationYears Int
+  trigger       String   @default("CREATION_DATE") // CREATION_DATE, EVENT_BASED
+  startDateField String? // For event-based triggers (e.g. "last_accessed")
+  
+  records       Record[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model LegalHold {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  status      String   @default("ACTIVE") // ACTIVE, CLOSED
+  
+  records     RecordLegalHold[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model RecordLegalHold {
+  id          String    @id @default(uuid())
+  recordId    String
+  record      Record    @relation(fields: [recordId], references: [id])
+  legalHoldId String
+  legalHold   LegalHold @relation(fields: [legalHoldId], references: [id])
+  addedByUserId String? // Audit who added it
+  
+  createdAt   DateTime  @default(now())
+  
+  @@unique([recordId, legalHoldId])
 }
 
 model RecordVersion {
