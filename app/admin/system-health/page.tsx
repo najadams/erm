@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { 
-  Box, Typography, Paper, Grid, Card, CardContent, 
+  Box, Typography, Paper, Card, CardContent, 
   CircularProgress, Alert, Container, Divider, List, ListItem, ListItemText, Chip 
 } from '@mui/material';
 import { useSession } from 'next-auth/react';
@@ -74,9 +74,9 @@ export default function SystemHealthPage() {
       </Box>
 
       {/* KPI Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid xs={12} sm={6} md={3}>
-            <Card sx={{ bgcolor: 'primary.main', color: 'white' }}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 4 }}>
+        <Box sx={{ width: { xs: '100%', sm: 'calc(50% - 12px)', md: 'calc(25% - 18px)' } }}>
+            <Card sx={{ bgcolor: 'primary.main', color: 'white', height: '100%' }}>
                 <CardContent>
                     <Typography variant="overline" sx={{ opacity: 0.8 }}>Total Records</Typography>
                     <Typography variant="h3" fontWeight="bold">
@@ -88,10 +88,10 @@ export default function SystemHealthPage() {
                     </Box>
                 </CardContent>
             </Card>
-        </Grid>
+        </Box>
         
-        <Grid xs={12} sm={6} md={3}>
-            <Card sx={{ bgcolor: stats.pendingVerificationCount > 5 ? 'error.main' : 'warning.main', color: 'white' }}>
+        <Box sx={{ width: { xs: '100%', sm: 'calc(50% - 12px)', md: 'calc(25% - 18px)' } }}>
+            <Card sx={{ bgcolor: stats.pendingVerificationCount > 5 ? 'error.main' : 'warning.main', color: 'white', height: '100%' }}>
                 <CardContent>
                     <Typography variant="overline" sx={{ opacity: 0.8 }}>Pending Verification</Typography>
                     <Typography variant="h3" fontWeight="bold">
@@ -103,10 +103,10 @@ export default function SystemHealthPage() {
                     </Box>
                 </CardContent>
             </Card>
-        </Grid>
+        </Box>
 
-        <Grid xs={12} sm={6} md={3}>
-            <Card>
+        <Box sx={{ width: { xs: '100%', sm: 'calc(50% - 12px)', md: 'calc(25% - 18px)' } }}>
+            <Card sx={{ height: '100%' }}>
                 <CardContent>
                     <Typography variant="overline" color="text.secondary">Active Users (24h)</Typography>
                     <Typography variant="h3" fontWeight="bold" color="text.primary">
@@ -118,10 +118,10 @@ export default function SystemHealthPage() {
                     </Box>
                 </CardContent>
             </Card>
-        </Grid>
+        </Box>
 
-        <Grid xs={12} sm={6} md={3}>
-            <Card>
+        <Box sx={{ width: { xs: '100%', sm: 'calc(50% - 12px)', md: 'calc(25% - 18px)' } }}>
+            <Card sx={{ height: '100%' }}>
                 <CardContent>
                     <Typography variant="overline" color="text.secondary">Total Activity (24h)</Typography>
                     <Typography variant="h3" fontWeight="bold" color="text.primary">
@@ -130,12 +130,12 @@ export default function SystemHealthPage() {
                     <Typography variant="caption" color="text.secondary">Audit Events Logged</Typography>
                 </CardContent>
             </Card>
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
 
-      <Grid container spacing={3}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
           {/* Status Distribution */}
-          <Grid xs={12} md={6}>
+          <Box sx={{ width: { xs: '100%', md: 'calc(50% - 12px)' } }}>
               <Paper sx={{ p: 3, height: '100%' }}>
                   <Typography variant="h6" gutterBottom fontWeight="bold">
                       Record Status Distribution
@@ -158,10 +158,10 @@ export default function SystemHealthPage() {
                     )}
                   </Box>
               </Paper>
-          </Grid>
+          </Box>
 
           {/* Recent Alerts / Security Events */}
-          <Grid xs={12} md={6}>
+          <Box sx={{ width: { xs: '100%', md: 'calc(50% - 12px)' } }}>
               <Paper sx={{ p: 3, height: '100%' }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                     <WarningIcon color="error" />
@@ -200,8 +200,8 @@ export default function SystemHealthPage() {
                       )}
                   </List>
               </Paper>
-          </Grid>
-      </Grid>
+          </Box>
+      </Box>
     </Container>
   );
 }
