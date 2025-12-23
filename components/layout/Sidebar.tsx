@@ -6,6 +6,7 @@ import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import Tooltip from '@mui/material/Tooltip';
 import IconButton from '@mui/material/IconButton';
+import AssessmentIcon from '@mui/icons-material/Assessment';
 import FolderIcon from '@mui/icons-material/Folder';
 import DescriptionIcon from '@mui/icons-material/Description';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -61,6 +62,7 @@ const GOVERNANCE_NAV: NavItem[] = [
 ];
 
 const ADMIN_NAV: NavItem[] = [
+  { label: 'System Health', icon: <AssessmentIcon />, href: '/admin/system-health', requiresRole: [ROLES.ADMIN, ROLES.AUDITOR] },
   { label: 'System Audit Logs', icon: <SecurityIcon />, href: '/admin/audit', requiresRole: [ROLES.ADMIN, ROLES.AUDITOR] }, 
   { label: 'Classifications', icon: <CategoryIcon />, href: '/admin/classifications', requiresRole: [ROLES.ADMIN, ROLES.RECORDS_OFFICER] },
   { label: 'Metadata Templates', icon: <ArticleIcon />, href: '/admin/metadata-templates', requiresRole: [ROLES.ADMIN, ROLES.RECORDS_OFFICER] },
