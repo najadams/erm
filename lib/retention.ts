@@ -25,15 +25,12 @@ export function isRecordDisposalAllowed(
     if (!record.dispositionDate) return false;
     
     const now = new Date();
-    // Must be in past, and record must be official (ACTIVE or ARCHIVED, not DRAFT usually?)
-    // Actually, Drafts might just be deleted. "Disposal" usually implies formal end of life for Official records.
+    // Must be in past
     return record.dispositionDate <= now;
 }
 
 /**
  * Applies a Legal Hold to a record.
- * 1. Creates RecordLegalHold relation.
- * 2. Updates Record.isLegalHold = true.
  */
 export async function applyLegalHold(recordId: string, legalHoldId: string, userId: string) {
     return await prisma.$transaction(async (tx) => {
@@ -52,7 +49,7 @@ export async function applyLegalHold(recordId: string, legalHoldId: string, user
             data: { isLegalHold: true }
         });
 
-        // Audit? (Caller usually handles audit, or we do it here)
+        // Audit
         await tx.auditLog.create({
             data: {
                 action: 'LEGAL_HOLD_APPLIED',
@@ -67,8 +64,6 @@ export async function applyLegalHold(recordId: string, legalHoldId: string, user
 
 /**
  * Removes a Legal Hold.
- * 1. Checks if other holds exist.
- * 2. Updates Record.isLegalHold accordingly.
  */
 export async function removeLegalHold(recordId: string, legalHoldId: string, userId: string) {
     return await prisma.$transaction(async (tx) => {
@@ -105,4 +100,43 @@ export async function removeLegalHold(recordId: string, legalHoldId: string, use
             }
         });
     });
+}
+
+/**
+ * Scans for records that are ready for disposition and marks them.
+ * Returns the count of processed records.
+ */
+export async function processDispositionQueue() {
+    const now = new Date();
+    
+    // Find records that:
+    // 1. Are Active or Archived
+    // 2. Have passed their disposition date
+    // 3. Are NOT under legal hold
+    // 4. Are NOT already flagged
+    const expiredRecords = await prisma.record.findMany({
+        where: {
+            status: { in: ['ACTIVE', 'ARCHIVED'] },
+            dispositionDate: { lte: now },
+            isLegalHold: false
+        },
+        select: { id: true }
+    });
+
+    if (expiredRecords.length === 0) return 0;
+
+    // Update them to READY_FOR_DISPO
+    const result = await prisma.record.updateMany({
+        where: {
+            id: { in: expiredRecords.map(r => r.id) }
+        },
+        data: {
+            status: 'READY_FOR_DISPO'
+        }
+    });
+
+    // TODO: Ideally we should audit log these changes, but updateMany doesn't support it per record easily.
+    // For now, the status change is the evidence.
+    
+    return result.count;
 }

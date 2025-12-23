@@ -4,6 +4,8 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { hasPermission } from '@/lib/permissions';
 
+import { assertTransitionAllowed, RecordStatus } from '@/lib/lifecycle';
+
 // Note: In a real app, use the same access control clause as the list view.
 // For now, we'll do a simple check.
 
@@ -52,6 +54,82 @@ export async function GET(
   } catch (error) {
     console.error('Fetch Record Error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
+
+
+export async function PATCH(
+  request: NextRequest,
+  props: { params: Promise<{ id: string }> }
+) {
+  const params = await props.params;
+  const session = await getServerSession(authOptions);
+  
+  if (!session || !session.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { id } = params;
+  const user = session.user as any;
+  
+  try {
+      const body = await request.json();
+      const { status } = body;
+      
+      // We only support Status update for now via this specific route usage?
+      // Or should we support metadata update? 
+      // For Governance Automation, we need Status update.
+      
+      if (!status) {
+          return NextResponse.json({ error: 'Only status updates supported currently' }, { status: 400 });
+      }
+
+      // 1. Fetch current
+      const record = await prisma.record.findUnique({
+          where: { id }
+      });
+
+      if (!record) {
+          return NextResponse.json({ error: 'Record not found' }, { status: 404 });
+      }
+
+      // 2. Validate Transition
+      try {
+          // Cast string to RecordStatus (runtime check is inside assertTransitionAllowed via STATE_TRANSITIONS)
+          // But TS needs help.
+          assertTransitionAllowed(
+              record.status as RecordStatus, 
+              status as RecordStatus, 
+              user.role
+          );
+      } catch (e: any) {
+          return NextResponse.json({ error: e.message }, { status: 403 });
+      }
+
+      // 3. Update
+      const updated = await prisma.record.update({
+          where: { id },
+          data: { status }
+      });
+
+      // 4. Audit
+      await prisma.auditLog.create({
+          data: {
+              action: 'UPDATE_STATUS',
+              recordId: id,
+              userId: user.id,
+              actorRole: user.role,
+              source: 'API',
+              oldValue: record.status,
+              newValue: status
+          }
+      });
+
+      return NextResponse.json(updated);
+
+  } catch (error: any) {
+      console.error('Update Error:', error);
+      return NextResponse.json({ error: 'Update failed', details: error.message }, { status: 500 });
   }
 }
 

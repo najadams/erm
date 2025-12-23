@@ -47,6 +47,24 @@ export default function RecordDetailsPage() {
     }
   };
 
+  const handleRestore = async (versionId: string) => {
+      if (!confirm('This will create a new version with the content of the selected version. Continue?')) return;
+      try {
+          const res = await fetch(`/api/records/${id}/restore`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ versionId })
+          });
+          if (res.ok) {
+              window.location.reload();
+          } else {
+              alert('Failed to restore');
+          }
+      } catch (e) {
+          alert('Error restoring version');
+      }
+  };
+
   if (loading) return <Box sx={{ p: 4, textAlign: 'center' }}>Loading...</Box>;
   if (!record) return <Box sx={{ p: 4, textAlign: 'center' }}>Record not found.</Box>;
 
@@ -149,14 +167,17 @@ export default function RecordDetailsPage() {
                    </TableRow>
                  </TableHead>
                  <TableBody>
-                   {record.versions?.map((v: any) => (
+                   {record.versions?.map((v: any, index: number) => (
                      <TableRow key={v.id}>
                        <TableCell>v{v.versionNumber}</TableCell>
                        <TableCell>{new Date(v.createdAt).toLocaleDateString()}</TableCell>
                        <TableCell>{v.uploadedBy?.name}</TableCell>
-                       <TableCell align="right">
-                         <Button size="small" href={v.filePath} target="_blank">Download</Button>
-                       </TableCell>
+                        <TableCell align="right">
+                          <Button size="small" href={v.filePath} target="_blank">Download</Button>
+                          {index > 0 && ( /* Assuming ordered desc, index 0 is current, so others can be restored */
+                             <Button size="small" color="warning" onClick={() => handleRestore(v.id)}>Restore</Button>
+                          )}
+                        </TableCell>
                      </TableRow>
                    ))}
                    {(!record.versions || record.versions.length === 0) && (

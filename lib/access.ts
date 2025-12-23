@@ -40,7 +40,8 @@ export async function canAccessRecord(
 
 export async function getAccessibleRecordsClause(userId: string) {
   const user = await prisma.user.findUnique({
-    where: { id: userId }
+    where: { id: userId },
+    include: { groups: true }
   });
 
   if (!user) return { id: 'nothing' }; 
@@ -49,12 +50,48 @@ export async function getAccessibleRecordsClause(userId: string) {
       return { id: 'nothing' };
   }
 
-  if (user.role === 'ADMIN' || user.role === 'AUDITOR') {
+  // 1. Admin / Auditor / Records Manager see ALL
+  // (Records Manager might need scoping, but usually sees all for management)
+  if (['ADMIN', 'AUDITOR', 'RECORDS_MANAGER', 'RECORDS_OFFICER'].includes(user.role)) {
     return {}; // All records
   }
 
-  // Basic: Users see their own records
+  // 2. ABAC Clause construction
+  // Rules:
+  // - Own records
+  // - Department records (if user has department)
+  // - Explicitly shared (User or Group)
+  
+  const userGroupsIds = user.groups.map(g => g.id);
+
   return {
-    ownerUserId: userId
+    OR: [
+        // Rule A: Ownership
+        { ownerUserId: userId },
+        
+        // Rule B: Department Visibility
+        // If the record is associated with my department, I can view it.
+        ...(user.departmentId ? [{ departmentId: user.departmentId }] : []),
+        
+        // Rule C: Explicit Shared Access (Direct)
+        { 
+            access: { 
+                some: { 
+                    userId: userId,
+                    permission: { in: ['VIEW', 'EDIT', 'DOWNLOAD'] } 
+                } 
+            } 
+        },
+
+        // Rule D: Group Access
+        ...(userGroupsIds.length > 0 ? [{
+            access: {
+                some: {
+                    groupId: { in: userGroupsIds },
+                    permission: { in: ['VIEW', 'EDIT', 'DOWNLOAD'] }
+                }
+            }
+        }] : [])
+    ]
   };
 }

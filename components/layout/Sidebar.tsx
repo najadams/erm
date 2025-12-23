@@ -136,10 +136,11 @@ export default function Sidebar() {
   return (
     <Box
       component="nav"
+      className="glass-sidebar"
       sx={{
         width: sidebarWidth,
         flexShrink: 0,
-        bgcolor: 'primary.main',
+        // bgcolor: 'primary.main', // Removed for glass effect
         color: 'white',
         p: 2,
         display: { xs: 'none', md: 'flex' },

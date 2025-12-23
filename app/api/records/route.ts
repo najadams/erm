@@ -63,6 +63,22 @@ export async function GET(request: NextRequest) {
     filters.push({ createdAt: dateFilter });
   }
 
+  // Dynamic Metadata Filters
+  searchParams.forEach((value, key) => {
+      if (key.startsWith('metadata.')) {
+          const fieldId = key.replace('metadata.', '');
+          filters.push({
+              metadata: {
+                  some: {
+                      metadataFieldId: fieldId,
+                      value: { contains: value, mode: 'insensitive' }
+                  }
+              }
+          });
+      }
+  });
+
+
   // 2. Access Control
   const accessClause = await getAccessibleRecordsClause((session.user as any).id);
   if (accessClause.id === 'nothing') {
@@ -260,6 +276,22 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // Calculate Disposition Date (Retention)
+      // Currently only supporting simple retention via RecordType
+      let dispositionDate: Date | undefined;
+      if (recordTypeId) {
+          const rt = await tx.recordType.findUnique({ 
+              where: { id: recordTypeId },
+              select: { retentionYears: true }
+          });
+          
+          if (rt && rt.retentionYears) {
+              const now = new Date();
+              dispositionDate = new Date(now);
+              dispositionDate.setFullYear(now.getFullYear() + rt.retentionYears);
+          }
+      }
+
       // Determine Initial Status & Validate Lifecycle
       const rawUserRole = (session.user as any)?.role;
       const formStatus = formData.get('status') as string;
@@ -308,6 +340,7 @@ export async function POST(request: NextRequest) {
           ownerUserId: userId,
           referenceNumber, // Generated ID
           parentId,
+          dispositionDate, // calculated
         }
       });
 

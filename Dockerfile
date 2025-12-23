@@ -1,5 +1,5 @@
-FROM node:20-alpine AS base
-RUN apk add --no-cache libc6-compat openssl
+FROM node:20-slim AS base
+RUN apt-get update -y && apt-get install -y openssl ca-certificates
 
 # Install dependencies only when needed
 FROM base AS deps

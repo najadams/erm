@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import Grid from '@mui/material/Grid';
+import Grid from '@mui/material/GridLegacy';
 import Button from '@mui/material/Button';
 import Paper from '@mui/material/Paper';
 import InputBase from '@mui/material/InputBase';
@@ -47,15 +47,14 @@ export default function Dashboard() {
   };
 
   return (
-    <Box sx={{ display: 'flex', height: '100dvh', overflow: 'hidden', bgcolor: 'background.default' }}>
+    <Box sx={{ display: 'flex', height: '100dvh', overflow: 'hidden' }}>
       <Sidebar />
 
       {/* Main Content */}
       <Box component="main" sx={{ flexGrow: 1, p: 4, overflow: 'auto' }}>
-        {/* Header */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 5 }}>
           <Box>
-            <Typography variant="h4" fontWeight="bold" color="text.primary">
+            <Typography variant="h3" fontWeight="bold" className="premium-gradient-text" sx={{ mb: 1 }}>
               Dashboard
             </Typography>
             <Typography variant="body1" color="text.secondary">
@@ -67,21 +66,22 @@ export default function Dashboard() {
             <Paper
               component="form"
               onSubmit={handleSearch}
+              className="glass-panel"
               sx={{
                 p: '2px 4px',
                 display: 'flex',
                 alignItems: 'center',
                 width: 300,
                 borderRadius: 2,
-                bgcolor: 'background.paper',
+                border: 'none' // managed by class
               }}
             >
-              <IconButton sx={{ p: '10px' }} aria-label="search" onClick={handleSearch}>
+              <IconButton sx={{ p: '10px', color: 'text.secondary' }} aria-label="search" onClick={handleSearch}>
                 <SearchIcon />
               </IconButton>
               <InputBase 
                 sx={{ ml: 1, flex: 1 }} 
-                placeholder="Search records..." 
+                placeholder="Search..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />

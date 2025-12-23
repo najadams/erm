@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import Grid from '@mui/material/Grid';
+import Grid from '@mui/material/GridLegacy';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
@@ -64,7 +64,7 @@ export default function StatsCards() {
   return (
     <Grid container spacing={3} sx={{ mb: 4 }}>
       {/* Document Stats */}
-      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+      <Grid item xs={12} sm={6} md={3}>
         <StatCard 
             title="Total Documents" 
             value={stats.documents.total} 
@@ -72,7 +72,7 @@ export default function StatsCards() {
             color="primary" 
         />
       </Grid>
-      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+      <Grid item xs={12} sm={6} md={3}>
         <StatCard 
             title="My Documents" 
             value={stats.documents.mine} 
@@ -80,7 +80,7 @@ export default function StatsCards() {
             color="info" 
         />
       </Grid>
-      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+      <Grid item xs={12} sm={6} md={3}>
         <StatCard 
             title="Added This Month" 
             value={stats.documents.thisMonth} 
@@ -88,7 +88,7 @@ export default function StatsCards() {
             color="success" 
         />
       </Grid>
-      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+      <Grid item xs={12} sm={6} md={3}>
         <StatCard 
             title="Pending Cleanup" 
             value={stats.documents.pending} 
@@ -100,7 +100,7 @@ export default function StatsCards() {
       {/* Admin Stats */}
       {stats.admin && (
         <>
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <Grid item xs={12} sm={6} md={3}>
                 <StatCard 
                     title="Total Users" 
                     value={stats.admin.users} 
@@ -108,7 +108,7 @@ export default function StatsCards() {
                     color="secondary" 
                 />
             </Grid>
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <Grid item xs={12} sm={6} md={3}>
                 <StatCard 
                     title="Active Groups" 
                     value={stats.admin.groups} 
@@ -121,7 +121,7 @@ export default function StatsCards() {
 
       {/* Audit Stats */}
       {stats.audit && (
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <Grid item xs={12} sm={6} md={3}>
             <StatCard 
                 title="Audit Alerts (Mo.)" 
                 value={stats.audit.recentLogs} 
