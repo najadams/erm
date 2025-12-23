@@ -14,11 +14,46 @@ export default function LegalHoldsPage() {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  // Mock Fetch (Real API needed)
-  // For this step I'm creating the UI structure. The API endpoints need to be built or mocked.
-  // I will create a simple internal API for Holds in the next step or mock here.
-  // Let's assume /api/governance/legal-holds exists.
+  const fetchHolds = async () => {
+      try {
+          const res = await fetch('/api/governance/legal-holds');
+          if (res.ok) {
+              const data = await res.json();
+              setHolds(data);
+          }
+      } catch (e) {
+          console.error(e);
+      } finally {
+          setLoading(false);
+      }
+  };
+
+  useEffect(() => {
+    fetchHolds();
+  }, []);
+
+  const handleCreate = async () => {
+      if (!name) return;
+      try {
+          const res = await fetch('/api/governance/legal-holds', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name, description: desc })
+          });
+          if (res.ok) {
+              setOpen(false);
+              setName('');
+              setDesc('');
+              fetchHolds();
+          } else {
+              alert('Failed to create hold');
+          }
+      } catch (e) {
+          alert('Error creating hold');
+      }
+  };
 
   const columns: GridColDef[] = [
     { field: 'name', headerName: 'Case Name', flex: 1 },
@@ -48,6 +83,7 @@ export default function LegalHoldsPage() {
          <DataGrid
             rows={holds}
             columns={columns}
+            loading={loading}
             sx={{ border: 0 }}
              slots={{
               noRowsOverlay: () => (
@@ -73,7 +109,7 @@ export default function LegalHoldsPage() {
         </DialogContent>
         <DialogActions>
             <Button onClick={() => setOpen(false)}>Cancel</Button>
-            <Button variant="contained" color="error">Create Hold</Button>
+            <Button onClick={handleCreate} variant="contained" color="error">Create Hold</Button>
         </DialogActions>
       </Dialog>
     </Container>

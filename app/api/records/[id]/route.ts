@@ -75,11 +75,18 @@ export async function DELETE(
         // 1. Fetch Record to check status
         const record = await prisma.record.findUnique({
             where: { id },
-            select: { id: true, status: true, ownerUserId: true, title: true } // Fetch minimal
+            select: { id: true, status: true, ownerUserId: true, title: true, isLegalHold: true } // Fetch minimal + hold status
         });
 
         if (!record) {
             return NextResponse.json({ error: 'Record not found' }, { status: 404 });
+        }
+
+        // 1.5 Legal Hold Block (Overrides everything)
+        if (record.isLegalHold) {
+             return NextResponse.json({ 
+                 error: `Cannot delete. Record is subject to an active Legal Hold.` 
+             }, { status: 403 });
         }
 
         // 2. Strict Lifecycle Safeguard

@@ -382,3 +382,37 @@ model AccessRequest {
   status    String   @default("PENDING") // PENDING, APPROVED, REJECTED
   createdAt DateTime @default(now())
 }
+
+// ---------------------------------------------------------
+// INTEGRATIONS & SCALE
+// ---------------------------------------------------------
+
+model ApiKey {
+  id          String   @id @default(uuid())
+  keyHash     String   @unique
+  prefix      String   // e.g. "sk_live_..."
+  name        String   // e.g. "Zapier Integration"
+  scopes      String?  // JSON array of scopes ["records:read", "records:write"]
+  
+  // Optional: Link to a generic "Service Account" user?
+  // For now, let's keep it simple. If we need a user ID for "createdBy", we can add it.
+  createdByUserId String?
+  
+  expiresAt   DateTime?
+  lastUsedAt  DateTime?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  isActive    Boolean  @default(true)
+}
+
+model Webhook {
+  id          String   @id @default(uuid())
+  url         String
+  events      String   // JSON array of events ["RECORD.CREATED", "RECORD.STATUS_CHANGED"]
+  secret      String   // For signing payload
+  
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
