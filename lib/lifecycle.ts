@@ -18,6 +18,7 @@ export type RecordStatus =
   | 'VERIFIED'
   | 'ACTIVE'
   | 'ARCHIVED'
+  | 'READY_FOR_DISPO' // Governance: Waiting for manager approval
   | 'DISPOSED';
 
 // Defines VALID transitions from a given state
@@ -26,8 +27,9 @@ const STATE_TRANSITIONS: Record<RecordStatus, RecordStatus[]> = {
     DRAFT: ['SUBMITTED', 'ACTIVE', 'DISPOSED'], // Drafts can be deleted/disposed or submitted
     SUBMITTED: ['DRAFT', 'VERIFIED', 'ACTIVE'], // Can be sent back to draft, verified (approved), or directly activated
     VERIFIED: ['ACTIVE', 'DRAFT'], // Verified records become Active. Or sent back if issue found later.
-    ACTIVE: ['ARCHIVED', 'DRAFT'],  // Active -> Archived. Or corrected via new version (which might involve draft, but status logic usually implies archiving)
-    ARCHIVED: ['DISPOSED', 'ACTIVE'], // Can be restored or disposed
+    ACTIVE: ['ARCHIVED', 'DRAFT', 'READY_FOR_DISPO'],  // Active -> Archived, or flagged for disposal
+    ARCHIVED: ['DISPOSED', 'ACTIVE', 'READY_FOR_DISPO'], // Can be restored, disposed directly, or flagged
+    READY_FOR_DISPO: ['DISPOSED', 'ACTIVE', 'ARCHIVED'], // Can be approved (DISPOSED) or rejected (back to ACTIVE/ARCHIVED)
     DISPOSED: [] // Terminal state
 };
 

@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
           }
       });
       
-      const formatted = holds.map(h => ({
+      const formatted = holds.map((h: any) => ({
           ...h,
           recordCount: h._count.records
       }));
