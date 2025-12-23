@@ -27,6 +27,7 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import GavelIcon from '@mui/icons-material/Gavel';
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import SecurityIcon from '@mui/icons-material/Security';
+import ExtensionIcon from '@mui/icons-material/Extension';
 import Collapse from '@mui/material/Collapse';
 
 import { useRouter, usePathname } from 'next/navigation';
@@ -66,6 +67,7 @@ const ADMIN_NAV: NavItem[] = [
   { label: 'System Audit Logs', icon: <SecurityIcon />, href: '/admin/audit', requiresRole: [ROLES.ADMIN, ROLES.AUDITOR] }, 
   { label: 'Classifications', icon: <CategoryIcon />, href: '/admin/classifications', requiresRole: [ROLES.ADMIN, ROLES.RECORDS_OFFICER] },
   { label: 'Metadata Templates', icon: <ArticleIcon />, href: '/admin/metadata-templates', requiresRole: [ROLES.ADMIN, ROLES.RECORDS_OFFICER] },
+  { label: 'Integration Keys', icon: <ExtensionIcon />, href: '/admin/integrations', requiresRole: [ROLES.ADMIN] },
   { label: 'Users & Roles', icon: <PeopleIcon />, href: '/admin/users', requiresRole: [ROLES.ADMIN] },
   { label: 'Groups', icon: <FolderIcon />, href: '/admin/groups', requiresRole: [ROLES.ADMIN] },
 ];
