@@ -18,7 +18,7 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 
 import { useRouter, useParams } from 'next/navigation';
-import Sidebar from '@/components/layout/Sidebar';
+
 
 export default function RecordDetailsPage() {
   const router = useRouter();
@@ -73,10 +73,7 @@ export default function RecordDetailsPage() {
   const downloadUrl = currentVersion?.filePath || '#';
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
-      <Sidebar />
-
-      <Box component="main" sx={{ flexGrow: 1, p: 4, overflow: 'auto' }}>
+      <React.Fragment>
         {/* Header */}
         <Box sx={{ mb: 4 }}>
           <Button 
@@ -203,7 +200,6 @@ export default function RecordDetailsPage() {
           </Box>
 
         </Stack>
-      </Box>
-    </Box>
+      </React.Fragment>
   );
 }

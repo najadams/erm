@@ -27,7 +27,7 @@ import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
-import Sidebar from '@/components/layout/Sidebar';
+
 
 interface ClassificationNode {
   id: string;
@@ -257,10 +257,7 @@ export default function MetadataTemplatesPage() {
   };
 
   return (
-    <Box sx={{ display: 'flex', height: '100dvh', overflow: 'hidden', bgcolor: 'background.default' }}>
-      <Sidebar />
-      
-      <Box component="main" sx={{ flexGrow: 1, p: 4, overflow: 'auto' }}>
+      <React.Fragment>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
           <Box>
             <Typography variant="h4" fontWeight="bold" color="text.primary">
@@ -502,9 +499,6 @@ export default function MetadataTemplatesPage() {
             <Button onClick={() => setFieldDialogOpen(false)}>Cancel</Button>
           </DialogActions>
         </Dialog>
-      </Box>
-    </Box>
+      </React.Fragment>
   );
 }
-
-

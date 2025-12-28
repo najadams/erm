@@ -16,7 +16,7 @@ import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
-import Sidebar from '@/components/layout/Sidebar';
+
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -166,9 +166,7 @@ export default function AdminUsersPage() {
   if (loading) return <Box p={4}>Loading...</Box>;
 
   return (
-    <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden', bgcolor: 'background.default' }}>
-      <Sidebar />
-      <Box component="main" sx={{ flexGrow: 1, p: 4, overflow: 'auto' }}>
+      <React.Fragment>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
            <Typography variant="h4" fontWeight="bold">User Management</Typography>
            <Button variant="contained" onClick={handleOpenCreate}>Create User</Button>
@@ -258,7 +256,6 @@ export default function AdminUsersPage() {
             </Table>
           </TableContainer>
         )}
-      </Box>
 
       {/* Create/Edit User Dialog */}
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
@@ -319,6 +316,5 @@ export default function AdminUsersPage() {
             </Stack>
         </DialogContent>
       </Dialog>
-    </Box>
-  );
+      </React.Fragment>);
 }

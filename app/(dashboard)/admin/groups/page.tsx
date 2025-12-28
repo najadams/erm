@@ -14,7 +14,7 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
-import Sidebar from '@/components/layout/Sidebar';
+
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -85,9 +85,7 @@ export default function AdminGroupsPage() {
   };
 
   return (
-    <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden', bgcolor: 'background.default' }}>
-      <Sidebar />
-      <Box component="main" sx={{ flexGrow: 1, p: 4, overflow: 'auto' }}>
+      <React.Fragment>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
            <Typography variant="h4" fontWeight="bold">Group Management</Typography>
            <Button variant="contained" onClick={() => setOpenDialog(true)}>Create Group</Button>
@@ -122,30 +120,29 @@ export default function AdminGroupsPage() {
             </TableBody>
           </Table>
         </TableContainer>
-      </Box>
 
-      {/* Create Group Dialog */}
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
-        <DialogTitle>Create New Group</DialogTitle>
-        <DialogContent>
-            <Stack spacing={2} sx={{ mt: 1, minWidth: 300 }}>
-                <TextField label="Group Name" fullWidth value={newGroup.name} onChange={(e) => setNewGroup({...newGroup, name: e.target.value})} />
-                <FormControl fullWidth>
-                    <InputLabel>Type</InputLabel>
-                    <Select
-                        value={newGroup.type}
-                        label="Type"
-                        onChange={(e) => setNewGroup({...newGroup, type: e.target.value})}
-                    >
-                        {GROUP_TYPES.map(type => (
-                            <MenuItem key={type} value={type}>{type}</MenuItem>
-                        ))}
-                    </Select>
-                </FormControl>
-                <Button variant="contained" onClick={handleCreateGroup}>Create</Button>
-            </Stack>
-        </DialogContent>
-      </Dialog>
-    </Box>
+        {/* Create Group Dialog */}
+        <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
+          <DialogTitle>Create New Group</DialogTitle>
+          <DialogContent>
+              <Stack spacing={2} sx={{ mt: 1, minWidth: 300 }}>
+                  <TextField label="Group Name" fullWidth value={newGroup.name} onChange={(e) => setNewGroup({...newGroup, name: e.target.value})} />
+                  <FormControl fullWidth>
+                      <InputLabel>Type</InputLabel>
+                      <Select
+                          value={newGroup.type}
+                          label="Type"
+                          onChange={(e) => setNewGroup({...newGroup, type: e.target.value})}
+                      >
+                          {GROUP_TYPES.map(type => (
+                              <MenuItem key={type} value={type}>{type}</MenuItem>
+                          ))}
+                      </Select>
+                  </FormControl>
+                  <Button variant="contained" onClick={handleCreateGroup}>Create</Button>
+              </Stack>
+          </DialogContent>
+        </Dialog>
+      </React.Fragment>
   );
 }

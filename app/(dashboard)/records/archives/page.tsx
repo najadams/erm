@@ -6,7 +6,7 @@ import Typography from '@mui/material/Typography';
 import Paper from '@mui/material/Paper';
 import Chip from '@mui/material/Chip';
 import IconButton from '@mui/material/IconButton';
-import Sidebar from '@/components/layout/Sidebar';
+
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import DescriptionIcon from '@mui/icons-material/Description';
 import VisibilityIcon from '@mui/icons-material/Visibility';
@@ -107,11 +107,8 @@ function ArchivesContent() {
 
 export default function ArchivesPage() {
   return (
-    <Box sx={{ display: 'flex', height: '100dvh', overflow: 'hidden', bgcolor: 'background.default' }}>
-      <Sidebar />
       <Suspense fallback={<Box p={4}>Loading...</Box>}>
         <ArchivesContent />
       </Suspense>
-    </Box>
   );
 }

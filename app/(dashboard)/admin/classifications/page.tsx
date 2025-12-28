@@ -27,7 +27,7 @@ import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import Collapse from '@mui/material/Collapse';
 import Chip from '@mui/material/Chip';
-import Sidebar from '@/components/layout/Sidebar';
+
 
 interface ClassificationNode {
   id: string;
@@ -257,10 +257,7 @@ export default function ClassificationsPage() {
   console.log('ClassificationsPage: nodes:', nodes.length, 'treeData:', treeData.length);
 
   return (
-    <Box sx={{ display: 'flex', height: '100dvh', overflow: 'hidden', bgcolor: 'background.default' }}>
-      <Sidebar />
-      
-      <Box component="main" sx={{ flexGrow: 1, p: 4, overflow: 'auto' }}>
+      <React.Fragment>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
           <Box>
             <Typography variant="h4" fontWeight="bold" color="text.primary">
@@ -376,9 +373,6 @@ export default function ClassificationsPage() {
             </Button>
           </DialogActions>
         </Dialog>
-      </Box>
-    </Box>
+      </React.Fragment>
   );
 }
-
-

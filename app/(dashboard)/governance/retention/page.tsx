@@ -14,7 +14,7 @@ import AddIcon from '@mui/icons-material/Add';
 import IconButton from '@mui/material/IconButton';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import Sidebar from '@/components/layout/Sidebar';
+
 import { useRouter } from 'next/navigation';
 
 export default function RetentionPage() {
@@ -33,9 +33,7 @@ export default function RetentionPage() {
   }, []);
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
-      <Sidebar />
-      <Box component="main" sx={{ flexGrow: 1, p: 4, overflow: 'auto' }}>
+      <React.Fragment>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
           <Box>
             <Typography variant="h4" fontWeight="bold" gutterBottom>
@@ -85,7 +83,6 @@ export default function RetentionPage() {
             </TableBody>
           </Table>
         </Paper>
-      </Box>
-    </Box>
+      </React.Fragment>
   );
 }

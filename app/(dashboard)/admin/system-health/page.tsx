@@ -7,7 +7,7 @@ import Paper from '@mui/material/Paper';
 import Grid2 from '@mui/material/Grid';
 import LinearProgress from '@mui/material/LinearProgress';
 import Chip from '@mui/material/Chip';
-import Sidebar from '@/components/layout/Sidebar';
+
 import StorageIcon from '@mui/icons-material/Storage';
 import GroupIcon from '@mui/icons-material/Group';
 import DescriptionIcon from '@mui/icons-material/Description';
@@ -70,11 +70,8 @@ export default function SystemHealthPage() {
     };
 
     return (
-        <Box sx={{ display: 'flex', height: '100dvh', overflow: 'hidden' }}>
-            <Sidebar />
-            <Box component="main" sx={{ flexGrow: 1, p: 4, overflow: 'auto' }}>
-                
-                <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <React.Fragment>
+          <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Box>
                         <Typography variant="h4" fontWeight="bold" className="premium-gradient-text">
                             System Analytics
@@ -185,8 +182,6 @@ export default function SystemHealthPage() {
                          </Paper>
                     </Grid2>
                 </Grid2>
-
-            </Box>
-        </Box>
+      </React.Fragment>
     );
 }

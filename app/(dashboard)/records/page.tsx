@@ -10,7 +10,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Sidebar from '@/components/layout/Sidebar';
+
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import DescriptionIcon from '@mui/icons-material/Description';
 import type { Record } from '@/types';
@@ -191,11 +191,8 @@ function RecordsContent() {
 
 export default function RecordsPage() {
   return (
-    <Box sx={{ display: 'flex', height: '100dvh', overflow: 'hidden', bgcolor: 'background.default' }}>
-      <Sidebar />
-      <Suspense fallback={<Box p={4}>Loading...</Box>}>
-        <RecordsContent />
-      </Suspense>
-    </Box>
+    <Suspense fallback={<Box p={4}>Loading...</Box>}>
+      <RecordsContent />
+    </Suspense>
   );
 }

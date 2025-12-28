@@ -12,7 +12,7 @@ import Stack from '@mui/material/Stack';
 import Chip from '@mui/material/Chip';
 import Divider from '@mui/material/Divider';
 import Alert from '@mui/material/Alert';
-import Sidebar from '@/components/layout/Sidebar';
+
 import PersonIcon from '@mui/icons-material/Person';
 import EmailIcon from '@mui/icons-material/Email';
 import SecurityIcon from '@mui/icons-material/Security';
@@ -109,10 +109,7 @@ export default function SettingsPage() {
   const user = session.user as any;
 
   return (
-    <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden', bgcolor: 'background.default' }}>
-      <Sidebar />
-      
-      <Box component="main" sx={{ flexGrow: 1, p: 4, overflow: 'auto' }}>
+    <React.Fragment>
         <Typography variant="h4" fontWeight="bold" sx={{ mb: 4 }}>
           Settings
         </Typography>
@@ -235,7 +232,6 @@ export default function SettingsPage() {
             </Button>
           </Stack>
         </Paper>
-      </Box>
-    </Box>
+    </React.Fragment>
   );
 }
