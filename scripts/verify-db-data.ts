@@ -11,8 +11,8 @@ async function main() {
       console.log(`✅ User count: ${userCount}`);
       
       if (userCount > 0) {
-          const u = await prisma.user.findFirst();
-          console.log('Sample User:', u?.email, u?.role);
+          const u = await prisma.user.findUnique({ where: { email: 'admin@example.com' } });
+          console.log('Admin User:', u?.email, 'Role:', u?.role, 'Expires:', u?.accountExpiresAt, 'ID:', u?.id);
       } else {
           console.error('❌ User table exists but is EMPTY.');
       }
