@@ -20,14 +20,10 @@
 }
 
 body {
-  background: #f8fafc; /* Lighter background for better contrast with glass */
+  background: #f1f5f9; /* Slate 100 matches theme */
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
-  background-image: 
-    radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
-    radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
-    radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
-  background-attachment: fixed;
+  /* Removed dark abstract gradients for a cleaner, official Enterprise look */
   min-height: 100vh;
 }
 
@@ -37,11 +33,13 @@ body {
   }
   
   .glass-sidebar {
-    @apply bg-slate-900/95 backdrop-blur-2xl border-r border-white/10;
+    /* Using new Deep Navy RGB approx #113f67 -> 17, 63, 103 */
+    @apply bg-[rgba(17,63,103,0.95)] backdrop-blur-2xl border-r border-white/10;
   }
 
   .premium-gradient-text {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500;
+    /* Professional Blue-Teal Gradient */
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-800 via-sky-600 to-teal-500;
   }
   
   .premium-card {

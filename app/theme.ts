@@ -18,22 +18,40 @@ const theme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: '#0f172a', // Slate 900
-      light: '#334155',
-      dark: '#020617',
+      main: '#113f67', // Deep Navy - Trust & Stability
+      light: '#326a96',
+      dark: '#082845', 
+      contrastText: '#ffffff',
     },
     secondary: {
-      main: '#0ea5e9', // Sky 500
-      light: '#38bdf8',
-      dark: '#0284c7',
+      main: '#64748b', // Slate 500 - Neutral
+      light: '#94a3b8',
+      dark: '#475569',
+      contrastText: '#ffffff',
     },
     background: {
-      default: '#f8fafc', // Slate 50
+      default: '#f1f5f9', // Slate 100 - Slightly cooler background
       paper: '#ffffff',
     },
     text: {
-      primary: '#1e293b',
-      secondary: '#64748b',
+      primary: '#0f172a', // Slate 900
+      secondary: '#64748b', // Slate 500
+    },
+    success: {
+      main: '#10b981', // Emerald 500
+      light: '#34d399',
+    },
+    warning: {
+      main: '#f59e0b', // Amber 500
+      light: '#fbbf24',
+    },
+    error: {
+      main: '#ef4444', // Red 500
+      light: '#f87171',
+    },
+    info: {
+      main: '#0ea5e9', // Sky 500
+      light: '#38bdf8',
     },
   },
   components: {

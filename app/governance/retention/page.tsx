@@ -69,10 +69,12 @@ export default function RetentionPage() {
               ) : (
                 policies.map((policy) => (
                   <TableRow key={policy.id} hover>
-                    <TableCell fontWeight="500">{policy.name || '-'}</TableCell>
+                    <TableCell sx={{ fontWeight: 500 }}>{policy.name || '-'}</TableCell>
                     <TableCell>{policy.recordType?.name || 'All'}</TableCell>
                     <TableCell>{policy.durationYears} years</TableCell>
-                    <TableCell sx={{ color: 'text.secondary', maxWidth: 300 }} noWrap>{policy.description}</TableCell>
+                    <TableCell sx={{ color: 'text.secondary', maxWidth: 300, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {policy.description}
+                    </TableCell>
                     <TableCell align="right">
                       <IconButton size="small"><EditIcon fontSize="small" /></IconButton>
                       <IconButton size="small" color="error"><DeleteIcon fontSize="small" /></IconButton>
