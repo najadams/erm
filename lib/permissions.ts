@@ -95,7 +95,15 @@ export const ROLE_CAPABILITIES: Record<Role, Permission[]> = {
     'AUDIT_EXPORT',
     'MANAGE_USERS',
     'MANAGE_METADATA',
-    'AUDIT_VIEW_OWN' // Implicitly admins should likely see their own too, or full covers it
+    'AUDIT_VIEW_OWN',
+    // Added for full verification access
+    'VIEW_PENDING_SUBMISSIONS',
+    'VERIFY_RECORD',
+    'APPROVE_SUBMISSION',
+    'VIEW_OFFICIAL_RECORDS',
+    // Added for workspace management
+    'WORKSPACE_DELETE_OWN_DRAFT',
+    'WORKSPACE_EDIT_OWN_DRAFT'
   ],
 
   AUDITOR: [

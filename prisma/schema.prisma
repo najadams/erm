@@ -154,7 +154,7 @@ model RecordTypeMetadata {
 model RecordMetadata {
   id              String        @id @default(uuid())
   recordId        String
-  record          Record        @relation(fields: [recordId], references: [id])
+  record          Record        @relation(fields: [recordId], references: [id], onDelete: Cascade)
   metadataFieldId String
   metadataField   MetadataField @relation(fields: [metadataFieldId], references: [id])
   value           String        // Stores value or JSON string
@@ -264,7 +264,7 @@ model Record {
 
   // Parent/Child Relationship
   parentId      String?
-  parent        Record?  @relation("RecordHierarchy", fields: [parentId], references: [id])
+  parent        Record?  @relation("RecordHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
   children      Record[] @relation("RecordHierarchy")
 
   // Legacy/Convenience relations for existing code (Optional, but might break if removed abruptly. 
@@ -319,7 +319,7 @@ model LegalHold {
 model RecordLegalHold {
   id          String    @id @default(uuid())
   recordId    String
-  record      Record    @relation(fields: [recordId], references: [id])
+  record      Record    @relation(fields: [recordId], references: [id], onDelete: Cascade)
   legalHoldId String
   legalHold   LegalHold @relation(fields: [legalHoldId], references: [id])
   addedByUserId String? // Audit who added it
@@ -332,7 +332,7 @@ model RecordLegalHold {
 model RecordVersion {
   id            String   @id @default(uuid())
   recordId      String
-  record        Record   @relation(fields: [recordId], references: [id])
+  record        Record   @relation(fields: [recordId], references: [id], onDelete: Cascade)
   versionNumber Int
   filePath      String
   fileType      String
@@ -346,7 +346,7 @@ model RecordVersion {
 model RecordAccess {
   id            String    @id @default(uuid())
   recordId      String
-  record        Record    @relation(fields: [recordId], references: [id])
+  record        Record    @relation(fields: [recordId], references: [id], onDelete: Cascade)
   principalType String    // "USER" or "GROUP"
   userId        String?
   user          User?     @relation(fields: [userId], references: [id])
@@ -364,7 +364,7 @@ model AuditLog {
   ipAddress String?
   userAgent String?
   recordId  String?
-  record    Record?  @relation(fields: [recordId], references: [id])
+  record    Record?  @relation(fields: [recordId], references: [id], onDelete: SetNull)
   userId    String
   user      User     @relation(fields: [userId], references: [id])
   timestamp DateTime @default(now())
