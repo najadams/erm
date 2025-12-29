@@ -40,6 +40,27 @@ export default function RecordDetailsPage() {
     }
   }, [id]);
 
+  const handleRequestVerification = async (recordId: string) => {
+      if (!confirm('Submit this record for verification? You will not be able to edit it while it is under review.')) return;
+      try {
+          const res = await fetch(`/api/records/${recordId}/status`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ status: 'SUBMITTED' })
+          });
+          
+          if (!res.ok) {
+               const err = await res.json();
+               alert(err.error || 'Submission failed');
+               return;
+          }
+          
+          window.location.reload();
+      } catch (e) {
+          alert('Error submitting record');
+      }
+  };
+
   const handleDelete = async () => {
     if (confirm('Are you sure you want to delete this record?')) {
         await fetch(`/api/records/${id}`, { method: 'DELETE' });
@@ -193,7 +214,15 @@ export default function RecordDetailsPage() {
                 Actions
               </Typography>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                <Button variant="outlined" color="primary" fullWidth>Request Verification</Button>
+                <Button 
+                  variant="outlined" 
+                  color="primary" 
+                  onClick={() => handleRequestVerification(record.id)} 
+                  fullWidth
+                  disabled={record.status !== 'DRAFT'}
+                >
+                  Request Verification
+                </Button>
                 <Button variant="outlined" color="error" fullWidth onClick={handleDelete}>Delete Record</Button>
               </Box>
             </Paper>

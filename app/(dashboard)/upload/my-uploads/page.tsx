@@ -31,7 +31,9 @@ export default function MyUploadsPage() {
     try {
       setLoading(true);
       // Fetch records uploaded by ME
-      const res = await fetch(`/api/records?uploader=${(session.user as any).id}`);
+      const res = await fetch(`/api/records?uploader=${(session.user as any).id}&t=${Date.now()}`, {
+        headers: { 'Cache-Control': 'no-cache' }
+      });
       if (!res.ok) throw new Error('Failed to fetch records');
       const data = await res.json();
       setRecords(data);
