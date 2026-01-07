@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, level, parentId, code, organizationId } = body;
+    const { name, level, parentId, code, organizationId, securityLevel } = body;
 
     // Validation
     if (!name || !level || (level < 1 || level > 3)) {
@@ -172,6 +172,7 @@ export async function POST(request: NextRequest) {
         level,
         parentId: parentId || null,
         code: code || null,
+        securityLevel: securityLevel ? parseInt(securityLevel) : 1,
         isLeaf: level === 3,
         isActive: true,
         organizationId: orgId,

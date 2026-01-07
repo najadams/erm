@@ -39,6 +39,7 @@ interface ClassificationNode {
   parentId?: string;
   parent?: ClassificationNode;
   children?: ClassificationNode[];
+  securityLevel?: number;
   _count?: {
     records: number;
     children: number;
@@ -55,6 +56,7 @@ export default function ClassificationsPage() {
     level: 1,
     parentId: '',
     code: '',
+    securityLevel: 1,
   });
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string[]>([]);
@@ -114,6 +116,7 @@ export default function ClassificationsPage() {
         level: node.level,
         parentId: node.parentId || '',
         code: node.code || '',
+        securityLevel: node.securityLevel || 1,
       });
     } else {
       setEditingNode(null);
@@ -122,6 +125,7 @@ export default function ClassificationsPage() {
         level: parentId ? (nodes.find(n => n.id === parentId)?.level || 0) + 1 : 1,
         parentId: parentId || '',
         code: '',
+        securityLevel: 1,
       });
     }
     setDialogOpen(true);
@@ -131,7 +135,7 @@ export default function ClassificationsPage() {
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setEditingNode(null);
-    setFormData({ name: '', level: 1, parentId: '', code: '' });
+    setFormData({ name: '', level: 1, parentId: '', code: '', securityLevel: 1 });
     setError(null);
   };
 
@@ -144,7 +148,7 @@ export default function ClassificationsPage() {
       
       const method = editingNode ? 'PUT' : 'POST';
       const body = editingNode
-        ? { name: formData.name, code: formData.code }
+        ? { name: formData.name, code: formData.code, securityLevel: formData.securityLevel }
         : formData;
 
       const res = await fetch(url, {
@@ -219,6 +223,9 @@ export default function ClassificationsPage() {
 
                 {/* Badges/Chips */}
                 <Box sx={{ display: 'flex', gap: 1, mr: 2 }}>
+                    {node.securityLevel && node.securityLevel > 1 && (
+                        <Chip label={`Level ${node.securityLevel}`} size="small" color="warning" variant="outlined" />
+                    )}
                     {node.code && <Chip label={node.code} size="small" variant="outlined" />}
                     {recordCount > 0 && <Chip label={`${recordCount} records`} size="small" color="primary" />}
                     {!node.isActive && <Chip label="Inactive" size="small" color="error" />}
@@ -314,6 +321,14 @@ export default function ClassificationsPage() {
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
+              />
+              <TextField
+                label="Security Level (1-5)"
+                type="number"
+                fullWidth
+                value={formData.securityLevel}
+                onChange={(e) => setFormData({ ...formData, securityLevel: parseInt(e.target.value) || 1 })}
+                InputProps={{ inputProps: { min: 1, max: 5 } }}
               />
               {!editingNode && (
                 <>

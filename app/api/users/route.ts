@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { email, name, password, role, groupIds } = body;
+    const { email, name, password, role, clearanceLevel, groupIds } = body;
 
     if (!email || !password || !name) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
         name,
         password: hashedPassword,
         role: role || 'USER',
+        clearanceLevel: clearanceLevel ? parseInt(clearanceLevel) : 1,
         groups: groupIds ? {
             connect: groupIds.map((id: string) => ({ id }))
         } : undefined
@@ -63,12 +64,13 @@ export async function PATCH(request: NextRequest) {
 
     try {
         const body = await request.json();
-        const { id, role, groupIds } = body;
+        const { id, role, clearanceLevel, groupIds } = body;
         
         if (!id) return NextResponse.json({ error: 'Missing User ID' }, {status: 400});
 
         const updateData: any = {};
         if (role) updateData.role = role;
+        if (clearanceLevel !== undefined) updateData.clearanceLevel = parseInt(clearanceLevel);
         if (groupIds) {
             updateData.groups = {
                 set: groupIds.map((gid: string) => ({ id: gid }))

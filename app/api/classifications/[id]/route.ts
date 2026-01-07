@@ -79,7 +79,7 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { name, code, isActive } = body;
+    const { name, code, isActive, securityLevel } = body;
 
     // Check if node exists
     const existing = await prisma.classificationNode.findUnique({
@@ -112,6 +112,7 @@ export async function PUT(
         ...(name && { name }),
         ...(code !== undefined && { code }),
         ...(isActive !== undefined && { isActive }),
+        ...(securityLevel !== undefined && { securityLevel: parseInt(securityLevel) }),
       },
       include: {
         parent: true,
@@ -185,5 +186,3 @@ export async function DELETE(
     );
   }
 }
-
-

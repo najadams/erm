@@ -40,6 +40,9 @@ export async function GET(
         versions: {
           orderBy: { versionNumber: 'desc' },
           include: { uploadedBy: { select: { name: true } } }
+        },
+        parent: {
+            select: { id: true, title: true, referenceNumber: true }
         }
       }
     });

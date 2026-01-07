@@ -111,7 +111,13 @@ export default function MyUploadsPage() {
         field: 'createdAt', 
         headerName: 'Date Uploaded', 
         width: 180, 
-        valueFormatter: (params: any) => new Date(params.value).toLocaleString()
+        valueFormatter: (value: any) => {
+          if (!value) return 'Unknown';
+          // Handle both v5 (params.value) and v6 (value) just in case, though likely v6
+          const dateVal = typeof value === 'object' && value?.value ? value.value : value;
+          const d = new Date(dateVal);
+          return isNaN(d.getTime()) ? 'Invalid Date' : d.toLocaleString();
+        }
     },
     {
       field: 'actions',

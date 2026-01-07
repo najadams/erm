@@ -7,6 +7,9 @@ import MenuItem from '@mui/material/MenuItem';
 import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography';
 import Paper from '@mui/material/Paper';
+import Autocomplete from '@mui/material/Autocomplete';
+import CircularProgress from '@mui/material/CircularProgress';
+import debounce from 'lodash/debounce';
 
 interface DocumentMetadataProps {
   data: any; // Legacy or flexible
@@ -66,6 +69,16 @@ export default function DocumentMetadata({
                     onChange={(e) => onChange('title', e.target.value)}
                     helperText="Used to group versions"
                 />
+            </Grid>
+
+
+
+            {/* Parent Record Selection */}
+            <Grid size={{ xs: 12 }}>
+                 <ParentRecordSelect 
+                    value={data.parentId}
+                    onChange={(val) => onChange('parentId', val)}
+                 />
             </Grid>
 
             <Grid size={{ xs: 12 }}>
@@ -134,4 +147,87 @@ export default function DocumentMetadata({
         </Grid>
     </Paper>
   );
+}
+
+function ParentRecordSelect({ value, onChange }: { value: string | undefined, onChange: (id: string) => void }) {
+    const [open, setOpen] = React.useState(false);
+    const [options, setOptions] = React.useState<any[]>([]);
+    const [loading, setLoading] = React.useState(false);
+    const [inputValue, setInputValue] = React.useState('');
+    const [selectedOption, setSelectedOption] = React.useState<any>(null);
+
+    const fetchRecords = React.useMemo(() => debounce(async (input: string, callback: (results: any[]) => void) => {
+        if (input.length < 2) {
+            callback([]);
+            return;
+        }
+        try {
+            const res = await fetch(`/api/records?q=${encodeURIComponent(input)}`);
+            if (res.ok) {
+                const data = await res.json();
+                callback(data);
+            } else {
+                callback([]);
+            }
+        } catch (e) {
+            callback([]);
+        }
+    }, 400), []);
+
+    React.useEffect(() => {
+        let active = true;
+
+        if (inputValue === '') {
+            setOptions(selectedOption ? [selectedOption] : []);
+            return undefined;
+        }
+
+        setLoading(true);
+
+        fetchRecords(inputValue, (results) => {
+            if (active) {
+                let newOptions = [...results];
+                setOptions(newOptions);
+                setLoading(false);
+            }
+        });
+
+        return () => { active = false; };
+    }, [inputValue, fetchRecords, selectedOption]);
+
+    return (
+        <Autocomplete
+            open={open}
+            onOpen={() => setOpen(true)}
+            onClose={() => setOpen(false)}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            getOptionLabel={(option) => `${option.referenceNumber || 'No Ref'} - ${option.title}`}
+            options={options}
+            loading={loading}
+            onInputChange={(event, newInputValue) => {
+                setInputValue(newInputValue);
+            }}
+            onChange={(event, newValue: any) => {
+                setOptions(newValue ? [newValue, ...options] : options);
+                setSelectedOption(newValue);
+                onChange(newValue ? newValue.id : '');
+            }}
+            renderInput={(params) => (
+                <TextField
+                    {...params}
+                    label="Link to Parent Record (Optional)"
+                    helperText="Search by title or reference number to link this upload to an existing case or file."
+                    InputProps={{
+                        ...params.InputProps,
+                        endAdornment: (
+                            <React.Fragment>
+                                {loading ? <CircularProgress color="inherit" size={20} /> : null}
+                                {params.InputProps.endAdornment}
+                            </React.Fragment>
+                        ),
+                    }}
+                />
+            )}
+        />
+    );
 }

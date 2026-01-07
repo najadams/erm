@@ -11,18 +11,19 @@ export type Action = 'VIEW' | 'EDIT' | 'DELETE' | 'DOWNLOAD';
  */
 
 // Attributes we might check
+// Attributes we might check
 interface UserAttributes {
   id: string;
   role: string;
   departmentId: string | null;
-  clearanceLevel?: number; // Future: 1=Public, 2=Internal, 3=Confidential
+  clearanceLevel: number; // 1=Public, 5=Top Secret
 }
 
 interface RecordAttributes {
   id: string;
   status: string;
   departmentId: string | null;
-  visibilty?: string; // e.g. 'PUBLIC', 'DEPARTMENT', 'CONFIDENTIAL'
+  securityLevel: number; // 1=Public, 5=Top Secret
   ownerUserId: string | null;
 }
 
@@ -34,21 +35,23 @@ export function checkAttributeAccess(
   record: RecordAttributes,
   action: Action
 ): boolean {
-  // 1. Super Admin Bypass (Optional, but often practical)
+  // 1. Super Admin Bypass
   if (user.role === ROLES.ADMIN) return true;
 
   // 2. Owner Access (Usually full access to own drafts)
   const isOwner = user.id === record.ownerUserId;
   if (isOwner) return true;
 
-  // 3. Department Scoping
+  // 3. Security Clearance Check (Global)
+  if (user.clearanceLevel < record.securityLevel) {
+      return false; // Instant denial if clearance is insufficient
+  }
+
+  // 4. Department Scoping
   // If record is scoped to Department, User must be in same Department
-  // Assuming default is strict if not specified.
   if (record.departmentId) {
-      // If user has no department, they can't see department-scoped records (unless Admin)
       if (!user.departmentId) return false;
       
-      // Must match
       if (user.departmentId !== record.departmentId) {
           // Exception: Auditors might see all?
           if (user.role === ROLES.AUDITOR) return true; 
@@ -56,14 +59,7 @@ export function checkAttributeAccess(
       }
   }
 
-  // 4. Confidentiality / Clearance (Future scalability)
-  // if (record.confidentiality > user.clearance) return false;
-
-  // 5. Default Deny or Allow?
-  // If we passed specific blocks, and it's public/open, allow?
-  // Real ABAC usually requires an explicit "Allow" rule to fire.
-  
-  // For ERM, if they are in the same department, they generally have VIEW access.
+  // 5. Default Allow for VIEW if passed checks
   if (action === 'VIEW') return true;
 
   return false;
@@ -74,23 +70,26 @@ export function checkAttributeAccess(
  */
 export function assertAttributeAccess(
     user: User, 
-    record: Record, 
+    record: Record & { classificationNode?: { securityLevel: number } | null }, 
     action: Action
 ) {
     // Map Prisma models to attributes
-    // Ensure we handle nulls safely
     const userAttr: UserAttributes = {
         id: user.id,
         role: user.role,
-        departmentId: user.departmentId
+        departmentId: user.departmentId,
+        clearanceLevel: user.clearanceLevel ?? 1
     };
     
-    // We might need to fetch record.departmentId if not present in passed object
-    // Assuming 'record' passed here has the fields.
+    // Resolve security level safely
+    // If record has no classification, default to 1 (Public)
+    const securityLevel = record.classificationNode?.securityLevel ?? 1;
+
     const recordAttr: RecordAttributes = {
         id: record.id,
         status: record.status,
         departmentId: record.departmentId,
+        securityLevel: securityLevel,
         ownerUserId: record.ownerUserId
     };
 

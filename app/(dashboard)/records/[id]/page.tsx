@@ -159,6 +159,19 @@ export default function RecordDetailsPage() {
                     <Typography variant="caption" color="text.secondary" fontWeight="bold">DESCRIPTION</Typography>
                     <Typography>{record.description || '-'}</Typography>
                  </Box>
+
+                 {/* Parent Record Link */}
+                 {record.parent && (
+                    <Box>
+                        <Typography variant="caption" color="text.secondary" fontWeight="bold">PARENT RECORD</Typography>
+                        <Typography>
+                            <a href={`/records/${record.parent.id}`} style={{ color: '#0ea5e9', textDecoration: 'underline' }}>
+                                {record.parent.referenceNumber ? `${record.parent.referenceNumber} - ` : ''}{record.parent.title}
+                            </a>
+                        </Typography>
+                    </Box>
+                 )}
+
                  
                  {/* Dynamic Fields */}
                  {record.metadata?.map((meta: any) => (

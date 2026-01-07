@@ -41,6 +41,7 @@ interface User {
   name: string;
   email: string;
   role: string;
+  clearanceLevel?: number;
   createdAt: string;
   groups?: Group[];
 }
@@ -71,7 +72,8 @@ export default function AdminUsersPage() {
       name: '', 
       email: '', 
       password: '', 
-      role: 'USER', 
+      role: 'USER',
+      clearanceLevel: 1, 
       groupIds: [] as string[] 
   });
 
@@ -108,7 +110,7 @@ export default function AdminUsersPage() {
 
   const handleOpenCreate = () => {
       setEditMode(false);
-      setFormData({ id: '', name: '', email: '', password: '', role: 'USER', groupIds: [] });
+      setFormData({ id: '', name: '', email: '', password: '', role: 'USER', clearanceLevel: 1, groupIds: [] });
       setOpenDialog(true);
   };
 
@@ -120,6 +122,7 @@ export default function AdminUsersPage() {
           email: user.email,
           password: '', // Don't show password
           role: user.role,
+          clearanceLevel: user.clearanceLevel || 1,
           groupIds: user.groups ? user.groups.map(g => g.id) : []
       });
       setOpenDialog(true);
@@ -187,6 +190,7 @@ export default function AdminUsersPage() {
                   <TableCell>Name</TableCell>
                   <TableCell>Email</TableCell>
                   <TableCell>Role</TableCell>
+                  <TableCell>Clearance</TableCell>
                   <TableCell>Groups</TableCell>
                   <TableCell>Joined</TableCell>
                   <TableCell>Actions</TableCell>
@@ -199,6 +203,9 @@ export default function AdminUsersPage() {
                     <TableCell>{user.email}</TableCell>
                     <TableCell>
                         <Chip label={user.role} color={user.role === 'ADMIN' ? 'secondary' : 'default'} size="small" />
+                    </TableCell>
+                    <TableCell>
+                        <Chip label={`Level ${user.clearanceLevel || 1}`} size="small" variant="outlined" />
                     </TableCell>
                     <TableCell>
                         {user.groups?.map(g => (
@@ -268,19 +275,36 @@ export default function AdminUsersPage() {
                     <TextField label="Password" type="password" fullWidth value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} />
                 )}
                 
-                <FormControl fullWidth>
-                    <InputLabel>Role</InputLabel>
-                    <Select
-                        value={formData.role}
-                        label="Role"
-                        onChange={(e) => setFormData({...formData, role: e.target.value})}
-                    >
-                        <MenuItem value="USER">USER</MenuItem>
-                        <MenuItem value="ADMIN">ADMIN</MenuItem>
-                        <MenuItem value="AUDITOR">AUDITOR</MenuItem>
-                        <MenuItem value="STAFF">STAFF</MenuItem>
-                    </Select>
-                </FormControl>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                    <FormControl fullWidth>
+                        <InputLabel>Role</InputLabel>
+                        <Select
+                            value={formData.role}
+                            label="Role"
+                            onChange={(e) => setFormData({...formData, role: e.target.value})}
+                        >
+                            <MenuItem value="USER">USER</MenuItem>
+                            <MenuItem value="ADMIN">ADMIN</MenuItem>
+                            <MenuItem value="AUDITOR">AUDITOR</MenuItem>
+                            <MenuItem value="STAFF">STAFF</MenuItem>
+                        </Select>
+                    </FormControl>
+
+                    <FormControl fullWidth>
+                        <InputLabel>Clearance Level</InputLabel>
+                        <Select
+                            value={formData.clearanceLevel}
+                            label="Clearance Level"
+                            onChange={(e) => setFormData({...formData, clearanceLevel: Number(e.target.value)})}
+                        >
+                            <MenuItem value={1}>Level 1 (Public)</MenuItem>
+                            <MenuItem value={2}>Level 2 (Internal)</MenuItem>
+                            <MenuItem value={3}>Level 3 (Confidential)</MenuItem>
+                            <MenuItem value={4}>Level 4 (Secret)</MenuItem>
+                            <MenuItem value={5}>Level 5 (Top Secret)</MenuItem>
+                        </Select>
+                    </FormControl>
+                </Box>
 
                 <FormControl fullWidth>
                     <InputLabel>Groups</InputLabel>

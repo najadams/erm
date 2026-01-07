@@ -13,6 +13,7 @@ model User {
   password         String // Hashed password
   name             String?
   role             String    @default("USER") // ADMIN, USER, AUDITOR, RECORDS_MANAGER
+  clearanceLevel   Int       @default(1)      // 1=Public, 5=Top Secret
   createdAt        DateTime  @default(now())
   
   // Relations
@@ -179,6 +180,7 @@ model ClassificationNode {
   parent         ClassificationNode?   @relation("ClassificationHierarchy", fields: [parentId], references: [id])
   children       ClassificationNode[]  @relation("ClassificationHierarchy")
   code           String?
+  securityLevel  Int         @default(1) // 1=Public, 5=Top Secret
   lastSequenceNumber Int     @default(0) // Tracks the last used sequence for this node (if it's a leaf)
   isLeaf         Boolean     @default(false) // true only for level 3
   isActive       Boolean               @default(true)

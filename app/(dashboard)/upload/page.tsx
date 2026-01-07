@@ -33,7 +33,8 @@ export default function UploadPage() {
     category: '', // Legacy/Internal
     effectiveDate: '',
     retentionPeriod: '',
-    classificationNodeId: ''
+    classificationNodeId: '',
+    parentId: ''
   });
 
   const [access, setAccess] = useState({
@@ -106,7 +107,13 @@ export default function UploadPage() {
     // Append Compliance
     // Append Compliance
     formData.append('isLegalHold', String(compliance.isLegalHold));
+    formData.append('isLegalHold', String(compliance.isLegalHold));
     formData.append('requiresApproval', String(compliance.requiresApproval));
+    
+    // Append Parent ID
+    if (metadata.parentId) {
+        formData.append('parentId', metadata.parentId);
+    }
 
     // Append Classification & Dynamic Metadata
     if (template) {
