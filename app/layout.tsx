@@ -18,7 +18,7 @@ export default function RootLayout({
   // The primary instruction was to wrap children with NextAuthProvider.
   // The provided snippet also implies removing `options={{ key: 'mui' }}` from ThemeRegistry.
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>
         <ThemeRegistry options={{ key: 'mui' }}>
           <NextAuthProvider>

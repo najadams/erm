@@ -86,6 +86,7 @@ model Department {
   // New Relations
   users          User[]
   classifications ClassificationNode[]
+  retentionPolicies RetentionPolicy[]
   
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
@@ -115,6 +116,9 @@ model RecordType {
   approvalRequired  Boolean              @default(false)
   retentionYears    Int?
   isActive          Boolean              @default(true)
+  
+  retentionPolicyId String?
+  retentionPolicy   RetentionPolicy?     @relation(fields: [retentionPolicyId], references: [id])
   
   metadataFields    RecordTypeMetadata[]
   records           Record[]
@@ -293,17 +297,25 @@ model Record {
 }
 
 model RetentionPolicy {
-  id            String   @id @default(uuid())
-  name          String
-  description   String?
-  durationYears Int
-  trigger       String   @default("CREATION_DATE") // CREATION_DATE, EVENT_BASED
-  startDateField String? // For event-based triggers (e.g. "last_accessed")
+  id              String       @id @default(uuid())
+  name            String       @unique
+  description     String?
+  durationValue   Int          @default(7) // Replaces simple durationYears
+  durationUnit    String       @default("YEARS") // YEARS, MONTHS, DAYS
+  trigger         String       @default("CREATION_DATE") // CREATION_DATE, EVENT_BASED
+  dispositionAction String     @default("DESTROY") // DESTROY, REVIEW, ARCHIVE
   
-  records       Record[]
+  preventDeletion Boolean      @default(true)
+  status          String       @default("ACTIVE") // ACTIVE, DRAFT, DEPRECATED
   
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  departmentId    String?
+  department      Department?  @relation(fields: [departmentId], references: [id])
+  
+  recordTypes     RecordType[] // One-to-Many: Policy covers many types
+  records         Record[]
+  
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 }
 
 model LegalHold {

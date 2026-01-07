@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
 
   try {
       const policies = await prisma.retentionPolicy.findMany({
+          include: { recordTypes: true },
           orderBy: { name: 'asc' }
       });
       return NextResponse.json(policies);
@@ -32,9 +33,13 @@ export async function POST(request: NextRequest) {
 
     try {
         const body = await request.json();
-        const { name, description, durationYears } = body;
+        const { 
+            name, description, durationValue, durationUnit,
+            trigger, dispositionAction, preventDeletion, 
+            status, recordTypeIds 
+        } = body;
 
-        if (!name || durationYears === undefined) {
+        if (!name || durationValue === undefined) {
              return NextResponse.json({ error: 'Name and Duration are required' }, { status: 400 });
         }
 
@@ -42,9 +47,17 @@ export async function POST(request: NextRequest) {
             data: {
                 name,
                 description,
-                durationYears: parseInt(durationYears),
-                trigger: 'CREATION_DATE' // Default support for now
-            }
+                durationValue: parseInt(durationValue),
+                durationUnit: durationUnit || 'YEARS',
+                trigger: trigger || 'CREATION_DATE',
+                dispositionAction: dispositionAction || 'DESTROY',
+                preventDeletion: preventDeletion !== undefined ? preventDeletion : true,
+                status: status || 'ACTIVE',
+                recordTypes: recordTypeIds ? {
+                    connect: recordTypeIds.map((id: string) => ({ id }))
+                } : undefined
+            },
+            include: { recordTypes: true }
         });
 
         await prisma.auditLog.create({
