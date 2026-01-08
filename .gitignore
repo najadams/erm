@@ -46,3 +46,5 @@ next-env.d.ts
 /lib/generated/prisma
 scripts/verify-db-data.ts
 scripts/promote_admins.js
+scripts/verify-governance.ts
+test_upload.pdf

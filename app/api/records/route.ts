@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { writeFile } from 'fs/promises';
 import { join } from 'path';
+import crypto from 'crypto';
 import { hasPermission } from '@/lib/permissions';
 import { assertTransitionAllowed, LifecycleError } from '@/lib/lifecycle';
 
@@ -129,7 +130,15 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const formData = await request.formData();
+    console.log('[API] POST /records - Content-Type:', request.headers.get('content-type'));
+    
+    let formData;
+    try {
+        formData = await request.formData();
+    } catch (parseError: any) {
+        console.error('[API] Failed to parse formData:', parseError);
+        return NextResponse.json({ error: 'Invalid Form Data', details: parseError.message }, { status: 400 });
+    }
     
     // Core Fields
     const file = formData.get('file') as File;
@@ -222,6 +231,12 @@ export async function POST(request: NextRequest) {
     // Upload File (MinIO/S3)
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
+    
+    // Calculate SHA-256 Checksum for Integrity
+    const hash = crypto.createHash('sha256');
+    hash.update(buffer);
+    const calculatedChecksum = hash.digest('hex');
+    
     const fileName = `${Date.now()}-${file.name.replace(/\s+/g, '_')}`;
     
     // Put to Bucket
@@ -344,7 +359,7 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      // 2. Create Initial Version
+      // 2. Create InitialVersion
       await tx.recordVersion.create({
         data: {
           recordId: record.id,
@@ -352,6 +367,7 @@ export async function POST(request: NextRequest) {
           filePath: fileUrl,
           fileType: file.type || 'unknown',
           uploadedById: userId,
+          checksum: calculatedChecksum, // Store SHA-256
           changeNote: 'Initial Upload'
         }
       });

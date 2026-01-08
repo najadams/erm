@@ -18,6 +18,7 @@ model User {
   
   // Relations
   records          Record[]  // Records owned by user
+  legalHoldsOwned  LegalHold[] @relation("LegalHoldOwner")
   auditLogs        AuditLog[]
   groups           Group[]
   uploadedVersions RecordVersion[] // Versions uploaded by user
@@ -296,38 +297,87 @@ model Record {
   legalHolds        RecordLegalHold[]
 }
 
+enum RetentionTrigger {
+  CREATION_DATE
+  LAST_MODIFIED
+  CASE_CLOSED
+  CONTRACT_END
+  EMPLOYMENT_TERMINATION
+  FISCAL_YEAR_END
+}
+
+enum DispositionAction {
+  DESTROY
+  REVIEW
+  ARCHIVE
+  ARCHIVE_THEN_DESTROY
+}
+
+enum RetentionStatus {
+  ACTIVE
+  DRAFT
+  DEPRECATED
+}
+
+enum DurationUnit {
+  DAYS
+  MONTHS
+  YEARS
+  PERMANENT
+}
+
+enum LegalHoldStatus {
+  ACTIVE
+  RELEASED
+  CLOSED
+}
+
 model RetentionPolicy {
-  id              String       @id @default(uuid())
-  name            String       @unique
+  id              String   @id @default(uuid())
+  name            String   @unique
   description     String?
-  durationValue   Int          @default(7) // Replaces simple durationYears
-  durationUnit    String       @default("YEARS") // YEARS, MONTHS, DAYS
-  trigger         String       @default("CREATION_DATE") // CREATION_DATE, EVENT_BASED
-  dispositionAction String     @default("DESTROY") // DESTROY, REVIEW, ARCHIVE
   
-  preventDeletion Boolean      @default(true)
-  status          String       @default("ACTIVE") // ACTIVE, DRAFT, DEPRECATED
-  
+  durationValue   Int?
+  durationUnit    DurationUnit @default(YEARS)
+
+  trigger         RetentionTrigger @default(CREATION_DATE)
+  dispositionAction DispositionAction @default(DESTROY)
+
+  preventDeletion Boolean  @default(true)
+  status          RetentionStatus @default(ACTIVE)
+
+  // Scope (optional)
   departmentId    String?
-  department      Department?  @relation(fields: [departmentId], references: [id])
+  department      Department? @relation(fields: [departmentId], references: [id])
   
-  recordTypes     RecordType[] // One-to-Many: Policy covers many types
+  recordTypes     RecordType[]
   records         Record[]
   
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model LegalHold {
-  id          String   @id @default(uuid())
-  name        String
-  description String?
-  status      String   @default("ACTIVE") // ACTIVE, CLOSED
+  id              String   @id @default(uuid())
+  name            String   // Case Name
+  caseReference   String?  // e.g. CASE-2026-001
+  description     String?  // Scope Summary
   
-  records     RecordLegalHold[]
+  ownerId         String?  // Made optional for migration safety, but logic should enforce it
+  owner           User?    @relation("LegalHoldOwner", fields: [ownerId], references: [id])
   
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  startDate       DateTime @default(now())
+  endDate         DateTime? // Estimated end date
+  
+  status          LegalHoldStatus @default(ACTIVE)
+  
+  notificationRecipients String? // JSON array or comma-separated
+  notes           String?
+  
+  records         RecordLegalHold[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model RecordLegalHold {

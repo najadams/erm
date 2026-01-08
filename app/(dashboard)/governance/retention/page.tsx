@@ -23,15 +23,43 @@ import InputLabel from '@mui/material/InputLabel';
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Chip from '@mui/material/Chip';
-import Stack from '@mui/material/Stack';
 import OutlinedInput from '@mui/material/OutlinedInput';
 import ListItemText from '@mui/material/ListItemText';
 import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert } from '@mui/material';
 
+// Enum Constants
+const DURATION_UNITS = [
+  { value: 'YEARS', label: 'Years' },
+  { value: 'MONTHS', label: 'Months' },
+  { value: 'DAYS', label: 'Days' },
+  { value: 'PERMANENT', label: 'Permanent' },
+];
+
+const RETENTION_TRIGGERS = [
+  { value: 'CREATION_DATE', label: 'Trigger: Creation Date' },
+  { value: 'LAST_MODIFIED', label: 'Trigger: Last Modified' },
+  { value: 'CASE_CLOSED', label: 'Trigger: Case Closed' },
+  { value: 'CONTRACT_END', label: 'Trigger: Contract End' },
+  { value: 'FISCAL_YEAR_END', label: 'Trigger: Fiscal Year End' },
+];
+
+const DISPOSITION_ACTIONS = [
+  { value: 'DESTROY', label: 'Destroy / Delete' },
+  { value: 'REVIEW', label: 'Review Required' },
+  { value: 'ARCHIVE', label: 'Archive' },
+  { value: 'ARCHIVE_THEN_DESTROY', label: 'Archive then Destroy' },
+];
+
+const STATUSES = [
+  { value: 'ACTIVE', label: 'Active' },
+  { value: 'DRAFT', label: 'Draft' },
+  { value: 'DEPRECATED', label: 'Deprecated' },
+];
+
 export default function RetentionPage() {
   const router = useRouter();
   const [policies, setPolicies] = useState<any[]>([]);
-  const [recordTypes, setRecordTypes] = useState<any[]>([]); // Categories with nested Types
+  const [recordTypes, setRecordTypes] = useState<any[]>([]); 
   const [flatRecordTypes, setFlatRecordTypes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -67,7 +95,6 @@ export default function RetentionPage() {
         if (typesRes.ok) {
             const categories = await typesRes.json();
             setRecordTypes(categories);
-            // Flatten types for easier selection
             const flat: any[] = [];
             categories.forEach((cat: any) => {
                 if(cat.recordTypes) flat.push(...cat.recordTypes);
@@ -97,7 +124,7 @@ export default function RetentionPage() {
       setFormData({
           name: policy.name,
           description: policy.description || '',
-          durationValue: policy.durationValue,
+          durationValue: policy.durationValue || 0,
           durationUnit: policy.durationUnit,
           trigger: policy.trigger,
           dispositionAction: policy.dispositionAction,
@@ -132,8 +159,8 @@ export default function RetentionPage() {
   };
 
   const handleSubmit = async () => {
-      if (!formData.name || formData.durationValue === undefined) {
-          setError('Name and Duration are required');
+      if (!formData.name) {
+          setError('Name is required');
           return;
       }
 
@@ -160,10 +187,6 @@ export default function RetentionPage() {
       } catch (err: any) {
           setError(err.message);
       }
-  };
-
-  const getRecordTypeNames = (ids: string[]) => {
-      return ids.map(id => flatRecordTypes.find(t => t.id === id)?.name || id).join(', ');
   };
 
   return (
@@ -227,7 +250,12 @@ export default function RetentionPage() {
                         </Box>
                     </TableCell>
                     <TableCell>
-                        <Chip label={`${policy.durationValue} ${policy.durationUnit}`} size="small" color="primary" variant="outlined" />
+                        <Chip 
+                            label={policy.durationUnit === 'PERMANENT' ? 'PERMANENT' : `${policy.durationValue} ${policy.durationUnit}`} 
+                            size="small" 
+                            color={policy.durationUnit === 'PERMANENT' ? 'secondary' : 'primary'} 
+                            variant="outlined" 
+                        />
                     </TableCell>
                     <TableCell>{policy.trigger}</TableCell>
                     <TableCell>{policy.dispositionAction}</TableCell>
@@ -287,14 +315,16 @@ export default function RetentionPage() {
                     </FormControl>
                     
                     <Box sx={{ display: 'flex', gap: 2 }}>
-                        <TextField 
-                            label="Retention Period" 
-                            type="number"
-                            fullWidth 
-                            required
-                            value={formData.durationValue}
-                            onChange={(e) => setFormData({...formData, durationValue: parseInt(e.target.value) || 0})}
-                        />
+                        {formData.durationUnit !== 'PERMANENT' && (
+                            <TextField 
+                                label="Retention Period" 
+                                type="number"
+                                fullWidth 
+                                required
+                                value={formData.durationValue}
+                                onChange={(e) => setFormData({...formData, durationValue: parseInt(e.target.value) || 0})}
+                            />
+                        )}
                         <FormControl fullWidth>
                             <InputLabel>Unit</InputLabel>
                             <Select
@@ -302,9 +332,9 @@ export default function RetentionPage() {
                                 label="Unit"
                                 onChange={(e) => setFormData({...formData, durationUnit: e.target.value})}
                             >
-                                <MenuItem value="YEARS">Years</MenuItem>
-                                <MenuItem value="MONTHS">Months</MenuItem>
-                                <MenuItem value="DAYS">Days</MenuItem>
+                                {DURATION_UNITS.map(opt => (
+                                    <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
+                                ))}
                             </Select>
                         </FormControl>
                     </Box>
@@ -317,10 +347,9 @@ export default function RetentionPage() {
                                 label="Trigger Event"
                                 onChange={(e) => setFormData({...formData, trigger: e.target.value})}
                             >
-                                <MenuItem value="CREATION_DATE">Record Creation Date</MenuItem>
-                                <MenuItem value="EVENT_BASED">Event Based</MenuItem>
-                                <MenuItem value="CONTRACT_END">End of Contract</MenuItem>
-                                <MenuItem value="FISCAL_YEAR_END">Fiscal Year End</MenuItem>
+                                {RETENTION_TRIGGERS.map(opt => (
+                                    <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
+                                ))}
                             </Select>
                         </FormControl>
                          <FormControl fullWidth>
@@ -330,9 +359,9 @@ export default function RetentionPage() {
                                 label="Final Disposition"
                                 onChange={(e) => setFormData({...formData, dispositionAction: e.target.value})}
                             >
-                                <MenuItem value="DESTROY">Destroy / Delete</MenuItem>
-                                <MenuItem value="REVIEW">Review Required</MenuItem>
-                                <MenuItem value="ARCHIVE">Permanent Archive</MenuItem>
+                                {DISPOSITION_ACTIONS.map(opt => (
+                                    <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
+                                ))}
                             </Select>
                         </FormControl>
                     </Box>
@@ -354,9 +383,9 @@ export default function RetentionPage() {
                             label="Status"
                             onChange={(e) => setFormData({...formData, status: e.target.value})}
                         >
-                            <MenuItem value="ACTIVE">Active</MenuItem>
-                            <MenuItem value="DRAFT">Draft</MenuItem>
-                            <MenuItem value="DEPRECATED">Deprecated</MenuItem>
+                            {STATUSES.map(opt => (
+                                <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
+                            ))}
                         </Select>
                     </FormControl>
 

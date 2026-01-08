@@ -160,6 +160,26 @@ export default function RecordDetailsPage() {
                     <Typography>{record.description || '-'}</Typography>
                  </Box>
 
+                 {/* Retention Schedule */}
+                 <Box>
+                    <Typography variant="caption" color="text.secondary" fontWeight="bold">RETENTION SCHEDULE</Typography>
+                    {record.dispositionDate ? (
+                        <Box>
+                             <Typography variant="body2" fontWeight="bold">
+                                {new Date(record.dispositionDate).toLocaleDateString()}
+                             </Typography>
+                             <Typography variant="caption" color={new Date(record.dispositionDate) < new Date() ? 'error' : 'text.secondary'}>
+                                {new Date(record.dispositionDate) < new Date() 
+                                    ? 'Expired - Actions Required' 
+                                    : `Expires in ${Math.ceil((new Date(record.dispositionDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24 * 365))} years`
+                                }
+                             </Typography>
+                        </Box>
+                    ) : (
+                        <Typography variant="body2" color="text.secondary">Indefinite</Typography>
+                    )}
+                 </Box>
+
                  {/* Parent Record Link */}
                  {record.parent && (
                     <Box>
@@ -236,6 +256,29 @@ export default function RecordDetailsPage() {
                 >
                   Request Verification
                 </Button>
+
+                {(record.status === 'SUBMITTED' || record.status === 'DRAFT') && (
+                     <Button 
+                        variant="contained" 
+                        color="success" 
+                        onClick={() => {
+                            if(confirm('Approve this record and mark as ACTIVE?')) {
+                                fetch(`/api/records/${record.id}/status`, {
+                                    method: 'PATCH',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ status: 'ACTIVE' })
+                                }).then(res => {
+                                    if(res.ok) window.location.reload();
+                                    else alert('Failed to approve');
+                                });
+                            }
+                        }} 
+                        fullWidth
+                    >
+                        Approve Record (Admin)
+                    </Button>
+                )}
+
                 <Button variant="outlined" color="error" fullWidth onClick={handleDelete}>Delete Record</Button>
               </Box>
             </Paper>

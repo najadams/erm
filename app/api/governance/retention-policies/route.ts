@@ -39,15 +39,23 @@ export async function POST(request: NextRequest) {
             status, recordTypeIds 
         } = body;
 
-        if (!name || durationValue === undefined) {
-             return NextResponse.json({ error: 'Name and Duration are required' }, { status: 400 });
+        if (!name) {
+             return NextResponse.json({ error: 'Name is required' }, { status: 400 });
+        }
+        
+        let finalDurationValue: number | null = durationValue ? parseInt(durationValue) : null;
+        if (durationUnit === 'PERMANENT') {
+            finalDurationValue = null;
+        } else if (finalDurationValue === null) {
+            // If not permanent, value is required
+            return NextResponse.json({ error: 'Duration Value is required for non-permanent policies' }, { status: 400 });
         }
 
         const policy = await prisma.retentionPolicy.create({
             data: {
                 name,
                 description,
-                durationValue: parseInt(durationValue),
+                durationValue: finalDurationValue,
                 durationUnit: durationUnit || 'YEARS',
                 trigger: trigger || 'CREATION_DATE',
                 dispositionAction: dispositionAction || 'DESTROY',

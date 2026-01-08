@@ -68,7 +68,10 @@ function RecordsContent() {
     if (filters.recordTypeId) params.set('recordTypeId', filters.recordTypeId);
 
     fetch(`/api/records?${params.toString()}`)
-      .then(res => res.json())
+      .then(res => {
+          if (!res.ok) throw new Error(`API Error: ${res.statusText}`);
+          return res.json();
+      })
       .then(data => {
         if (Array.isArray(data)) {
             setRecords(data);
@@ -77,7 +80,10 @@ function RecordsContent() {
             setRecords([]);
         }
       })
-      .catch(err => console.error('Failed to fetch records', err))
+      .catch(err => {
+          console.error('Failed to fetch records', err);
+          setRecords([]);
+      })
       .finally(() => setLoading(false));
   }, [filters]);
 
@@ -88,34 +94,37 @@ function RecordsContent() {
           All Records
         </Typography>
         
-        {/* Simple Type Filter (Can be moved to AdvancedSearch later) */}
-        <Box sx={{ mb: 3, display: 'flex', gap: 2 }}>
-            <Box component="select" 
-                value={filters.recordTypeId}
-                onChange={(e: any) => setFilters({...filters, recordTypeId: e.target.value})}
-                sx={{ p: 1, paddingRight: 4, borderRadius: 1, borderColor: '#ccc' }}
-            >
-                <option value="">All Types</option>
-                {recordTypes.map(t => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
-                ))}
-            </Box>
-        </Box>
-
         <AdvancedSearch 
            initialValues={{ q: initialQuery }}
            onSearch={(newFilters) => setFilters(prev => ({ ...prev, ...newFilters }))} 
+           recordTypes={recordTypes}
         />
+      </Box>
+
+      {/* Results Summary */}
+      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="body2" color="text.secondary">
+             Showing <b>{records.length}</b> records
+             {/* Future: Add 'sort by' indicator here */}
+          </Typography>
       </Box>
 
       {/* Results */}
       <Paper sx={{ width: '100%', mb: 2, overflow: 'hidden', borderRadius: 3 }}>
         {/* Header Row */}
         <Box sx={{ p: 2, bgcolor: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center' }}>
-          <Box sx={{ width: '40%', fontWeight: 600, color: 'text.secondary' }}>Document Name</Box>
-          <Box sx={{ width: '25%', fontWeight: 600, color: 'text.secondary' }}>Type</Box>
-          <Box sx={{ width: '20%', fontWeight: 600, color: 'text.secondary' }}>Date</Box>
-          <Box sx={{ width: '15%', fontWeight: 600, color: 'text.secondary' }}>Status</Box>
+          <Box sx={{ width: '40%', fontWeight: 600, color: 'text.secondary', cursor: 'pointer', '&:hover': { color: 'text.primary' } }}>
+             Document Name
+          </Box>
+          <Box sx={{ width: '25%', fontWeight: 600, color: 'text.secondary', cursor: 'pointer', '&:hover': { color: 'text.primary' } }}>
+             Type
+          </Box>
+          <Box sx={{ width: '20%', fontWeight: 600, color: 'text.secondary', cursor: 'pointer', '&:hover': { color: 'text.primary' } }}>
+             Date ↓
+          </Box>
+          <Box sx={{ width: '15%', fontWeight: 600, color: 'text.secondary' }}>
+             Status
+          </Box>
         </Box>
         
         {loading ? (
@@ -174,11 +183,16 @@ function RecordsContent() {
                 {new Date(record.createdAt).toLocaleDateString()}
               </Box>
               <Box sx={{ width: '15%' }}>
-                 <Chip 
+                  <Chip 
                    label={record.status.replace('_', ' ')} 
                    size="small" 
-                   variant="outlined" 
-                   color={record.status === 'verified' ? 'success' : 'default'}
+                   variant={record.status === 'ACTIVE' ? 'filled' : 'outlined'}
+                   color={
+                       record.status === 'verified' || record.status === 'ACTIVE' ? 'success' : 
+                       record.status === 'ARCHIVED' ? 'default' :
+                       record.status === 'd' ? 'warning' : 'primary'
+                   }
+                   sx={{ fontWeight: 500 }}
                  />
               </Box>
             </Box>

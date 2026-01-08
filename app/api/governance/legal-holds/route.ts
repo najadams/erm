@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { ROLES, hasPermission } from '@/lib/permissions';
+import { ROLES } from '@/lib/permissions';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,21 +11,19 @@ export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session || !session.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  // List Holds
   try {
       const holds = await prisma.legalHold.findMany({
           orderBy: { createdAt: 'desc' },
           include: {
-              _count: { select: { records: true } }
+              _count: {
+                  select: { records: true }
+              },
+              owner: {
+                  select: { name: true, email: true }
+              }
           }
       });
-      
-      const formatted = holds.map((h: any) => ({
-          ...h,
-          recordCount: h._count.records
-      }));
-
-      return NextResponse.json(formatted);
+      return NextResponse.json(holds);
   } catch (error: any) {
       return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -35,27 +33,42 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session || !session.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     
-    // Check Permission (Admin or Records Officer)
+    // Only Authorized roles can create holds
     const userRole = (session.user as any).role;
-    if (userRole !== ROLES.ADMIN && userRole !== ROLES.RECORDS_OFFICER) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (userRole !== ROLES.ADMIN && userRole !== ROLES.RECORDS_OFFICER && userRole !== ROLES.LEGAL_OFFICER) {
+        // Assuming LEGAL_OFFICER role exists, if not fall back to ADMIN/RECORDS
+        // For now checking ADMIN/RECORDS
+        if (userRole !== ROLES.ADMIN && userRole !== ROLES.RECORDS_OFFICER) {
+             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
     }
 
     try {
         const body = await request.json();
-        const { name, description } = body;
+        const { 
+            name, caseReference, description, 
+            ownerId, startDate, endDate, 
+            status, notificationRecipients, notes 
+        } = body;
 
-        if (!name) return NextResponse.json({ error: 'Name is required' }, { status: 400 });
+        if (!name || !description) {
+             return NextResponse.json({ error: 'Name and Description are required' }, { status: 400 });
+        }
 
         const hold = await prisma.legalHold.create({
             data: {
                 name,
+                caseReference,
                 description,
-                status: 'ACTIVE'
+                ownerId: ownerId || (session.user as any).id, // Default to creator if not specified
+                startDate: startDate ? new Date(startDate) : new Date(),
+                endDate: endDate ? new Date(endDate) : null,
+                status: status || 'ACTIVE',
+                notificationRecipients,
+                notes
             }
         });
 
-        // Audit
         await prisma.auditLog.create({
             data: {
                 action: 'LEGAL_HOLD_CREATED',

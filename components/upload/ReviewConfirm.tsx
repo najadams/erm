@@ -27,10 +27,26 @@ interface ReviewConfirmProps {
 export default function ReviewConfirm({ data, onCancel, onUpload, uploading }: ReviewConfirmProps) {
   const { file, metadata, access, compliance, versionInfo } = data;
 
+  const missingFields = [];
+  if (!metadata.title) missingFields.push('Title');
+  if (!metadata.classificationNodeId && !metadata.type) missingFields.push('Classification/Type');
+  // Check required dynamic fields
+  // This logic ideally belongs in parent, but we can do a simple check if template passed
+  
+  const isValid = missingFields.length === 0 && !!file;
+
   return (
     <Paper variant="outlined" sx={{ p: 3, mb: 10, bgcolor: 'background.default' }}>
-      <Typography variant="h6" fontWeight="600" gutterBottom>Review & Confirm</Typography>
       
+      {/* Validation Warning */}
+      {!isValid && (
+          <Box sx={{ mb: 2, p: 2, bgcolor: '#fff3cd', borderRadius: 1 }}>
+              <Typography color="warning.main" variant="body2">
+                  <strong>Missing Required Fields:</strong> {missingFields.join(', ')}
+              </Typography>
+          </Box>
+      )}
+
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, md: 6 }}>
             <List dense>
@@ -38,10 +54,10 @@ export default function ReviewConfirm({ data, onCancel, onUpload, uploading }: R
                     <ListItemText primary="Document" secondary={file?.name || 'No file selected'} />
                 </ListItem>
                 <ListItem>
-                    <ListItemText primary="Type" secondary={metadata.type} />
+                    <ListItemText primary="Type" secondary={metadata.type || 'Not Selected'} />
                 </ListItem>
                 <ListItem>
-                     <ListItemText primary="Department" secondary={metadata.department} />
+                     <ListItemText primary="Department" secondary={metadata.department || 'None'} />
                 </ListItem>
                 <ListItem>
                      <ListItemText primary="Version" secondary={versionInfo?.isNewVersion ? `v${versionInfo.version} (New Version)` : 'New Document'} />
@@ -85,7 +101,7 @@ export default function ReviewConfirm({ data, onCancel, onUpload, uploading }: R
         <Button variant="outlined" onClick={onCancel} disabled={uploading}>
             Cancel
         </Button>
-        <Button variant="contained" onClick={onUpload} disabled={uploading || !file}>
+        <Button variant="contained" onClick={onUpload} disabled={uploading || !isValid}>
             {uploading ? 'Uploading...' : 'Upload Document'}
         </Button>
       </Box>

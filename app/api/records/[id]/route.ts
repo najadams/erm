@@ -5,6 +5,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { hasPermission } from '@/lib/permissions';
 
 import { assertTransitionAllowed, RecordStatus } from '@/lib/lifecycle';
+import { canAccessRecord } from '@/lib/access';
 
 // Note: In a real app, use the same access control clause as the list view.
 // For now, we'll do a simple check.
@@ -15,12 +16,18 @@ export async function GET(
 ) {
   const params = await props.params;
   const session = await getServerSession(authOptions);
-  if (!session) {
+  if (!session || !session.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
     const id = params.id;
+    // 1. Permission Check
+    const hasAccess = await canAccessRecord((session.user as any).id, id);
+    if (!hasAccess) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const record = await prisma.record.findUnique({
       where: { id },
       include: {
@@ -50,8 +57,6 @@ export async function GET(
     if (!record) {
       return NextResponse.json({ error: 'Record not found' }, { status: 404 });
     }
-
-    // TODO: Add refined permission check here (e.g., is userId == owner or in group)
 
     return NextResponse.json(record);
   } catch (error) {
