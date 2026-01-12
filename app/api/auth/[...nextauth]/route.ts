@@ -67,6 +67,23 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: '/login',
+  },
+  events: {
+    async signIn({ user }) {
+        try {
+            await prisma.auditLog.create({
+                data: {
+                    action: 'LOGIN',
+                    userId: user.id,
+                    actorRole: (user as any).role,
+                    source: 'WEB',
+                    newValue: 'User logged in'
+                }
+            });
+        } catch (error) {
+            console.error('Failed to log login event:', error);
+        }
+    }
   }
 };
 

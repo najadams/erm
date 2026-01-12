@@ -15,6 +15,13 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
 import { useSession } from 'next-auth/react';
 import { format } from 'date-fns';
+import TextField from '@mui/material/TextField';
+import MenuItem from '@mui/material/MenuItem';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Select from '@mui/material/Select';
+import Stack from '@mui/material/Stack';
+import { debounce } from 'lodash';
 
 interface AuditLog {
   id: string;
@@ -38,28 +45,49 @@ export default function AdminAuditPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // Filters
+  const [searchTerm, setSearchTerm] = useState('');
+  const [actionFilter, setActionFilter] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
   const isAdmin = (session?.user as any)?.role === 'ADMIN' || (session?.user as any)?.role === 'AUDITOR';
+
+  const fetchLogs = async (search: string, action: string, start: string, end: string) => {
+    setLoading(true);
+    try {
+        const params = new URLSearchParams();
+        params.append('limit', '100');
+        if (search) params.append('search', search);
+        if (action && action !== 'ALL') params.append('action', action);
+        if (start) params.append('startDate', start);
+        if (end) params.append('endDate', end);
+
+        const res = await fetch(`/api/audit-logs?${params.toString()}`);
+        if (!res.ok) throw new Error('Failed to fetch logs');
+        const data = await res.json();
+        setLogs(data);
+    } catch (err: any) {
+        console.error(err);
+        setError(err.message);
+    } finally {
+        setLoading(false);
+    }
+  };
+
+  // Debounce search to avoid too many requests
+  const debouncedFetch = React.useCallback(
+    debounce((s, a, sd, ed) => fetchLogs(s, a, sd, ed), 500),
+    []
+  );
 
   useEffect(() => {
     if (isAdmin) {
-        fetch('/api/audit-logs?limit=100') // Fetch more for admin view
-        .then(res => {
-            if (!res.ok) throw new Error('Failed to fetch logs');
-            return res.json();
-        })
-        .then(data => {
-            setLogs(data);
-            setLoading(false);
-        })
-        .catch(err => {
-            console.error(err);
-            setError(err.message);
-            setLoading(false);
-        });
+        debouncedFetch(searchTerm, actionFilter, startDate, endDate);
     } else {
-        setLoading(false); // Stop loading if not admin (handled by UI render)
+        setLoading(false);
     }
-  }, [isAdmin]);
+  }, [isAdmin, searchTerm, actionFilter, startDate, endDate, debouncedFetch]);
 
   if (!isAdmin) {
       return (
@@ -89,6 +117,59 @@ export default function AdminAuditPage() {
       </Typography>
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+      {/* Filters */}
+      <Paper sx={{ p: 2, mb: 3 }} variant="outlined">
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
+            <TextField 
+                label="Search" 
+                placeholder="User, Email, Record..." 
+                size="small" 
+                fullWidth
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            
+            <FormControl size="small" sx={{ minWidth: 150 }}>
+                <InputLabel>Action</InputLabel>
+                <Select
+                    value={actionFilter}
+                    label="Action"
+                    onChange={(e) => setActionFilter(e.target.value)}
+                >
+                    <MenuItem value=""><em>All</em></MenuItem>
+                    <MenuItem value="LOGIN">Login</MenuItem>
+                    <MenuItem value="UPLOAD">Upload</MenuItem>
+                    <MenuItem value="DELETE">Delete</MenuItem>
+                    <MenuItem value="STATUS_CHANGE">Status Change</MenuItem>
+                    <MenuItem value="LEGAL_HOLD_CREATED">Legal Hold Created</MenuItem>
+                    <MenuItem value="LEGAL_HOLD_UPDATED">Legal Hold Updated</MenuItem>
+                    <MenuItem value="LEGAL_HOLD_APPLIED">Legal Hold Applied</MenuItem>
+                    <MenuItem value="RETENTION_POLICY_CREATED">Retention Policy Created</MenuItem>
+                    <MenuItem value="RETENTION_POLICY_UPDATED">Retention Policy Updated</MenuItem>
+                </Select>
+            </FormControl>
+
+            <TextField 
+                label="Start Date" 
+                type="date" 
+                size="small" 
+                InputLabelProps={{ shrink: true }}
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                sx={{ minWidth: 160 }}
+            />
+             <TextField 
+                label="End Date" 
+                type="date" 
+                size="small" 
+                InputLabelProps={{ shrink: true }}
+                 value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                sx={{ minWidth: 160 }}
+            />
+        </Stack>
+      </Paper>
 
       <TableContainer component={Paper} variant="outlined">
         <Table sx={{ minWidth: 650 }} aria-label="audit logs table">

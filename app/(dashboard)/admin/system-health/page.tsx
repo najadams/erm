@@ -58,6 +58,10 @@ export default function SystemHealthPage() {
 
     if (loading) return <Box p={4}>Loading Metrics...</Box>;
     if (!metrics) return <Box p={4}>Failed to load metrics.</Box>;
+    if (metrics.error) return <Box p={4}>Error: {metrics.error}</Box>;
+    
+    // Safety check for malformed successful response
+    if (!metrics.overview) return <Box p={4}>Invalid metrics data received.</Box>;
 
     const { overview, recordDistribution, activityTrend } = metrics;
     
