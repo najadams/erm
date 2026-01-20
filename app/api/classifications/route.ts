@@ -68,7 +68,11 @@ export async function GET(request: NextRequest) {
     const nodes = await prisma.classificationNode.findMany({
       where,
       include: {
-        parent: true,
+        parent: {
+          include: {
+            parent: true
+          }
+        },
         children: true,
         _count: {
           select: {

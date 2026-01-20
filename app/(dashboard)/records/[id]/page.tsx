@@ -16,6 +16,12 @@ import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import TextField from '@mui/material/TextField';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 
 import { useRouter, useParams } from 'next/navigation';
 
@@ -26,6 +32,12 @@ export default function RecordDetailsPage() {
   const id = params?.id as string;
   const [record, setRecord] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
+  
+  // Upload State
+  const [openUpload, setOpenUpload] = React.useState(false);
+  const [uploadFile, setUploadFile] = React.useState<File | null>(null);
+  const [changeNote, setChangeNote] = React.useState('');
+  const [uploading, setUploading] = React.useState(false);
 
   React.useEffect(() => {
     if (id) {
@@ -86,6 +98,34 @@ export default function RecordDetailsPage() {
       }
   };
 
+  const handleUploadSubmit = async () => {
+    if (!uploadFile) return alert('Please select a file');
+    
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('file', uploadFile);
+    formData.append('changeNote', changeNote);
+
+    try {
+        const res = await fetch(`/api/records/${id}/versions`, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (res.ok) {
+            window.location.reload();
+        } else {
+            const data = await res.json();
+            alert(data.error || 'Upload failed');
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Upload failed');
+    } finally {
+        setUploading(false);
+    }
+  };
+
   if (loading) return <Box sx={{ p: 4, textAlign: 'center' }}>Loading...</Box>;
   if (!record) return <Box sx={{ p: 4, textAlign: 'center' }}>Record not found.</Box>;
 
@@ -127,6 +167,13 @@ export default function RecordDetailsPage() {
             </Box>
             
             <Box sx={{ display: 'flex', gap: 2 }}>
+               <Button 
+                 variant="outlined" 
+                 startIcon={<CloudUploadIcon />}
+                 onClick={() => setOpenUpload(true)}
+               >
+                 New Version
+               </Button>
                <Button 
                  variant="contained" 
                  color="secondary" 
@@ -285,6 +332,49 @@ export default function RecordDetailsPage() {
           </Box>
 
         </Stack>
+
+        {/* Upload Version Dialog */}
+        <Dialog open={openUpload} onClose={() => setOpenUpload(false)} maxWidth="sm" fullWidth>
+            <DialogTitle>Upload New Version</DialogTitle>
+            <DialogContent>
+                <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    <Button
+                        variant="outlined"
+                        component="label"
+                        startIcon={<CloudUploadIcon />}
+                        fullWidth
+                        sx={{ height: 100, borderStyle: 'dashed' }}
+                    >
+                        {uploadFile ? uploadFile.name : 'Select File'}
+                        <input
+                            type="file"
+                            hidden
+                            onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                        />
+                    </Button>
+                    
+                    <TextField
+                        label="Change Note / Comment"
+                        fullWidth
+                        multiline
+                        rows={2}
+                        value={changeNote}
+                        onChange={(e) => setChangeNote(e.target.value)}
+                        placeholder="Describe what changed in this version..."
+                    />
+                </Box>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={() => setOpenUpload(false)}>Cancel</Button>
+                <Button 
+                    variant="contained" 
+                    onClick={handleUploadSubmit} 
+                    disabled={!uploadFile || uploading}
+                >
+                    {uploading ? 'Uploading...' : 'Upload Version'}
+                </Button>
+            </DialogActions>
+        </Dialog>
       </React.Fragment>
   );
 }

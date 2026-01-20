@@ -39,8 +39,9 @@ export async function GET(request: NextRequest) {
     filters.push({
       OR: [
         { title: { contains: q, mode: 'insensitive' } },
-        { description: { contains: q, mode: 'insensitive' } },
         { referenceNumber: { contains: q, mode: 'insensitive' } },
+        // Search by User Name
+        { user: { name: { contains: q, mode: 'insensitive' } } },
         // Search in metadata values
         { 
             metadata: { 
@@ -143,6 +144,7 @@ export async function POST(request: NextRequest) {
     // Core Fields
     const file = formData.get('file') as File;
     const title = formData.get('title') as string;
+    // const recordTypeId = formData.get('recordTypeId') as string | null; // Allow legacy but prefer class
     const recordTypeId = formData.get('recordTypeId') as string | null;
     const classificationNodeId = formData.get('classificationNodeId') as string | null;
     const templateVersion = formData.get('templateVersion') as string | null;
@@ -215,7 +217,11 @@ export async function POST(request: NextRequest) {
     
           // Validate required fields
           const requiredFields = template.templateFields.filter(tf => tf.required);
-          const missingFields = requiredFields.filter(tf => !metadataValues[tf.metadataFieldId]);
+          const missingFields = requiredFields.filter(tf => {
+              const val = metadataValues[tf.metadataFieldId];
+              // Allow false (boolean) and 0 (number), only reject null/undefined/empty string
+              return val === undefined || val === null || val === '';
+          });
           if (missingFields.length > 0) {
             const fieldNames = await prisma.metadataField.findMany({
               where: { id: { in: missingFields.map(tf => tf.metadataFieldId) } },
@@ -255,6 +261,17 @@ export async function POST(request: NextRequest) {
     // Transactional Create
     const result = await prisma.$transaction(async (tx) => {
 
+      // Resolve RecordType ID from Classification Node if not provided explicitly
+      let appliedRecordTypeId = recordTypeId;
+      if (classificationNodeId && !appliedRecordTypeId) {
+         const linkedRecordType = await tx.recordType.findUnique({
+             where: { classificationNodeId }
+         });
+         if (linkedRecordType) {
+             appliedRecordTypeId = linkedRecordType.id;
+         }
+      }
+
       let referenceNumber: string | undefined = undefined;
 
       // Generate Reference Number if using 3-Level Classification
@@ -293,17 +310,58 @@ export async function POST(request: NextRequest) {
 
       // Calculate Disposition Date (Retention)
       // Currently only supporting simple retention via RecordType
+      // Calculate Disposition Date (Retention)
+      // PRIORITY: Classification Node Policy > Record Type Policy
       let dispositionDate: Date | undefined;
-      if (recordTypeId) {
+      let usedRetentionPolicyId: string | undefined = undefined;
+
+      // 1. Try Classification Policy
+      if (classificationNodeId) {
+          const node = await tx.classificationNode.findUnique({
+              where: { id: classificationNodeId },
+              select: { 
+                  retentionPolicy: {
+                      select: { id: true, durationValue: true, durationUnit: true }
+                  }
+              }
+          });
+          if (node && node.retentionPolicy) {
+              const rp = node.retentionPolicy;
+              usedRetentionPolicyId = rp.id;
+              
+              if (rp.durationValue && rp.durationUnit === 'YEARS') {
+                    const now = new Date();
+                    dispositionDate = new Date(now);
+                    dispositionDate.setFullYear(now.getFullYear() + rp.durationValue);
+              } else if (rp.durationValue && rp.durationUnit === 'MONTHS') {
+                    const now = new Date();
+                    dispositionDate = new Date(now);
+                    dispositionDate.setMonth(now.getMonth() + rp.durationValue);
+              } else if (rp.durationValue && rp.durationUnit === 'DAYS') {
+                    const now = new Date();
+                    dispositionDate = new Date(now);
+                    dispositionDate.setDate(now.getDate() + rp.durationValue);
+              }
+              // PERMANENT = undefined / null dispositionDate
+          }
+      }
+
+      // 2. Fallback to Record Type Policy (if no classification policy found)
+      if (!dispositionDate && !usedRetentionPolicyId && recordTypeId) {
           const rt = await tx.recordType.findUnique({ 
               where: { id: recordTypeId },
-              select: { retentionYears: true }
+              select: { retentionYears: true, retentionPolicy: true }
           });
           
+          // Legacy simple int
           if (rt && rt.retentionYears) {
               const now = new Date();
               dispositionDate = new Date(now);
               dispositionDate.setFullYear(now.getFullYear() + rt.retentionYears);
+          }
+          // Or linked policy
+          else if (rt && rt.retentionPolicy) {
+               // ... similar logic ... for now relying on simple retentionYears as that was the legacy schema
           }
       }
 
@@ -346,7 +404,7 @@ export async function POST(request: NextRequest) {
         data: {
           title,
           status: initialStatus,
-          ...(recordTypeId && { recordTypeId }), // Legacy support
+          ...(appliedRecordTypeId && { recordTypeId: appliedRecordTypeId }), // Legacy support linked to Classification
           ...(classificationNodeId && {
             classificationNodeId,
             templateVersion: templateVersion ? parseInt(templateVersion) : undefined,
@@ -356,6 +414,7 @@ export async function POST(request: NextRequest) {
           referenceNumber, // Generated ID
           parentId,
           dispositionDate, // calculated
+          retentionPolicyId: usedRetentionPolicyId,
         }
       });
 
@@ -398,7 +457,7 @@ export async function POST(request: NextRequest) {
             title,
             status: initialStatus,
             verificationBypassed,
-            ...(recordTypeId && { recordTypeId }),
+            ...(appliedRecordTypeId && { recordTypeId: appliedRecordTypeId }),
             ...(classificationNodeId && { classificationNodeId, templateVersion })
           })
         }

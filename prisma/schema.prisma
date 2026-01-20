@@ -49,7 +49,9 @@ model Group {
   users     User[]
   
   // Relations
+  // Relations
   sharedRecords Record[] @relation("GroupSharedRecords")
+  projectRecords Record[] @relation("ProjectRecords")
   
   // Record Access
   accessPermissions RecordAccess[]
@@ -120,6 +122,10 @@ model RecordType {
   
   retentionPolicyId String?
   retentionPolicy   RetentionPolicy?     @relation(fields: [retentionPolicyId], references: [id])
+
+  // Link to ClassificationNode (Level 3)
+  classificationNodeId String? @unique
+  classificationNode   ClassificationNode? @relation(fields: [classificationNodeId], references: [id])
   
   metadataFields    RecordTypeMetadata[]
   records           Record[]
@@ -198,6 +204,12 @@ model ClassificationNode {
   templates      MetadataTemplate[]
   records        Record[]
   
+  retentionPolicyId String?
+  retentionPolicy   RetentionPolicy?      @relation(fields: [retentionPolicyId], references: [id])
+  
+  // Link to RecordType (One-to-One for L3)
+  recordType        RecordType?
+
   @@index([organizationId])
   @@index([parentId])
   @@index([level])
@@ -252,6 +264,9 @@ model Record {
   
   departmentId  String?
   department    Department? @relation(fields: [departmentId], references: [id])
+
+  projectId     String?
+  project       Group?    @relation("ProjectRecords", fields: [projectId], references: [id])
   
   title         String
   ownerUserId   String?  // Renamed from userId to match spec, but keeping mapping if convenient? No, let's use ownerUserId to match spec.
@@ -351,6 +366,7 @@ model RetentionPolicy {
   department      Department? @relation(fields: [departmentId], references: [id])
   
   recordTypes     RecordType[]
+  classificationNodes ClassificationNode[]
   records         Record[]
   
   createdAt       DateTime @default(now())
@@ -407,6 +423,18 @@ model RecordVersion {
   changeNote    String?
 }
 
+enum AccessLevel {
+  VIEW   // See metadata/existence
+  READ   // See content/download
+  EDIT   // Modify metadata/content
+  FULL   // Admin/Delete/Perms
+}
+
+enum AccessType {
+  ALLOW
+  DENY
+}
+
 model RecordAccess {
   id            String    @id @default(uuid())
   recordId      String
@@ -416,7 +444,13 @@ model RecordAccess {
   user          User?     @relation(fields: [userId], references: [id])
   groupId       String?
   group         Group?    @relation(fields: [groupId], references: [id])
-  permission    String    // VIEW, DOWNLOAD, UPLOAD_VERSION
+  
+  level         AccessLevel @default(VIEW)
+  accessType    AccessType  @default(ALLOW)
+  
+  // Legacy String field for migration (optional, can remove if we do a hard reset, but safer to keep/ignore for now)
+  // permission    String    // DEPRECATED
+  
   expiresAt     DateTime?
 }
 

@@ -26,6 +26,7 @@ const DOCUMENT_TYPES = ['HR Document', 'Contract', 'Invoice', 'Policy', 'Report'
 
 // Import DynamicField
 import DynamicField from './DynamicField';
+import ClassificationSelect from './ClassificationSelect';
 
 export default function DocumentMetadata({ 
   data, 
@@ -49,17 +50,16 @@ export default function DocumentMetadata({
 
         <Grid container spacing={3}>
             <Grid size={{ xs: 12, md: 6 }}>
-                <TextField
-                    select
-                    label="Document Type"
-                    fullWidth
-                    value={data.type || ''}
-                    onChange={(e) => onChange('type', e.target.value)}
-                >
-                    {DOCUMENT_TYPES.map(type => (
-                        <MenuItem key={type} value={type}>{type}</MenuItem>
-                    ))}
-                </TextField>
+                <ClassificationSelect
+                    value={data.classificationNodeId || null}
+                    onChange={(val) => {
+                        onChange('classificationNodeId', val);
+                        // Optional: Clear legacy type if needed, or keep for fallback
+                        // onChange('type', 'Legacy Replaced'); 
+                    }}
+                    label="Classification (Record Type)"
+                    required
+                />
             </Grid>
             <Grid size={{ xs: 12, md: 6 }}>
                 <TextField

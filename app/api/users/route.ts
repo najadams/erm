@@ -54,7 +54,11 @@ export async function POST(request: NextRequest) {
 
     const { password: _, ...userWithoutPassword } = user;
     return NextResponse.json(userWithoutPassword, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
+    console.error('User creation error:', error);
+    if (error.code === 'P2002') {
+        return NextResponse.json({ error: 'User with this email already exists' }, { status: 409 });
+    }
     return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
   }
 }

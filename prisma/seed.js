@@ -13,12 +13,17 @@ async function main() {
   await prisma.recordMetadata.deleteMany()
   await prisma.recordVersion.deleteMany()
   await prisma.auditLog.deleteMany()
-  await prisma.recordAccess.deleteMany() // Access permissions
+  await prisma.recordAccess.deleteMany()
+  await prisma.recordLegalHold.deleteMany()
+  await prisma.legalHold.deleteMany()
   await prisma.record.deleteMany()
+  await prisma.templateField.deleteMany()
+  await prisma.metadataTemplate.deleteMany()
   await prisma.recordTypeMetadata.deleteMany()
   await prisma.metadataField.deleteMany()
   await prisma.recordType.deleteMany()
   await prisma.recordCategory.deleteMany()
+  await prisma.classificationNode.deleteMany()
   await prisma.department.deleteMany()
   await prisma.organization.deleteMany()
   await prisma.user.deleteMany()
@@ -32,7 +37,6 @@ async function main() {
   console.log(`Created Organization: ${org.name}`)
 
   // 2. Create Departments & Groups
-  // We keep Groups for legacy user grouping, but also create Departments for Record hierarchy
   const deptsData = [
     { name: 'Human Resources', code: 'HR' },
     { name: 'Information Technology', code: 'IT' },
@@ -52,7 +56,6 @@ async function main() {
     })
     departments[d.code] = dept
 
-    // Also create a corresponding Group
     const group = await prisma.group.create({
       data: { name: d.code, type: 'DEPARTMENT' }
     })
@@ -98,58 +101,46 @@ async function main() {
     },
   })
 
-  // 4. Create Record Categories & Types & Metadata
-  
-  // Metadata Fields
+  // 4. Define Metadata Fields
   const fields = {}
   const metadataDefs = [
-  // ─────────────────────
-  // Core business metadata
-  // ─────────────────────
-  { name: 'invoice_number', label: 'Invoice Number', dataType: 'text', required: true, searchable: true },
-  { name: 'invoice_amount', label: 'Amount', dataType: 'number', required: true, searchable: false },
-  { name: 'currency', label: 'Currency', dataType: 'enum', enumValues: '["GHS", "USD", "EUR"]', required: true, searchable: true },
-  { name: 'vendor_name', label: 'Vendor Name', dataType: 'text', required: true, searchable: true },
-  { name: 'vendor_tax_id', label: 'Vendor Tax ID', dataType: 'text', required: false, searchable: true },
+    // Core business metadata
+    { name: 'invoice_number', label: 'Invoice Number', dataType: 'text', required: true, searchable: true },
+    { name: 'invoice_amount', label: 'Amount', dataType: 'number', required: true, searchable: false },
+    { name: 'currency', label: 'Currency', dataType: 'enum', enumValues: '["GHS", "USD", "EUR"]', required: true, searchable: true },
+    { name: 'vendor_name', label: 'Vendor Name', dataType: 'text', required: true, searchable: true },
+    { name: 'vendor_tax_id', label: 'Vendor Tax ID', dataType: 'text', required: false, searchable: true },
 
-  // ─────────────────────
-  // Date & financial context
-  // ─────────────────────
-  { name: 'issue_date', label: 'Issue Date', dataType: 'date', required: true, searchable: true },
-  { name: 'effective_date', label: 'Effective Date', dataType: 'date', required: true, searchable: true },
-  { name: 'due_date', label: 'Payment Due Date', dataType: 'date', required: false, searchable: true },
-  { name: 'tax_amount', label: 'Tax Amount', dataType: 'number', required: false, searchable: false },
+    // Date & financial context
+    { name: 'issue_date', label: 'Issue Date', dataType: 'date', required: true, searchable: true },
+    { name: 'effective_date', label: 'Effective Date', dataType: 'date', required: true, searchable: true },
+    { name: 'due_date', label: 'Payment Due Date', dataType: 'date', required: false, searchable: true },
+    { name: 'tax_amount', label: 'Tax Amount', dataType: 'number', required: false, searchable: false },
 
-  // ─────────────────────
-  // Classification & linkage
-  // ─────────────────────
-  { name: 'department', label: 'Department', dataType: 'enum', enumValues: '["Finance", "Procurement", "Operations"]', required: true, searchable: true },
-  { name: 'cost_center', label: 'Cost Center', dataType: 'text', required: false, searchable: true },
-  { name: 'purchase_order_number', label: 'PO Number', dataType: 'text', required: false, searchable: true },
-  { name: 'related_contract_id', label: 'Related Contract', dataType: 'text', required: false, searchable: false },
+    // Classification & linkage
+    { name: 'department', label: 'Department', dataType: 'enum', enumValues: '["Finance", "Procurement", "Operations"]', required: true, searchable: true },
+    { name: 'cost_center', label: 'Cost Center', dataType: 'text', required: false, searchable: true },
+    { name: 'purchase_order_number', label: 'PO Number', dataType: 'text', required: false, searchable: true },
+    { name: 'related_contract_id', label: 'Related Contract', dataType: 'text', required: false, searchable: false },
 
-  // ─────────────────────
-  // Record management (ERM-specific)
-  // ─────────────────────
-  { name: 'record_owner', label: 'Record Owner', dataType: 'user', required: true, searchable: false },
-  { name: 'record_status', label: 'Record Status', dataType: 'enum', enumValues: '["Draft", "Active", "Paid", "Archived"]', required: true, searchable: true },
-  { name: 'retention_category', label: 'Retention Category', dataType: 'enum', enumValues: '["Financial-7Y", "Tax-10Y"]', required: true, searchable: false },
-  { name: 'review_date', label: 'Review Date', dataType: 'date', required: false, searchable: false },
+    // Record management (ERM-specific)
+    { name: 'record_owner', label: 'Record Owner', dataType: 'user', required: true, searchable: false },
+    { name: 'record_status', label: 'Record Status', dataType: 'enum', enumValues: '["Draft", "Active", "Paid", "Archived"]', required: true, searchable: true },
+    { name: 'retention_category', label: 'Retention Category', dataType: 'enum', enumValues: '["Financial-7Y", "Tax-10Y"]', required: true, searchable: false },
+    { name: 'review_date', label: 'Review Date', dataType: 'date', required: false, searchable: false },
 
-  // ─────────────────────
-  // Security & compliance
-  // ─────────────────────
-  { name: 'confidentiality', label: 'Confidentiality Level', dataType: 'enum', enumValues: '["Low", "Medium", "High"]', required: false, searchable: true },
-  { name: 'legal_hold', label: 'Legal Hold', dataType: 'boolean', required: false, searchable: false },
-  { name: 'compliance_tags', label: 'Compliance Tags', dataType: 'multiselect', enumValues: '["VAT", "GRA", "Audit"]', required: false, searchable: true },
+    // Security & compliance
+    { name: 'confidentiality', label: 'Confidentiality Level', dataType: 'enum', enumValues: '["Low", "Medium", "High"]', required: false, searchable: true },
+    { name: 'legal_hold', label: 'Legal Hold', dataType: 'boolean', required: false, searchable: false },
+    { name: 'compliance_tags', label: 'Compliance Tags', dataType: 'multiselect', enumValues: '["VAT", "GRA", "Audit"]', required: false, searchable: true },
 
-  // ─────────────────────
-  // Search & usability
-  // ─────────────────────
-  { name: 'keywords', label: 'Keywords', dataType: 'text', required: false, searchable: true },
-  { name: 'notes', label: 'Notes / Remarks', dataType: 'text', required: false, searchable: false },
-]
-
+    // Search & usability
+    { name: 'keywords', label: 'Keywords', dataType: 'text', required: false, searchable: true },
+    { name: 'notes', label: 'Notes / Remarks', dataType: 'text', required: false, searchable: false },
+    { name: 'renewal_date', label: 'Renewal Date', dataType: 'date', required: false, searchable: true },
+    { name: 'manager_name', label: 'Manager Name', dataType: 'text', required: false, searchable: true },
+    { name: 'description', label: 'Description', dataType: 'text', required: false, searchable: true },
+  ]
 
   for (const f of metadataDefs) {
     const field = await prisma.metadataField.upsert({
@@ -160,69 +151,8 @@ async function main() {
     fields[f.name] = field
   }
 
-  // Categories & Types
-  const categoriesData = [
-    { 
-      name: 'Financial', 
-      types: [
-        { name: 'Invoice', code: 'INV', fields: ['invoice_number', 'invoice_amount', 'vendor_name'] },
-        { name: 'Purchase Order', code: 'PO', fields: ['vendor_name', 'invoice_amount'] }
-      ]
-    },
-    { 
-      name: 'Legal', 
-      types: [
-        { name: 'Contract', code: 'CNT', fields: ['effective_date', 'vendor_name', 'confidentiality'] },
-        { name: 'NDA', code: 'NDA', fields: ['effective_date', 'vendor_name'] }
-      ]
-    },
-    {
-      name: 'General',
-      types: [
-        { name: 'Policy', code: 'POL', fields: ['effective_date'] },
-        { name: 'Memo', code: 'MEM', fields: [] }
-      ]
-    }
-  ]
-
-  const recordTypes = {} // code -> ID
-
-  for (const c of categoriesData) {
-    const cat = await prisma.recordCategory.create({
-      data: {
-        name: c.name,
-        organizationId: org.id,
-        defaultVisibility: 'PRIVATE'
-      }
-    })
-
-    for (const t of c.types) {
-      const rType = await prisma.recordType.create({
-        data: {
-          name: t.name,
-          code: t.code,
-          categoryId: cat.id
-        }
-      })
-      recordTypes[t.code] = rType
-
-      // Link Fields
-      let order = 1
-      for (const fname of t.fields) {
-        await prisma.recordTypeMetadata.create({
-          data: {
-            recordTypeId: rType.id,
-            metadataFieldId: fields[fname].id,
-            displayOrder: order++,
-            editable: true
-          }
-        })
-      }
-    }
-  }
-
-  // 5. Create Dynamic 3-Level Hierarchy & Templates
-  console.log('Creating Classification Hierarchy...')
+  // 5. Create Dynamic 3-Level Hierarchy + Unified Record Types
+  console.log('Creating Classification Hierarchy & Record Types...')
 
   // Helper to create node
   async function createNode(name, level, code, parentId, isLeaf = false) {
@@ -230,7 +160,7 @@ async function main() {
       data: {
         organizationId: org.id,
         name,
-        level,
+        level, // 1=Category(L1), 2=SubCategory(L2), 3=RecordType(L3)
         code,
         parentId,
         isLeaf,
@@ -239,7 +169,10 @@ async function main() {
     })
   }
 
+  /*
   // Hierarchy Definition
+  // Level 1 will correspond to "Record Categories"
+  // Level 3 will correspond to "Record Types"
   const hierarchy = [
     {
       name: 'Finance', code: 'FIN',
@@ -296,19 +229,40 @@ async function main() {
   const leafNodesStore = {} // map code -> node
 
   for (const l1 of hierarchy) {
+    // Level 1: This maps to a Record Category
     const node1 = await createNode(l1.name, 1, l1.code, null)
     
+    // Create Corresponding Record Category
+    const category = await prisma.recordCategory.create({
+      data: {
+        name: l1.name,
+        organizationId: org.id,
+        defaultVisibility: 'PRIVATE'
+      }
+    });
+
     if (l1.children) {
       for (const l2 of l1.children) {
         const node2 = await createNode(l2.name, 2, l2.code, node1.id)
         
         if (l2.children) {
           for (const l3 of l2.children) {
-            // Level 3 (Leaf)
+            // Level 3 (Leaf): Maps to Record Type
             const node3 = await createNode(l3.name, 3, l3.code, node2.id, true)
             leafNodesStore[l3.code] = node3
 
-            // Create Template for this Leaf
+            // 1. Create Corresponding Record Type
+            const recordType = await prisma.recordType.create({
+              data: {
+                name: l3.name,
+                code: l3.code,
+                categoryId: category.id,
+                classificationNodeId: node3.id, // THE LINK
+                isActive: true
+              }
+            });
+
+            // 2. Create Template for this Leaf (New System)
             const tmpl = await prisma.metadataTemplate.create({
               data: {
                 classificationNodeId: node3.id,
@@ -317,20 +271,35 @@ async function main() {
               }
             })
 
-            // Link Fields
+            // 3. Link Fields to BOTH (Legacy RecordType + New Template)
             let order = 1
             const fieldsToLink = l3.fields || []
-            // Add implicit fields if needed, or just link specified
+            
             for (const fname of fieldsToLink) {
               if (fields[fname]) {
+                const fId = fields[fname].id;
+
+                // A. Link to Legacy Record Type
+                await prisma.recordTypeMetadata.create({
+                  data: {
+                    recordTypeId: recordType.id,
+                    metadataFieldId: fId,
+                    displayOrder: order,
+                    editable: true
+                  }
+                });
+
+                // B. Link to New Template
                 await prisma.templateField.create({
                   data: {
                     templateId: tmpl.id,
-                    metadataFieldId: fields[fname].id,
-                    displayOrder: order++,
-                    required: fields[fname].required // default to field def
+                    metadataFieldId: fId,
+                    displayOrder: order,
+                    required: fields[fname].required 
                   }
-                })
+                });
+                
+                order++;
               }
             }
           }
@@ -338,14 +307,20 @@ async function main() {
       }
     }
   }
+  */
 
-  // 6. Create Sample Records with Reference Numbers
-  // Strategy: Manually construct reference number L1-L2-L3-SEQ
+
+  /*
+  // 6. Create Sample Records 
+  // We use the new logic: creating via Classification Node
+  // The API (or manual insertion here) must ensure recordTypeId is also set
   
-  // Ex 1: Invoice (Alice) -> FIN-AP-INV-0001
+  // Ex 1: Invoice (Alice) -> FIN-AP-INV
   const invNode = leafNodesStore['INV']
   if (invNode) {
-    // Update sequence
+    // Look up generated Record Type
+    const invRt = await prisma.recordType.findFirst({ where: { classificationNodeId: invNode.id } })
+
     await prisma.classificationNode.update({
       where: { id: invNode.id },
       data: { lastSequenceNumber: 1 }
@@ -356,8 +331,8 @@ async function main() {
         title: 'Q4 Server Payment',
         status: 'ACTIVE',
         classificationNodeId: invNode.id,
+        recordTypeId: invRt ? invRt.id : undefined, // Compatibility
         templateVersion: 1,
-        // Department vs Dept Node? Use Link to Dept Table
         departmentId: departments['IT'].id,
         ownerUserId: alice.id,
         referenceNumber: 'FIN-AP-INV-0001',
@@ -376,10 +351,12 @@ async function main() {
     })
   }
 
-  // Ex 2: Contract (Bob) -> HR-EMP-CNT-0001
+  // Ex 2: Contract (Bob) -> HR-EMP-CNT
   const cntNode = leafNodesStore['CNT']
   if (cntNode) {
-     await prisma.classificationNode.update({
+    const cntRt = await prisma.recordType.findFirst({ where: { classificationNodeId: cntNode.id } })
+
+    await prisma.classificationNode.update({
       where: { id: cntNode.id },
       data: { lastSequenceNumber: 1 }
     })
@@ -389,6 +366,7 @@ async function main() {
         title: 'Employment Agreement - John Doe',
         status: 'ACTIVE',
         classificationNodeId: cntNode.id,
+        recordTypeId: cntRt ? cntRt.id : undefined,
         templateVersion: 1,
         departmentId: departments['HR'].id,
         ownerUserId: bob.id,
@@ -406,6 +384,7 @@ async function main() {
       }
     })
   }
+  */
 
   console.log('Seeding finished.')
 }

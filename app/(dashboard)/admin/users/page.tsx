@@ -144,7 +144,8 @@ export default function AdminUsersPage() {
         setOpenDialog(false);
         fetchData();
     } else {
-        alert('Operation failed');
+        const data = await res.json();
+        alert(data.error || 'Operation failed');
     }
   };
 

@@ -26,6 +26,7 @@ import Chip from '@mui/material/Chip';
 import OutlinedInput from '@mui/material/OutlinedInput';
 import ListItemText from '@mui/material/ListItemText';
 import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert } from '@mui/material';
+import ClassificationSelect from '@/components/upload/ClassificationSelect';
 
 // Enum Constants
 const DURATION_UNITS = [
@@ -75,7 +76,8 @@ export default function RetentionPage() {
       dispositionAction: 'DESTROY',
       preventDeletion: true,
       status: 'ACTIVE',
-      recordTypeIds: [] as string[]
+      recordTypeIds: [] as string[],
+      classificationNodeIds: [] as string[]
   });
   const [error, setError] = useState<string | null>(null);
 
@@ -113,7 +115,7 @@ export default function RetentionPage() {
       setFormData({ 
           name: '', description: '', durationValue: 7, durationUnit: 'YEARS',
           trigger: 'CREATION_DATE', dispositionAction: 'DESTROY',
-          preventDeletion: true, status: 'ACTIVE', recordTypeIds: []
+          preventDeletion: true, status: 'ACTIVE', recordTypeIds: [], classificationNodeIds: []
       });
       setError(null);
       setOpen(true);
@@ -130,7 +132,8 @@ export default function RetentionPage() {
           dispositionAction: policy.dispositionAction,
           preventDeletion: policy.preventDeletion,
           status: policy.status,
-          recordTypeIds: policy.recordTypes ? policy.recordTypes.map((rt: any) => rt.id) : []
+          recordTypeIds: policy.recordTypes ? policy.recordTypes.map((rt: any) => rt.id) : [],
+          classificationNodeIds: policy.classificationNodes ? policy.classificationNodes.map((n: any) => n.id) : []
       });
       setError(null);
       setOpen(true);
@@ -240,12 +243,16 @@ export default function RetentionPage() {
                     </TableCell>
                     <TableCell>
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                            {policy.recordTypes && policy.recordTypes.length > 0 ? (
+                            {policy.classificationNodes && policy.classificationNodes.length > 0 ? (
+                                policy.classificationNodes.map((n: any) => (
+                                    <Chip key={n.id} label={n.name} size="small" variant="outlined" />
+                                ))
+                            ) : policy.recordTypes && policy.recordTypes.length > 0 ? (
                                 policy.recordTypes.map((rt: any) => (
-                                    <Chip key={rt.id} label={rt.name} size="small" variant="outlined" />
+                                     <Chip key={rt.id} label={rt.name} size="small" variant="outlined" color="warning" title="Legacy Record Type" />
                                 ))
                             ) : (
-                                <Typography variant="caption" color="text.secondary">All / None</Typography>
+                                <Typography variant="caption" color="text.secondary">None</Typography>
                             )}
                         </Box>
                     </TableCell>
@@ -286,33 +293,44 @@ export default function RetentionPage() {
                         placeholder="e.g. Financial Records - 7 Years"
                     />
 
-                    <FormControl fullWidth>
-                        <InputLabel>Record Types (Category)</InputLabel>
-                        <Select
-                            multiple
-                            value={formData.recordTypeIds}
-                            onChange={(e) => {
-                                const val = e.target.value;
-                                setFormData({...formData, recordTypeIds: typeof val === 'string' ? val.split(',') : val})
-                            }}
-                            input={<OutlinedInput label="Record Types (Category)" />}
-                            renderValue={(selected) => (
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                    {selected.map((value) => {
-                                        const t = flatRecordTypes.find(type => type.id === value);
-                                        return <Chip key={value} label={t ? t.name : value} size="small" />;
-                                    })}
-                                </Box>
-                            )}
-                        >
-                            {flatRecordTypes.map((type) => (
-                                <MenuItem key={type.id} value={type.id}>
-                                    <Checkbox checked={formData.recordTypeIds.indexOf(type.id) > -1} />
-                                    <ListItemText primary={type.name} secondary={type.code} />
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
+                    <ClassificationSelect
+                        multiple
+                        label="Record Types (Classifications)"
+                        value={formData.classificationNodeIds}
+                        onChange={(val) => setFormData({...formData, classificationNodeIds: val as string[]})}
+                        helperText="Select specific classification nodes (Level 3)"
+                    />
+                    
+                    <Box sx={{ mt: 2 }}>
+                        <Typography variant="caption" color="text.secondary">Legacy Options</Typography>
+                        <FormControl fullWidth size="small" sx={{ mt: 1 }}>
+                            <InputLabel>Legacy Categories</InputLabel>
+                            <Select
+                                multiple
+                                value={formData.recordTypeIds}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    setFormData({...formData, recordTypeIds: typeof val === 'string' ? val.split(',') : val})
+                                }}
+                                input={<OutlinedInput label="Legacy Categories" />}
+                                renderValue={(selected) => (
+                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                        {selected.map((value) => {
+                                            const t = flatRecordTypes.find(type => type.id === value);
+                                            return <Chip key={value} label={t ? t.name : value} size="small" />;
+                                        })}
+                                    </Box>
+                                )}
+                            >
+                                {flatRecordTypes.map((type) => (
+                                    <MenuItem key={type.id} value={type.id}>
+                                        <Checkbox checked={formData.recordTypeIds.indexOf(type.id) > -1} />
+                                        <ListItemText primary={type.name} secondary={type.code} />
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </Box>
                     
                     <Box sx={{ display: 'flex', gap: 2 }}>
                         {formData.durationUnit !== 'PERMANENT' && (

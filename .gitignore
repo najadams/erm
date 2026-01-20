@@ -48,3 +48,7 @@ scripts/verify-db-data.ts
 scripts/promote_admins.js
 scripts/verify-governance.ts
 test_upload.pdf
+scripts/verify_classification_retention.ts
+.gitignore
+.gitignore
+.gitignore

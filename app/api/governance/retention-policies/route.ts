@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
 
   try {
       const policies = await prisma.retentionPolicy.findMany({
-          include: { recordTypes: true },
+          include: { recordTypes: true, classificationNodes: true },
           orderBy: { name: 'asc' }
       });
       return NextResponse.json(policies);
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
         const { 
             name, description, durationValue, durationUnit,
             trigger, dispositionAction, preventDeletion, 
-            status, recordTypeIds 
+            status, recordTypeIds, classificationNodeIds
         } = body;
 
         if (!name) {
@@ -63,9 +63,12 @@ export async function POST(request: NextRequest) {
                 status: status || 'ACTIVE',
                 recordTypes: recordTypeIds ? {
                     connect: recordTypeIds.map((id: string) => ({ id }))
+                } : undefined,
+                classificationNodes: classificationNodeIds ? {
+                    connect: classificationNodeIds.map((id: string) => ({ id }))
                 } : undefined
             },
-            include: { recordTypes: true }
+            include: { recordTypes: true, classificationNodes: true }
         });
 
         await prisma.auditLog.create({
