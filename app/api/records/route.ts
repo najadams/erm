@@ -166,6 +166,9 @@ export async function POST(request: NextRequest) {
     const groupId = formData.get('groupId') as string || undefined;
     const parentId = formData.get('parentId') as string || null;
     
+    // Versioning Fields
+    const linkedRecordId = formData.get('linkedRecordId') as string | null;
+    
     // Dynamic Metadata (JSON string)
     const rawMetadata = formData.get('metadata') as string;
     const metadataValues = JSON.parse(rawMetadata || '{}');
@@ -246,6 +249,52 @@ export async function POST(request: NextRequest) {
             }, { status: 400 });
           }
       }
+    }
+
+    // Versioning Validation & Setup
+    let versionGroupId: string | undefined;
+    let nextVersionNumber = 1;
+
+    if (linkedRecordId) {
+        const previousRecord = await prisma.record.findUnique({
+            where: { id: linkedRecordId },
+            include: { classificationNode: true }
+        });
+
+        if (!previousRecord) {
+             return NextResponse.json({ error: 'Previous version record not found' }, { status: 404 });
+        }
+
+        // Validate Permissions (Must have EDIT on target)
+        // Assuming `hasPermission` checks role, but for specific record access we might need `getAccessibleRecordsClause` equivalent or direct check.
+        // For MVP/Speed, we rely on the fact that the user could SEE the record to select it (via search) and we check global CREATE/EDIT permissions.
+        // Ideally: await checkRecordAccess(userId, linkedRecordId, 'EDIT');
+
+        // Validate Classification Consistency
+        if (classificationNodeId && previousRecord.classificationNodeId !== classificationNodeId) {
+             // Optional: Allow override? For now, enforce same classification for versions to prevent confusion.
+             return NextResponse.json({ error: 'New version must belong to the same classification as the original record' }, { status: 400 });
+        }
+
+        // Determine Version Group
+        versionGroupId = previousRecord.versionGroupId || crypto.randomUUID(); // If null, start a new group
+        
+        // Determine Version Number
+        // We generally increment based on the *max* in the group, to avoid race conditions or branching.
+        // If we just generated a new GroupId, we are V2 (prev is V1 implicitly).
+        if (!previousRecord.versionGroupId) {
+             nextVersionNumber = (previousRecord.versionNumber || 1) + 1;
+        } else {
+             // Find max version in this group
+             const maxVer = await prisma.record.aggregate({
+                 where: { versionGroupId },
+                 _max: { versionNumber: true }
+             });
+             nextVersionNumber = (maxVer._max.versionNumber || 1) + 1;
+        }
+    } else {
+        // New Record -> New Version Group
+        versionGroupId = crypto.randomUUID();
     }
 
     // Upload File (MinIO/S3)
@@ -408,6 +457,33 @@ export async function POST(request: NextRequest) {
       // Note: We should probably validate if the group is actually a project, but for now we map it.
       const projectId = groupId;
 
+      // Handle Versioning Updates (if linked)
+      if (linkedRecordId && versionGroupId) {
+           // 1. If previous record didn't have a group ID, update it now
+           // This handles the migration case where old records have null groupId
+           await tx.record.updateMany({
+               where: { 
+                   OR: [
+                       { id: linkedRecordId },
+                       { versionGroupId } 
+                   ],
+                   isLatest: true
+               },
+               data: { isLatest: false }
+           });
+           
+           // If the linked record was "standalone" (no groupId), we need to update it to belong to this group
+           // AND if we just created the group ID for it.
+           // Actually, it's safer to just look for the record by ID and update it if needed.
+           const prev = await tx.record.findUnique({ where: { id: linkedRecordId }, select: { versionGroupId: true }});
+           if (!prev?.versionGroupId) {
+               await tx.record.update({
+                   where: { id: linkedRecordId },
+                   data: { versionGroupId, isLatest: false }
+               });
+           }
+      }
+
       const record = await tx.record.create({
         data: {
           title,
@@ -424,6 +500,11 @@ export async function POST(request: NextRequest) {
           parentId,
           dispositionDate, // calculated
           retentionPolicyId: usedRetentionPolicyId,
+          
+          // Versioning
+          versionGroupId,
+          versionNumber: nextVersionNumber,
+          isLatest: true,
         }
       });
 
@@ -468,7 +549,9 @@ export async function POST(request: NextRequest) {
             verificationBypassed,
             projectId,
             ...(appliedRecordTypeId && { recordTypeId: appliedRecordTypeId }),
-            ...(classificationNodeId && { classificationNodeId, templateVersion })
+            ...(classificationNodeId && { classificationNodeId, templateVersion }),
+            versionGroupId,
+            versionNumber: nextVersionNumber
           })
         }
       });

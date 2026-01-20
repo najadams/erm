@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
 
   const searchParams = request.nextUrl.searchParams;
   const q = searchParams.get('q');
+  const classificationNodeId = searchParams.get('classificationNodeId');
   
   if (!q || q.length < 2) {
     return NextResponse.json([]);
@@ -34,9 +35,11 @@ export async function GET(request: NextRequest) {
           {
             OR: [
               { title: { contains: q, mode: 'insensitive' } },
-              { referenceNumber: { contains: q, mode: 'insensitive' } }
+              { referenceNumber: { contains: q, mode: 'insensitive' } },
+              { classificationNode: { name: { contains: q, mode: 'insensitive' } } }
             ]
           },
+          ...(classificationNodeId ? [{ classificationNodeId }] : []), 
           { status: 'ACTIVE' } // Only link to active records?
         ]
       },
@@ -44,7 +47,13 @@ export async function GET(request: NextRequest) {
         id: true,
         title: true,
         referenceNumber: true,
-        createdAt: true
+        createdAt: true,
+        status: true,
+        classificationNode: {
+            select: { name: true, code: true }
+        },
+        versionNumber: true,
+        isLatest: true
       },
       take: 20,
       orderBy: { createdAt: 'desc' }

@@ -52,3 +52,8 @@ scripts/verify_classification_retention.ts
 .gitignore
 .gitignore
 .gitignore
+verify_classifications.js
+cleanup_users.js
+verify_search_fail.js
+verify_versioning.js
+verify_access_control.js

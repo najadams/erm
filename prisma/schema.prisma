@@ -272,7 +272,7 @@ model Record {
   ownerUserId   String?  // Renamed from userId to match spec, but keeping mapping if convenient? No, let's use ownerUserId to match spec.
   user          User?    @relation(fields: [ownerUserId], references: [id])
   
-  referenceNumber String?  @unique // Generated: L1-L2-L3-SEQ
+  referenceNumber String?  // Non-unique at column level to allow versions to share it
   status        String   @default("DRAFT") // DRAFT, ACTIVE, ARCHIVED
   
   createdAt     DateTime @default(now())
@@ -310,6 +310,14 @@ model Record {
   
   isLegalHold       Boolean          @default(false) // Optimized flag
   legalHolds        RecordLegalHold[]
+
+  // Versioning
+  versionGroupId    String?          // UUID shared by all versions of a record
+  versionNumber     Int              @default(1)
+  isLatest          Boolean          @default(true)
+
+  @@index([versionGroupId])
+  @@unique([referenceNumber, versionNumber]) // Ensure uniqueness per version
 }
 
 enum RetentionTrigger {

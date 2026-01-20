@@ -9,7 +9,7 @@ async function main() {
 
   // 0. Clean up (Order matters due to FKs)
   // Be careful with deleteMany in production!
-  /*
+
   await prisma.recordMetadata.deleteMany()
   await prisma.recordVersion.deleteMany()
   await prisma.auditLog.deleteMany()
@@ -28,7 +28,7 @@ async function main() {
   await prisma.organization.deleteMany()
   await prisma.user.deleteMany()
   await prisma.group.deleteMany()
-  */
+
 
   // 1. Create Organization
   const org = await prisma.organization.create({
@@ -169,10 +169,14 @@ async function main() {
     })
   }
 
-  /*
+
   // Hierarchy Definition
   // Level 1 will correspond to "Record Categories"
   // Level 3 will correspond to "Record Types"
+  // Hierarchy Definition (Real Life Structure)
+  // Level 1: Functional Area / Category
+  // Level 2: Activity / Sub-Category
+  // Level 3: Record Type (Leaf)
   const hierarchy = [
     {
       name: 'Finance', code: 'FIN',
@@ -180,15 +184,31 @@ async function main() {
         {
           name: 'Accounts Payable', code: 'AP',
           children: [
-            { name: 'Vendor Invoice', code: 'INV', fields: ['invoice_number', 'invoice_amount', 'vendor_name', 'currency'] },
-            { name: 'Expense Report', code: 'EXP', fields: ['invoice_amount', 'department'] }
+            { name: 'Vendor Invoice', code: 'INV', fields: ['invoice_number', 'invoice_amount', 'vendor_name', 'currency', 'due_date'] },
+            { name: 'Expense Report', code: 'EXP', fields: ['invoice_amount', 'department', 'notes'] },
+            { name: 'Purchase Order', code: 'PO', fields: ['purchase_order_number', 'vendor_name', 'invoice_amount'] }
+          ]
+        },
+        {
+          name: 'Accounts Receivable', code: 'AR',
+          children: [
+            { name: 'Sales Invoice', code: 'SINV', fields: ['invoice_number', 'invoice_amount', 'customer_name', 'due_date'] },
+            { name: 'Credit Memo', code: 'CM', fields: ['invoice_amount', 'reference_number', 'notes'] }
           ]
         },
         {
           name: 'Taxation', code: 'TAX',
           children: [
-            { name: 'Tax Return', code: 'RET', fields: ['tax_amount', 'issue_date'] },
-            { name: 'VAT Filing', code: 'VAT', fields: ['tax_amount', 'effective_date', 'compliance_tags'] }
+            { name: 'Corporate Tax Return', code: 'RET', fields: ['tax_amount', 'issue_date', 'fiscal_year'] },
+            { name: 'VAT Filing', code: 'VAT', fields: ['tax_amount', 'effective_date', 'compliance_tags'] },
+            { name: 'Tax Assessment', code: 'ASM', fields: ['tax_amount', 'issue_date'] }
+          ]
+        },
+        {
+          name: 'Financial Reporting', code: 'RPT',
+          children: [
+            { name: 'Annual Financial Statement', code: 'AFS', fields: ['fiscal_year', 'auditor_name'] },
+            { name: 'Audit Report', code: 'AUD', fields: ['auditor_name', 'issue_date', 'compliance_tags'] }
           ]
         }
       ]
@@ -199,27 +219,90 @@ async function main() {
         {
           name: 'Recruitment', code: 'REC',
           children: [
-            { name: 'Resume / CV', code: 'CV', fields: ['keywords'] },
-            { name: 'Offer Letter', code: 'OFF', fields: ['effective_date', 'confidentiality'] }
+            { name: 'Resume / CV', code: 'CV', fields: ['keywords', 'candidate_name'] },
+            { name: 'Offer Letter', code: 'OFF', fields: ['effective_date', 'confidentiality', 'candidate_name'] },
+            { name: 'Job Description', code: 'JD', fields: ['department', 'role_title'] }
           ]
         },
         {
-          name: 'Employee Files', code: 'EMP',
+          name: 'Personnel Files', code: 'EMP',
           children: [
-            { name: 'Contract', code: 'CNT', fields: ['effective_date', 'renewal_date'] },
-            { name: 'Performance Review', code: 'REV', fields: ['review_date', 'manager_name'] }
+            { name: 'Employment Contract', code: 'CNT', fields: ['effective_date', 'renewal_date', 'employee_id'] },
+            { name: 'Performance Review', code: 'REV', fields: ['review_date', 'manager_name', 'rating'] },
+            { name: 'Disciplinary Record', code: 'DIS', fields: ['issue_date', 'description', 'confidentiality'] }
+          ]
+        },
+        {
+          name: 'Payroll & Benefits', code: 'PAY',
+          children: [
+            { name: 'Payroll Register', code: 'REG', fields: ['fiscal_period', 'department'] },
+            { name: 'Tax Declaration (PAYE)', code: 'PAYE', fields: ['tax_amount', 'effective_date'] }
           ]
         }
       ]
     },
     {
-      name: 'Legal', code: 'LEG',
+      name: 'Legal & Governance', code: 'LEG',
       children: [
         {
-          name: 'Corporate', code: 'CORP',
+          name: 'Corporate Governance', code: 'CORP',
           children: [
-            { name: 'Board Resolution', code: 'RES', fields: ['issue_date', 'description'] },
-            { name: 'Power of Attorney', code: 'POA', fields: ['effective_date'] }
+            { name: 'Board Resolution', code: 'RES', fields: ['issue_date', 'description', 'signatories'] },
+            { name: 'Meeting Minutes', code: 'MIN', fields: ['meeting_date', 'attendees'] },
+            { name: 'Certificate of Incorporation', code: 'INC', fields: ['issue_date', 'registration_number'] }
+          ]
+        },
+        {
+          name: 'Contracts & Agreements', code: 'CON',
+          children: [
+            { name: 'Service Level Agreement', code: 'SLA', fields: ['effective_date', 'vendor_name', 'renewal_date'] },
+            { name: 'Non-Disclosure Agreement', code: 'NDA', fields: ['effective_date', 'counterparty_name'] },
+            { name: 'Lease Agreement', code: 'LSE', fields: ['effective_date', 'property_address', 'expiry_date'] }
+          ]
+        },
+        {
+          name: 'Litigation', code: 'LIT',
+          children: [
+            { name: 'Court Filing', code: 'FIL', fields: ['case_number', 'court_name', 'filing_date'] },
+            { name: 'Legal Brief', code: 'BRF', fields: ['case_number', 'author_name'] }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Procurement', code: 'PRO',
+      children: [
+        {
+          name: 'Sourcing', code: 'SRC',
+          children: [
+            { name: 'Request for Proposal (RFP)', code: 'RFP', fields: ['project_name', 'deadline'] },
+            { name: 'Vendor Proposal', code: 'PROP', fields: ['vendor_name', 'submitted_date', 'quote_amount'] }
+          ]
+        },
+        {
+          name: 'Vendor Management', code: 'VND',
+          children: [
+            { name: 'Vendor Registration Form', code: 'REG', fields: ['vendor_name', 'tax_id'] },
+            { name: 'Compliance Certificate', code: 'CERT', fields: ['vendor_name', 'expiry_date', 'compliance_type'] }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'Operations', code: 'OPS',
+      children: [
+        {
+          name: 'Facilities', code: 'FAC',
+          children: [
+            { name: 'Maintenance Log', code: 'MNT', fields: ['maintenance_date', 'technician_name', 'location'] },
+            { name: 'Safety Inspection', code: 'SAF', fields: ['inspection_date', 'inspector_name', 'result'] }
+          ]
+        },
+        {
+          name: 'IT Operations', code: 'ITO',
+          children: [
+            { name: 'System Architecture Diagram', code: 'ARC', fields: ['system_name', 'version', 'author'] },
+            { name: 'Incident Report', code: 'INC', fields: ['incident_date', 'severity', 'description'] }
           ]
         }
       ]
@@ -307,10 +390,10 @@ async function main() {
       }
     }
   }
-  */
 
 
-  /*
+
+
   // 6. Create Sample Records 
   // We use the new logic: creating via Classification Node
   // The API (or manual insertion here) must ensure recordTypeId is also set
@@ -384,7 +467,7 @@ async function main() {
       }
     })
   }
-  */
+
 
   console.log('Seeding finished.')
 }

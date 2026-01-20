@@ -13,6 +13,33 @@ async function isAdmin() {
 }
 
 export async function GET(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const { searchParams } = new URL(request.url);
+  const query = searchParams.get('q');
+
+  // Case 1: Search (Open to all Authenticated Users)
+  if (query) {
+      // Return SAFE subset of data for autocomplete
+      try {
+          const users = await prisma.user.findMany({
+              where: {
+                  OR: [
+                      { name: { contains: query, mode: 'insensitive' } },
+                      { email: { contains: query, mode: 'insensitive' } }
+                  ]
+              },
+              select: { id: true, name: true, email: true, department: { select: { name: true } } },
+              take: 10
+          });
+          return NextResponse.json(users);
+      } catch (error) {
+          return NextResponse.json({ error: 'Search failed' }, { status: 500 });
+      }
+  }
+
+  // Case 2: Full List (Strictly Admin Only)
   if (!await isAdmin()) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
 
   try {

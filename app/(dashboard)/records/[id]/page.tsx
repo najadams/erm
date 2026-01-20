@@ -22,13 +22,23 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import TextField from '@mui/material/TextField';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import SecurityIcon from '@mui/icons-material/Security';
+import IconButton from '@mui/material/IconButton';
+import DeleteIcon from '@mui/icons-material/Delete';
+import MenuItem from '@mui/material/MenuItem';
+import Select from '@mui/material/Select';
+import InputLabel from '@mui/material/InputLabel';
+import FormControl from '@mui/material/FormControl';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import UserSearch from '@/components/UserSearch';
 
 import { useRouter, useParams } from 'next/navigation';
-
+import { useSession } from 'next-auth/react';
 
 export default function RecordDetailsPage() {
   const router = useRouter();
   const params = useParams();
+  const { data: session } = useSession();
   const id = params?.id as string;
   const [record, setRecord] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
@@ -38,6 +48,39 @@ export default function RecordDetailsPage() {
   const [uploadFile, setUploadFile] = React.useState<File | null>(null);
   const [changeNote, setChangeNote] = React.useState('');
   const [uploading, setUploading] = React.useState(false);
+
+  // Access Control State
+  const [permissions, setPermissions] = React.useState<{ explicit: any[], inherited: any[] }>({ explicit: [], inherited: [] });
+  const [openAccessDialog, setOpenAccessDialog] = React.useState(false);
+  const [accessForm, setAccessForm] = React.useState({
+      principalType: 'USER', // USER or GROUP
+      principalId: '',
+      level: 'VIEW',
+      accessType: 'ALLOW'
+  });
+
+  const userRole = (session?.user as any)?.role || 'USER';
+  const userId = (session?.user as any)?.id;
+  // Note: We need record to calculate ownership, so we wait for record load.
+  const isOwner = record?.ownerUserId === userId;
+  // const isAdmin = userRole === 'ADMIN'; // Defined below inside render or effect? Better defined here once record is loaded.
+   const isAdmin = userRole === 'ADMIN';
+   const canManageAccess = isOwner || isAdmin;
+
+  // Fetch Permissions ONLY if allowed
+  React.useEffect(() => {
+    if (id && canManageAccess) {
+        fetch(`/api/records/${id}/access`)
+        .then(res => {
+            if (res.ok) return res.json();
+             // If 403, just ignore
+            return { explicit: [], inherited: [] };
+        })
+        .then(data => setPermissions(data))
+        .catch(e => console.error(e));
+    }
+  }, [id, canManageAccess]);
+
 
   React.useEffect(() => {
     if (id) {
@@ -126,12 +169,52 @@ export default function RecordDetailsPage() {
     }
   };
 
+  const handleGrantAccess = async () => {
+      if (!accessForm.principalId) return alert('Please select a User or Group');
+
+      try {
+          const res = await fetch(`/api/records/${id}/access`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(accessForm)
+          });
+          
+          if (res.ok) {
+              window.location.reload();
+          } else {
+              const err = await res.json();
+              alert(err.error || 'Failed to grant access');
+          }
+      } catch (e) {
+          alert('Error granting access');
+      }
+  };
+
+  const handleRevokeAccess = async (accessId: string) => {
+      if (!confirm('Revoke this permission?')) return;
+      try {
+          const res = await fetch(`/api/records/${id}/access?accessId=${accessId}`, {
+              method: 'DELETE'
+          });
+          if (res.ok) {
+              window.location.reload();
+          } else {
+              alert('Failed to revoke');
+          }
+      } catch (e) {
+          alert('Error revoking access');
+      }
+  };
+
   if (loading) return <Box sx={{ p: 4, textAlign: 'center' }}>Loading...</Box>;
   if (!record) return <Box sx={{ p: 4, textAlign: 'center' }}>Record not found.</Box>;
 
   // Get current version file
   const currentVersion = record.versions?.[0];
   const downloadUrl = currentVersion?.filePath || '#';
+  
+  // Refined for display
+  const showAccessControl = canManageAccess;
 
   return (
       <React.Fragment>
@@ -177,11 +260,11 @@ export default function RecordDetailsPage() {
                <Button 
                  variant="contained" 
                  color="secondary" 
-                 startIcon={<DownloadIcon />}
+                 startIcon={<VisibilityIcon />}
                  href={downloadUrl}
                  target="_blank"
                >
-                 Download File
+                 Preview / Download
                </Button>
             </Box>
           </Box>
@@ -261,6 +344,89 @@ export default function RecordDetailsPage() {
                  ))}
               </Box>
             </Paper>
+
+            {/* Access Control - ONLY VISIBLE TO OWNER/ADMIN */}
+            {showAccessControl && (
+            <Paper sx={{ p: 3 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                    <Typography variant="h6" fontWeight="bold">Access Control</Typography>
+                     <Button 
+                         startIcon={<SecurityIcon />} 
+                         size="small" 
+                         onClick={() => setOpenAccessDialog(true)}
+                     >
+                         Grant Access
+                     </Button>
+                </Box>
+                
+                {/* Inherited Policies */}
+                {permissions.inherited.length > 0 && (
+                     <Box sx={{ mb: 3 }}>
+                         <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                            EFFECTIVE / INHERITED ACCESS
+                         </Typography>
+                         <Stack spacing={1}>
+                             {permissions.inherited.map((rule: any, i: number) => (
+                                 <Chip 
+                                     key={i} 
+                                     icon={<Typography variant="caption" sx={{ pl: 1 }}>{rule.level}</Typography>}
+                                     label={`${rule.source} - ${rule.description}`} 
+                                     size="small"
+                                     variant="outlined"
+                                     sx={{ justifyContent: 'flex-start', maxWidth: '100%' }}
+                                 />
+                             ))}
+                         </Stack>
+                     </Box>
+                )}
+
+                <Table size="small">
+                    <TableHead>
+                        <TableRow>
+                            <TableCell>Principal</TableCell>
+                            <TableCell>Type</TableCell>
+                            <TableCell>Access Level</TableCell>
+                            <TableCell>Permission</TableCell>
+                            <TableCell align="right">Action</TableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {/* Owner (Implicit) */}
+                        <TableRow>
+                            <TableCell>{record.user?.name || 'Owner'}</TableCell>
+                            <TableCell>USER</TableCell>
+                            <TableCell>FULL</TableCell>
+                            <TableCell><Chip label="OWNER" size="small" color="primary" /></TableCell>
+                            <TableCell align="right">-</TableCell>
+                        </TableRow>
+                        
+                        {/* Explicit Permissions */}
+                        {permissions.explicit?.map((access: any) => (
+                            <TableRow key={access.id}>
+                                <TableCell>
+                                    {access.principalType === 'USER' ? access.user?.name || access.userId : access.group?.name || access.groupId}
+                                </TableCell>
+                                <TableCell>{access.principalType}</TableCell>
+                                <TableCell>{access.level}</TableCell>
+                                <TableCell>
+                                    <Chip 
+                                        label={access.accessType} 
+                                        size="small" 
+                                        color={access.accessType === 'ALLOW' ? 'success' : 'error'} 
+                                        variant="outlined"
+                                    />
+                                </TableCell>
+                                <TableCell align="right">
+                                    <IconButton size="small" color="error" onClick={() => handleRevokeAccess(access.id)}>
+                                        <DeleteIcon fontSize="small" />
+                                    </IconButton>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </Paper>
+            )}
 
             {/* Version History */}
             <Paper sx={{ p: 3 }}>
@@ -385,6 +551,79 @@ export default function RecordDetailsPage() {
                 </Button>
             </DialogActions>
         </Dialog>
+
+         {/* Grant Access Dialog */}
+         <Dialog open={openAccessDialog} onClose={() => setOpenAccessDialog(false)} maxWidth="sm" fullWidth>
+            <DialogTitle>Grant Access</DialogTitle>
+            <DialogContent>
+                <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    <FormControl fullWidth>
+                         <InputLabel>Principal Type</InputLabel>
+                         <Select
+                            value={accessForm.principalType}
+                            label="Principal Type"
+                            onChange={(e) => setAccessForm({...accessForm, principalType: e.target.value, principalId: ''})}
+                         >
+                            <MenuItem value="USER">User (Individual)</MenuItem>
+                            <MenuItem value="GROUP">Group (Project/Dept)</MenuItem>
+                         </Select>
+                    </FormControl>
+
+                    {/* NEW: User Search Component */}
+                    <UserSearch 
+                        type={accessForm.principalType as 'USER' | 'GROUP'}
+                        value={null} // Controlled vs Uncontrolled? The component handles search, we just need ID.
+                        onChange={(newValue: any) => {
+                            if (newValue) {
+                                setAccessForm({ ...accessForm, principalId: newValue.id });
+                            }
+                        }}
+                    />
+                    {accessForm.principalId && (
+                        <Typography variant="caption" color="success.main">
+                            Selected ID: {accessForm.principalId}
+                        </Typography>
+                    )}
+
+                    <FormControl fullWidth>
+                         <InputLabel>Access Level</InputLabel>
+                         <Select
+                            value={accessForm.level}
+                            label="Access Level"
+                            onChange={(e) => setAccessForm({...accessForm, level: e.target.value})}
+                         >
+                            <MenuItem value="VIEW">VIEW (Metadata Only)</MenuItem>
+                            <MenuItem value="READ">READ (Download File)</MenuItem>
+                            <MenuItem value="EDIT">EDIT (Metadata & Versions)</MenuItem>
+                            <MenuItem value="FULL">FULL (Manage)</MenuItem>
+                         </Select>
+                    </FormControl>
+
+                    <FormControl fullWidth>
+                         <InputLabel>Permission Type</InputLabel>
+                         <Select
+                            value={accessForm.accessType}
+                            label="Permission Type"
+                            onChange={(e) => setAccessForm({...accessForm, accessType: e.target.value})}
+                         >
+                            <MenuItem value="ALLOW">ALLOW</MenuItem>
+                            <MenuItem value="DENY">DENY (Explicit Block)</MenuItem>
+                         </Select>
+                    </FormControl>
+                </Box>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={() => setOpenAccessDialog(false)}>Cancel</Button>
+                <Button 
+                    variant="contained" 
+                    onClick={handleGrantAccess}
+                    disabled={!accessForm.principalId}
+                >
+                    Grant Permission
+                </Button>
+            </DialogActions>
+        </Dialog>
+
       </React.Fragment>
   );
 }

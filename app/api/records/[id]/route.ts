@@ -52,7 +52,8 @@ export async function GET(
         parent: {
             select: { id: true, title: true, referenceNumber: true }
         },
-        department: { select: { id: true, name: true } }
+        department: { select: { id: true, name: true } },
+        // Access list removed for security. Use /api/records/:id/access
       }
     });
 

@@ -8,11 +8,30 @@ import Button from '@mui/material/Button';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useRouter } from 'next/navigation';
 
+import Autocomplete from '@mui/material/Autocomplete';
+import TextField from '@mui/material/TextField';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Switch from '@mui/material/Switch';
+import Chip from '@mui/material/Chip';
+
 import FileSelection from '@/components/upload/FileSelection';
 import DocumentMetadata from '@/components/upload/DocumentMetadata';
 import AccessControl from '@/components/upload/AccessControl';
 import ComplianceControl from '@/components/upload/ComplianceControl';
 import ReviewConfirm from '@/components/upload/ReviewConfirm';
+
+interface Record {
+    id: string;
+    title: string;
+    referenceNumber: string;
+    status: string;
+    versionNumber: number;
+    classificationNode?: {
+        name: string;
+        code: string;
+    };
+    isLatest: boolean;
+}
 
 
 
@@ -55,6 +74,46 @@ export default function UploadPage() {
   // Dynamic Metadata State
   const [template, setTemplate] = useState<any>(null);
   const [dynamicValues, setDynamicValues] = useState<any>({});
+
+  // Versioning State
+  const [isVersionMode, setIsVersionMode] = useState(false);
+  const [linkedRecord, setLinkedRecord] = useState<Record | null>(null);
+  const [recordSearchQuery, setRecordSearchQuery] = useState('');
+  const [recordOptions, setRecordOptions] = useState<Record[]>([]);
+  const [searchingRecords, setSearchingRecords] = useState(false);
+
+  // Search Effect
+  React.useEffect(() => {
+      if (!isVersionMode || recordSearchQuery.length < 2) {
+          setRecordOptions([]);
+          return;
+      }
+
+      const timer = setTimeout(async () => {
+          setSearchingRecords(true);
+          try {
+              // Construct Search URL
+              let url = `/api/records/search?q=${encodeURIComponent(recordSearchQuery)}`;
+              
+              // Filter by classification if selected (Pragmatic Default)
+              if (metadata.classificationNodeId) {
+                  url += `&classificationNodeId=${metadata.classificationNodeId}`;
+              }
+
+              const res = await fetch(url);
+              if (res.ok) {
+                  const data = await res.json();
+                  setRecordOptions(data);
+              }
+          } catch (e) {
+              console.error('Search failed', e);
+          } finally {
+              setSearchingRecords(false);
+          }
+      }, 300);
+
+      return () => clearTimeout(timer);
+  }, [recordSearchQuery, isVersionMode, metadata.classificationNodeId]);
 
   const handleFileSelect = (selectedFile: File, fileChecksum: string) => {
     setFile(selectedFile);
@@ -145,6 +204,10 @@ export default function UploadPage() {
         // Assuming API might look at 'metadata' json now.
     }
 
+    if (isVersionMode && linkedRecord) {
+        formData.append('linkedRecordId', linkedRecord.id);
+    }
+
     try {
         const res = await fetch('/api/records', {
             method: 'POST',
@@ -179,6 +242,89 @@ export default function UploadPage() {
       <Typography variant="h4" fontWeight="bold" sx={{ mb: 4 }}>
         Upload Document
       </Typography>
+
+      {/* Versioning Toggle Section */}
+      <Typography variant="h6" gutterBottom>0. Version Control</Typography>
+      <Box sx={{ mb: 4, p: 3, border: '1px solid #ccc', borderRadius: 2, bgcolor: '#f5f5f5' }}>
+          <FormControlLabel 
+              control={
+                  <Switch 
+                      checked={isVersionMode} 
+                      onChange={(e) => {
+                          setIsVersionMode(e.target.checked);
+                          if (!e.target.checked) setLinkedRecord(null);
+                      }} 
+                      color="primary"
+                  />
+              } 
+              label={<Typography fontWeight="bold" color="text.primary">Is this a new version of an existing record?</Typography>} 
+          />
+          
+          {isVersionMode && (
+              <Box sx={{ mt: 2, p: 2, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid #eee' }}>
+                  <Autocomplete
+                      value={linkedRecord}
+                      options={recordOptions}
+                      getOptionLabel={(option) => {
+                          // Handle case where option is a string (freeSolo?) or null
+                          if (typeof option === 'string') return option;
+                          return `${option.referenceNumber || 'No Ref'} - ${option.title}`;
+                      }}
+                      isOptionEqualToValue={(option, value) => option.id === value.id}
+                      filterOptions={(x) => x} // Disable local filter, rely on API
+                      loading={searchingRecords}
+                      onInputChange={(_, val) => setRecordSearchQuery(val)}
+                      onChange={(_, newVal) => {
+                          setLinkedRecord(newVal);
+                          if (newVal) {
+                              if (!metadata.title) {
+                                  handleMetadataChange('title', newVal.title);
+                              }
+                          }
+                      }}
+                      renderInput={(params) => (
+                          <TextField 
+                              {...params} 
+                              label="Search original record to link..." 
+                              placeholder="Type title or reference number (e.g. INV)"
+                              helperText={metadata.classificationNodeId ? "Searching within selected classification..." : "Searching all records..."}
+                              fullWidth
+                          />
+                      )}
+                      renderOption={(props, option) => (
+                          <li {...props} key={option.id}>
+                              <Box sx={{ width: '100%' }}>
+                                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                      <Typography variant="subtitle2" component="span" fontWeight="bold">
+                                        {option.referenceNumber}
+                                      </Typography>
+                                      <Chip 
+                                        size="small" 
+                                        label={`v${option.versionNumber}`} 
+                                        color={option.isLatest ? "primary" : "default"} 
+                                        sx={{ ml: 1, height: 20, fontSize: '0.7rem' }} 
+                                      />
+                                  </Box>
+                                  <Typography variant="body2" component="div" sx={{ color: 'text.secondary' }}>
+                                    {option.title}
+                                  </Typography>
+                              </Box>
+                          </li>
+                      )}
+                  />
+                  {linkedRecord && (
+                      <Box sx={{ mt: 2, p: 1, bgcolor: '#e3f2fd', borderRadius: 1, borderLeft: '4px solid #1976d2' }}>
+                          <Typography variant="body2" color="primary" fontWeight="bold">
+                              ✓ Will create new version for:
+                          </Typography>
+                          <Typography variant="body2">
+                              {linkedRecord.title} (v{linkedRecord.versionNumber} → v{linkedRecord.versionNumber + 1})
+                          </Typography>
+                      </Box>
+                  )}
+              </Box>
+          )}
+      </Box>
 
       <FileSelection 
         onFileSelect={handleFileSelect} 
