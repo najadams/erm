@@ -24,7 +24,9 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const q = searchParams.get('q');
   const status = searchParams.get('status');
-  const groupId = searchParams.get('groupId') || searchParams.get('department');
+  const groupId = searchParams.get('groupId');
+  const departmentId = searchParams.get('departmentId') || searchParams.get('department');
+  const projectId = searchParams.get('projectId');
   const uploaderId = searchParams.get('uploader');
   const tag = searchParams.get('tag'); 
   const startDate = searchParams.get('startDate');
@@ -53,7 +55,19 @@ export async function GET(request: NextRequest) {
   }
 
   if (status) filters.push({ status });
-  if (groupId) filters.push({ groupId });
+  if (projectId) filters.push({ projectId });
+  if (departmentId) filters.push({ departmentId });
+  
+  // Legacy/Generic Group Filter (matches either Dept or Project)
+  if (groupId) {
+      filters.push({
+          OR: [
+              { departmentId: groupId },
+              { projectId: groupId }
+          ]
+      });
+  }
+
   if (uploaderId) filters.push({ ownerUserId: uploaderId });
   if (recordTypeId) filters.push({ recordTypeId });
   if (classificationNodeId) filters.push({ classificationNodeId });
@@ -217,18 +231,18 @@ export async function POST(request: NextRequest) {
     
           // Validate required fields
           const requiredFields = template.templateFields.filter(tf => tf.required);
-          const missingFields = requiredFields.filter(tf => {
+          const missingFields = requiredFields.filter((tf: any) => {
               const val = metadataValues[tf.metadataFieldId];
               // Allow false (boolean) and 0 (number), only reject null/undefined/empty string
               return val === undefined || val === null || val === '';
           });
           if (missingFields.length > 0) {
             const fieldNames = await prisma.metadataField.findMany({
-              where: { id: { in: missingFields.map(tf => tf.metadataFieldId) } },
+              where: { id: { in: missingFields.map((tf: any) => tf.metadataFieldId) } },
               select: { label: true }
             });
             return NextResponse.json({
-              error: `Missing required fields: ${fieldNames.map(f => f.label).join(', ')}`
+              error: `Missing required fields: ${fieldNames.map((f: any) => f.label).join(', ')}`
             }, { status: 400 });
           }
       }
@@ -259,7 +273,7 @@ export async function POST(request: NextRequest) {
     const userId = (session.user as any).id;
 
     // Transactional Create
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: any) => {
 
       // Resolve RecordType ID from Classification Node if not provided explicitly
       let appliedRecordTypeId = recordTypeId;
@@ -370,21 +384,11 @@ export async function POST(request: NextRequest) {
       const formStatus = formData.get('status') as string;
       
       // Default to DRAFT, unless user requested something else (handled by assert)
-      // If user has Verify permission, they MIGHT default to ACTIVE if they didn't specify DRAFT.
-      // But let's be explicit:
-      // If no status provided -> Default DRAFT (Safe) OR ACTIVE (if Admin/RO)?
-      // Previous logic: Admin -> Active.
-      // Let's refine default:
       let targetStatus: any = 'DRAFT';
       
       if (formStatus && ['DRAFT', 'ACTIVE'].includes(formStatus)) {
           targetStatus = formStatus;
       } else if (hasPermission(rawUserRole, 'VERIFY_RECORD')) {
-          // Auto-promote to ACTIVE for Admins if not specified? 
-          // Or Safer: Default to DRAFT, but allow Active?
-          // User requirement: "Admin + normal upload -> DRAFT". "Admin + 'Upload as Official' -> ACTIVE".
-          // So default should probably be DRAFT unless explicitly requested.
-          // However, for backward compatibility with "Bulk Upload" needing Active:
           targetStatus = 'ACTIVE'; 
       }
 
@@ -400,6 +404,10 @@ export async function POST(request: NextRequest) {
       const verificationBypassed = (initialStatus === 'ACTIVE');
 
       // 1. Create Record Container
+      // Map groupId to projectId if it's a valid Group ID (assuming UI sends groupId for project context)
+      // Note: We should probably validate if the group is actually a project, but for now we map it.
+      const projectId = groupId;
+
       const record = await tx.record.create({
         data: {
           title,
@@ -410,6 +418,7 @@ export async function POST(request: NextRequest) {
             templateVersion: templateVersion ? parseInt(templateVersion) : undefined,
           }),
           departmentId, // Optional
+          projectId,   // New: Project/Case Link
           ownerUserId: userId,
           referenceNumber, // Generated ID
           parentId,
@@ -457,6 +466,7 @@ export async function POST(request: NextRequest) {
             title,
             status: initialStatus,
             verificationBypassed,
+            projectId,
             ...(appliedRecordTypeId && { recordTypeId: appliedRecordTypeId }),
             ...(classificationNodeId && { classificationNodeId, templateVersion })
           })

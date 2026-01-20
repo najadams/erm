@@ -39,6 +39,7 @@ export default function UploadPage() {
 
   const [access, setAccess] = useState({
     visibility: 'PRIVATE',
+    projectId: '',
     sharedUsers: [] as string[],
     sharedGroups: [] as string[]
   });
@@ -102,7 +103,13 @@ export default function UploadPage() {
     // Append Access
     formData.append('visibility', access.visibility);
     formData.append('sharedUsers', JSON.stringify(access.sharedUsers));
+    formData.append('sharedUsers', JSON.stringify(access.sharedUsers));
     formData.append('sharedGroups', JSON.stringify(access.sharedGroups));
+    
+    // Map Project Context -> groupId (Backend expects primary group as Project)
+    if (access.projectId) {
+        formData.append('groupId', access.projectId);
+    }
     
     // Append Compliance
     // Append Compliance

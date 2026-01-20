@@ -16,6 +16,7 @@ import Chip from '@mui/material/Chip';
 interface AccessControlProps {
   data: {
     visibility: string;
+    projectId: string; // New
     sharedUsers: string[];
     sharedGroups: string[];
   };
@@ -23,28 +24,50 @@ interface AccessControlProps {
 }
 
 export default function AccessControl({ data, onChange }: AccessControlProps) {
-  // Mock data for users and groups - in real app this would come from API
   const [availableUsers, setAvailableUsers] = useState<{id: string, name: string}[]>([]);
-  const [availableGroups, setAvailableGroups] = useState<{id: string, name: string}[]>([]);
+  const [availableGroups, setAvailableGroups] = useState<{id: string, name: string, type: string}[]>([]);
 
   useEffect(() => {
-    // Simulate fetching
+    // 1. Fetch Groups
+    fetch('/api/groups')
+        .then(res => res.json())
+        .then(data => {
+            if (Array.isArray(data)) setAvailableGroups(data);
+        })
+        .catch(console.error);
+
+    // 2. Fetch Users (Mock for now, or fetch if API exists)
+    // Assuming /api/users endpoint doesn't exist or is restricted. Keeping mock for Users but real for Groups.
     setAvailableUsers([
         { id: '1', name: 'Alice Admin' },
         { id: '2', name: 'Bob Manager' },
         { id: '3', name: 'Charlie User' },
     ]);
-    setAvailableGroups([
-        { id: 'g1', name: 'HR Team' }, 
-        { id: 'g2', name: 'Legal Team' },
-        { id: 'g3', name: 'Management' }
-    ]);
   }, []);
+
+  const projects = availableGroups.filter(g => g.type === 'PROJECT');
+  const otherGroups = availableGroups.filter(g => g.type !== 'PROJECT');
 
   return (
     <Paper variant="outlined" sx={{ p: 3, mb: 3 }}>
       <Typography variant="h6" fontWeight="600" gutterBottom>Access & Visibility</Typography>
       
+      {/* Project Context */}
+      <Box sx={{ mb: 3 }}>
+          <Typography variant="subtitle2" color="text.secondary" gutterBottom>Project / Case Context</Typography>
+          <Autocomplete
+                options={projects}
+                getOptionLabel={(option) => option.name}
+                value={projects.find(p => p.id === data.projectId) || null}
+                onChange={(_, newValue) => {
+                    onChange('projectId', newValue ? newValue.id : '');
+                }}
+                renderInput={(params) => (
+                    <TextField {...params} label="Assign to Project (Optional)" placeholder="Select Project..." helperText="Assigning to a project grants access to all project members."/>
+                )}
+            />
+      </Box>
+
       <FormControl component="fieldset" sx={{ mb: 3 }}>
         <FormLabel component="legend">Visibility Scope</FormLabel>
         <RadioGroup
@@ -63,9 +86,9 @@ export default function AccessControl({ data, onChange }: AccessControlProps) {
             <Box sx={{ mb: 2 }}>
                 <Autocomplete
                     multiple
-                    options={availableGroups}
+                    options={otherGroups}
                     getOptionLabel={(option) => option.name}
-                    value={availableGroups.filter(g => data.sharedGroups.includes(g.id))}
+                    value={otherGroups.filter(g => data.sharedGroups.includes(g.id))}
                     onChange={(_, newValue) => {
                         onChange('sharedGroups', newValue.map(v => v.id));
                     }}

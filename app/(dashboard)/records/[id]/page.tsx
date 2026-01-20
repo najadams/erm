@@ -207,7 +207,17 @@ export default function RecordDetailsPage() {
                     <Typography>{record.description || '-'}</Typography>
                  </Box>
 
-                 {/* Retention Schedule */}
+                  {/* Department & Project */}
+                  <Box>
+                     <Typography variant="caption" color="text.secondary" fontWeight="bold">DEPARTMENT</Typography>
+                     <Typography>{record.department?.name || '-'}</Typography>
+                  </Box>
+                  <Box>
+                     <Typography variant="caption" color="text.secondary" fontWeight="bold">PROJECT / CASE</Typography>
+                     <Typography>{record.project?.name || '-'}</Typography> 
+                  </Box>
+
+                  {/* Retention Schedule */}
                  <Box>
                     <Typography variant="caption" color="text.secondary" fontWeight="bold">RETENTION SCHEDULE</Typography>
                     {record.dispositionDate ? (

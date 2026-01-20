@@ -5,7 +5,8 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { hasPermission } from '@/lib/permissions';
 
 import { assertTransitionAllowed, RecordStatus } from '@/lib/lifecycle';
-import { canAccessRecord } from '@/lib/access';
+import { canAccessRecord } from '@/lib/access'; // Kept for compatibility if other funcs used, but we prefer ACS
+import { ACS } from '@/lib/acs';
 
 // Note: In a real app, use the same access control clause as the list view.
 // For now, we'll do a simple check.
@@ -22,8 +23,8 @@ export async function GET(
 
   try {
     const id = params.id;
-    // 1. Permission Check
-    const hasAccess = await canAccessRecord((session.user as any).id, id);
+    // 1. Permission Check via Unified ACS
+    const hasAccess = await ACS.evaluate((session.user as any).id, id, 'VIEW');
     if (!hasAccess) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
@@ -50,7 +51,8 @@ export async function GET(
         },
         parent: {
             select: { id: true, title: true, referenceNumber: true }
-        }
+        },
+        department: { select: { id: true, name: true } }
       }
     });
 
@@ -58,7 +60,15 @@ export async function GET(
       return NextResponse.json({ error: 'Record not found' }, { status: 404 });
     }
 
-    return NextResponse.json(record);
+    let project = null;
+    if ((record as any).projectId) {
+        project = await prisma.group.findUnique({ 
+            where: { id: (record as any).projectId },
+            select: { id: true, name: true }
+        });
+    }
+
+    return NextResponse.json({ ...record, project });
   } catch (error) {
     console.error('Fetch Record Error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
@@ -201,7 +211,7 @@ export async function DELETE(
         // Let's assume schema handles cascading or we transactionally delete.
         
         // Transaction: Create Audit Log (orphaned) -> Delete Record
-        await prisma.$transaction(async (tx) => {
+        await prisma.$transaction(async (tx: any) => {
              // Create Audit Log of deletion (must be before delete if we want to snapshot, 
              // but 'recordId' will be nullified if foreign key restricted, or we leave it as string?)
              // Schema: recordId String? relation... onDelete: SetNull usually.
