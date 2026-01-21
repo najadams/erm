@@ -94,7 +94,7 @@ export async function POST(
     const newVersionNumber = lastVersion + 1;
 
     // 6. Transaction: Create Version + Update Record + Audit
-    const newVersion = await prisma.$transaction(async (tx) => {
+    const newVersion = await prisma.$transaction(async (tx: any) => {
         const v = await tx.recordVersion.create({
             data: {
                 recordId: id,

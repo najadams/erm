@@ -39,15 +39,15 @@ export async function GET(request: NextRequest) {
       }
   }
 
-  // Case 2: Full List (Strictly Admin Only)
-  if (!await isAdmin()) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-
+  // Case 2: List (Autocomplete/Default)
+  // Allow all authenticated users to get a default list (e.g. recent or alphabetical)
   try {
-    const users = await prisma.user.findMany({
-       select: { id: true, name: true, email: true, role: true, createdAt: true, groups: true },
-       orderBy: { createdAt: 'desc' }
-    });
-    return NextResponse.json(users);
+     const users = await prisma.user.findMany({
+       select: { id: true, name: true, email: true, department: { select: { name: true } } },
+       orderBy: { name: 'asc' },
+       take: 20
+     });
+     return NextResponse.json(users);
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
   }

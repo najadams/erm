@@ -4,7 +4,7 @@ import React from 'react';
 import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
 import MenuItem from '@mui/material/MenuItem';
-import Grid from '@mui/material/Grid';
+import { Grid } from '@mui/material';
 import Typography from '@mui/material/Typography';
 import Paper from '@mui/material/Paper';
 import Autocomplete from '@mui/material/Autocomplete';

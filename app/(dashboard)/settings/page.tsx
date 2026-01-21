@@ -12,6 +12,7 @@ import Stack from '@mui/material/Stack';
 import Chip from '@mui/material/Chip';
 import Divider from '@mui/material/Divider';
 import Alert from '@mui/material/Alert';
+import Switch from '@mui/material/Switch';
 
 import PersonIcon from '@mui/icons-material/Person';
 import EmailIcon from '@mui/icons-material/Email';
@@ -232,6 +233,69 @@ export default function SettingsPage() {
             </Button>
           </Stack>
         </Paper>
+
+        {/* System Settings (Admin Only) */}
+        {(user.role === 'ADMIN') && (
+            <Paper sx={{ p: 4, borderRadius: 3, mt: 3, border: '1px solid #e2e8f0' }}>
+                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                    <SecurityIcon sx={{ mr: 1, color: 'error.main' }} />
+                    <Typography variant="h6" fontWeight="bold">
+                      Admin Controls
+                    </Typography>
+                 </Box>
+                 <SystemSettingsControl />
+            </Paper>
+        )}
     </React.Fragment>
   );
+}
+
+function SystemSettingsControl() {
+    const [allowUploads, setAllowUploads] = useState(true);
+    const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        fetch('/api/settings/system')
+            .then(res => res.json())
+            .then(data => {
+                if (data.allowUserUploads !== undefined) setAllowUploads(data.allowUserUploads);
+            })
+            .catch(console.error);
+    }, []);
+
+    const handleToggle = async (val: boolean) => {
+        setAllowUploads(val);
+        setSaving(true);
+        try {
+            await fetch('/api/settings/system', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ allowUserUploads: val })
+            });
+        } catch(e) {
+            console.error(e);
+            alert('Failed to save settings');
+            setAllowUploads(!val); // Revert
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <Stack spacing={2}>
+             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                 <Box>
+                     <Typography fontWeight="bold">User Uploads</Typography>
+                     <Typography variant="caption" color="text.secondary">
+                        Allow non-admin users to upload records.
+                     </Typography>
+                 </Box>
+                 <Switch 
+                    checked={allowUploads}
+                    onChange={(e) => handleToggle(e.target.checked)}
+                    disabled={saving}
+                 />
+             </Box>
+        </Stack>
+    );
 }

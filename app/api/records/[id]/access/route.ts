@@ -237,7 +237,7 @@ export async function DELETE(
     }
 
     try {
-        await prisma.$transaction(async (tx) => {
+        await prisma.$transaction(async (tx: any) => {
             const access = await tx.recordAccess.findUnique({ where: { id: accessId }});
             if (!access) throw new Error('Access permission not found');
 

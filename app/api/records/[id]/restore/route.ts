@@ -39,7 +39,7 @@ export async function POST(
       }
 
       const latestVersion = record.versions[0];
-      const targetVersion = record.versions.find(v => v.id === versionId);
+      const targetVersion = record.versions.find((v: any) => v.id === versionId);
 
       if (!targetVersion) {
           return NextResponse.json({ error: 'Target version not found' }, { status: 404 });
@@ -63,7 +63,7 @@ export async function POST(
       // 4. Create New Version
       const newVersionNum = (latestVersion?.versionNumber || 0) + 1;
       
-      await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx: any) => {
            await tx.recordVersion.create({
                data: {
                    recordId: id,

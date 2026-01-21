@@ -35,12 +35,8 @@ export async function POST(request: NextRequest) {
     
     // Only Authorized roles can create holds
     const userRole = (session.user as any).role;
-    if (userRole !== ROLES.ADMIN && userRole !== ROLES.RECORDS_OFFICER && userRole !== ROLES.LEGAL_OFFICER) {
-        // Assuming LEGAL_OFFICER role exists, if not fall back to ADMIN/RECORDS
-        // For now checking ADMIN/RECORDS
-        if (userRole !== ROLES.ADMIN && userRole !== ROLES.RECORDS_OFFICER) {
-             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-        }
+    if (userRole !== ROLES.ADMIN && userRole !== ROLES.RECORDS_OFFICER) {
+         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     try {

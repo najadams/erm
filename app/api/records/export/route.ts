@@ -41,20 +41,20 @@ export async function POST(request: NextRequest) {
         const stream = new PassThrough();
 
         // 3. Add Metadata JSON
-        const metadataExport = records.map(r => ({
+        const metadataExport = records.map((r: any) => ({
             id: r.id,
             title: r.title,
             referenceNumber: r.referenceNumber,
             status: r.status,
             createdAt: r.createdAt,
-            metadata: r.metadata.map(m => ({ [m.metadataField.name]: m.value }))
+            metadata: r.metadata.map((m: any) => ({ [m.metadataField.name]: m.value }))
         }));
         archive.append(JSON.stringify(metadataExport, null, 2), { name: 'export_manifest.json' });
 
         // 4. Add Files (Mocking adding file content, as we only have S3/Local URLs)
         // In real app, we would fetch streams from S3.
         // For audit demo, we'll add a placeholder text file for each record.
-        records.forEach(r => {
+        records.forEach((r: any) => {
             const current = r.versions[0];
             if (current) {
                 archive.append(`File Content Placeholder for ${current.filePath}`, { name: `${r.referenceNumber || r.id}_v${current.versionNumber}.txt` });

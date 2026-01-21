@@ -171,14 +171,14 @@ export default function LegalHoldsPage() {
                     {error && <Alert severity="error">{error}</Alert>}
                     
                     <Grid container spacing={2}>
-                        <Grid item xs={8}>
+                        <Grid size={{ xs: 8 }}>
                             <TextField 
                                 label="Case / Hold Name" fullWidth required
                                 value={formData.name}
                                 onChange={(e) => setFormData({...formData, name: e.target.value})}
                             />
                         </Grid>
-                        <Grid item xs={4}>
+                        <Grid size={{ xs: 4 }}>
                             <TextField 
                                 label="Case Reference ID" fullWidth 
                                 value={formData.caseReference}
@@ -196,7 +196,7 @@ export default function LegalHoldsPage() {
                     />
 
                     <Grid container spacing={2}>
-                         <Grid item xs={6}>
+                         <Grid size={{ xs: 6 }}>
                             <TextField 
                                 label="Start Date" type="date" fullWidth
                                 InputLabelProps={{ shrink: true }}
@@ -204,7 +204,7 @@ export default function LegalHoldsPage() {
                                 onChange={(e) => setFormData({...formData, startDate: e.target.value})}
                             />
                         </Grid>
-                        <Grid item xs={6}>
+                        <Grid size={{ xs: 6 }}>
                             <TextField 
                                 label="Est. End Date" type="date" fullWidth
                                 InputLabelProps={{ shrink: true }}
@@ -215,7 +215,7 @@ export default function LegalHoldsPage() {
                     </Grid>
 
                     <Grid container spacing={2}>
-                        <Grid item xs={6}>
+                        <Grid size={{ xs: 6 }}>
                              <TextField 
                                 select label="Status" fullWidth
                                 value={formData.status}
@@ -226,7 +226,7 @@ export default function LegalHoldsPage() {
                                  <MenuItem value="CLOSED">Closed (Archived)</MenuItem>
                              </TextField>
                         </Grid>
-                        <Grid item xs={6}>
+                        <Grid size={{ xs: 6 }}>
                             <TextField 
                                 label="Notification Recipients" fullWidth
                                 placeholder="email@example.com, legal@example.com"

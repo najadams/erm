@@ -522,3 +522,11 @@ model Webhook {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+model SystemSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique // e.g. "ALLOW_USER_UPLOADS"
+  value       String   // JSON value or simple string
+  description String?
+  updatedAt   DateTime @updatedAt
+}

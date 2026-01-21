@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
           _count: { id: true }
       });
 
-      const totalRecords = recordCounts.reduce((acc, curr) => acc + curr._count.id, 0);
+      const totalRecords = recordCounts.reduce((acc: number, curr: any) => acc + curr._count.id, 0);
 
       // 2. User Activity (from Audit Logs - Last 7 Days)
       const recentActivity = await prisma.auditLog.findMany({
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
           activityMap[key] = { upload: 0, login: 0, other: 0 };
       }
 
-      recentActivity.forEach(log => {
+      recentActivity.forEach((log: any) => {
           const key = new Date(log.timestamp).toISOString().split('T')[0];
           if (activityMap[key]) {
               if (log.action === 'UPLOAD') activityMap[key].upload++;
@@ -73,11 +73,11 @@ export async function GET(request: NextRequest) {
           overview: {
               totalRecords,
               totalUsers,
-              recordsPendingHeaders: recordCounts.find(c => c.status === 'READY_FOR_DISPO')?._count.id || 0,
+              recordsPendingHeaders: recordCounts.find((c: any) => c.status === 'READY_FOR_DISPO')?._count.id || 0,
               storageBytes: estimatedStorageUsageBytes,
               dbStatus: 'Online' // implicit success
           },
-          recordDistribution: recordCounts.map(c => ({ name: c.status, value: c._count.id })),
+          recordDistribution: recordCounts.map((c: any) => ({ name: c.status, value: c._count.id })),
           activityTrend
       });
 

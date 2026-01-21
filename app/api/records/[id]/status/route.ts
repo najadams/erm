@@ -56,7 +56,7 @@ export async function PATCH(
     }
 
     // 4. Perform Update & Audit
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: any) => {
         // Update Record
         const updatedRecord = await tx.record.update({
             where: { id },

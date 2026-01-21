@@ -36,13 +36,13 @@ export default function AccessControl({ data, onChange }: AccessControlProps) {
         })
         .catch(console.error);
 
-    // 2. Fetch Users (Mock for now, or fetch if API exists)
-    // Assuming /api/users endpoint doesn't exist or is restricted. Keeping mock for Users but real for Groups.
-    setAvailableUsers([
-        { id: '1', name: 'Alice Admin' },
-        { id: '2', name: 'Bob Manager' },
-        { id: '3', name: 'Charlie User' },
-    ]);
+    // 2. Fetch Users (Real)
+    fetch('/api/users')
+        .then(res => res.json())
+        .then(data => {
+            if (Array.isArray(data)) setAvailableUsers(data);
+        })
+        .catch(console.error);
   }, []);
 
   const projects = availableGroups.filter(g => g.type === 'PROJECT');

@@ -80,30 +80,7 @@ export async function PUT(
         // Fetch old for audit
         const oldPolicy = await prisma.retentionPolicy.findUnique({ where: { id }, include: { recordTypes: true } });
 
-        const policy = await prisma.retentionPolicy.update({
-            where: { id },
-            data: {
-                name,
-                description,
         let finalDurationValue: number | null = durationValue ? parseInt(durationValue) : null;
-        if (durationUnit === 'PERMANENT') {
-            finalDurationValue = null;
-        } else if (finalDurationValue === null && durationUnit) {
-             // If durationUnit is supplied but not permanent, and we don't have a value:
-             // But wait, PUT might be partial update? 
-             // Ideally we should check if they are changing unit to non-permanent.
-             // For simplicity, let's assume UI sends full object or at least consistent pairs.
-             // If durationUnit is changing to 'YEARS' but durationValue isn't sent, what happens?
-             // Prisma updates only what is defined. 
-             // Safe bet: If durationUnit is sent and != PERMANENT, verify we have a value either in body or existing?
-             // Let's stick to the simplest logic: if passing keys, validate them.
-             if (durationValue === undefined || durationValue === null) {
-                  // We might need to fetch old policy to check? 
-                  // Let's assume the frontend sends correct data.
-             }
-        }
-        
-        // Actually, simplest is:
         if (durationUnit === 'PERMANENT') {
             finalDurationValue = null;
         }

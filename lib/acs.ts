@@ -23,6 +23,35 @@ export class ACS {
 
     if (!user) return false;
 
+    // Fix for "Department vs Group" disconnect (Same as getWhereClause):
+    if (user.departmentId) {
+        const dept = await prisma.department.findUnique({ 
+            where: { id: user.departmentId },
+            select: { name: true }
+        });
+        if (dept) {
+            const groups = await prisma.group.findMany({
+                where: {
+                    type: 'DEPARTMENT',
+                    OR: [
+                        { name: dept.name },
+                        { name: dept.name.replace(' Department', '') },
+                        { name: `${dept.name} Department` }
+                    ]
+                },
+                select: { id: true, name: true, type: true } // Need structure to match User.groups
+            });
+            // Append to user.groups in memory
+            groups.forEach(g => {
+                // @ts-ignore
+                if (!user.groups.some(ug => ug.id === g.id)) {
+                     // @ts-ignore
+                     user.groups.push({ ...g, createdAt: new Date(), updatedAt: new Date() });
+                }
+            });
+        }
+    }
+
     // 1. GLOBAL ADMIN / AUDITOR OVERRIDES
     if (user.role === ROLES.ADMIN) return true;
     if (user.role === ROLES.AUDITOR && ['VIEW', 'READ'].includes(action)) return true;
@@ -70,7 +99,7 @@ export class ACS {
     // 6. PROJECT / CASE MEMBERSHIP
     // If record belongs to a project, and user is in that project group -> ALLOW
     if (record.projectId) {
-      const inProject = user.groups.some(g => g.id === record.projectId);
+      const inProject = user.groups.some((g: any) => g.id === record.projectId);
       if (inProject && ['VIEW', 'READ', 'EDIT'].includes(action)) return true;
       // Note: Project member usually implies EDIT permissions? 
       // For now, let's assume Project Member = Full Participant (View/Read/Edit)
@@ -103,8 +132,41 @@ export class ACS {
       return {}; 
     }
 
-    const userGroupsIds = user.groups.map(g => g.id);
+    const userGroupsIds = user.groups.map((g: any) => g.id);
     const userClearance = user.clearanceLevel ?? 1;
+
+    // Fix for "Department vs Group" disconnect:
+    // If user is in a Department, find if there is a corresponding Group (by name) 
+    // and treat the user as a member of that group for READ access.
+    if (user.departmentId) {
+        const dept = await prisma.department.findUnique({ 
+            where: { id: user.departmentId },
+            select: { name: true }
+        });
+        if (dept) {
+            // Find groups with similar name (e.g. "IT" vs "IT Department")
+            // Strict match or strict + " Department" removal?
+            // Let's do loose matching: Group Name == Dept Name OR Group Name + " Department" == Dept Name
+            // Actually, safest is: Group Type = 'DEPARTMENT' AND Name matches.
+            // But let's just find Groups that match the Dept Name exactly or as a substring??
+            // User case: Dept="IT Department", Group="IT" (or "IT Department")?
+            // Let's try exact match first, and trimmed match.
+            const groups = await prisma.group.findMany({
+                where: {
+                    type: 'DEPARTMENT',
+                    OR: [
+                        { name: dept.name },
+                        { name: dept.name.replace(' Department', '') },
+                        { name: `${dept.name} Department` }
+                    ]
+                },
+                select: { id: true }
+            });
+            groups.forEach(g => {
+                if (!userGroupsIds.includes(g.id)) userGroupsIds.push(g.id);
+            });
+        }
+    }
 
     return {
       AND: [
@@ -115,7 +177,7 @@ export class ACS {
             { ownerUserId: userId },
             
             // 2. Department Member (View Only)
-            { departmentId: user.departmentId },
+            ...(user.departmentId ? [{ departmentId: user.departmentId }] : []),
             
             // 3. Project Member
             { projectId: { in: userGroupsIds } },

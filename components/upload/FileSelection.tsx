@@ -128,7 +128,9 @@ export default function FileSelection({ onFileSelect, onClassificationSelect, de
         const res = await fetch(`/api/classifications/${nodeId}`);
         if (res.ok) {
            const fullNode = await res.json();
-           const template = fullNode.templates && fullNode.templates.length > 0 ? fullNode.templates[0] : null;
+           // Find active template or first one
+           const template = fullNode.templates?.find((t: any) => t.isActive) || fullNode.templates?.[0] || null;
+           console.log('Fetched Node:', fullNode.name, 'Template:', template?.name);
            onClassificationSelect({ ...fullNode, template });
         } else {
            console.error("Failed to fetch full node details");

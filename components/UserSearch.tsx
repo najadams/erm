@@ -23,24 +23,16 @@ export default function UserSearch({ value, onChange, type }: UserSearchProps) {
     const fetchOptions = React.useMemo(
         () =>
             debounce(async (input: string, callback: (results: any[]) => void) => {
-                if (!input || input.length < 2) return callback([]);
-                
-                const endpoint = type === 'USER' ? `/api/users?q=${input}` : `/api/groups?q=${input}`; // Note: Group search might need robust q support too, assuming similar to users
-
-                // For now, if type is GROUP, we might need to fetch all or filter client side if API doesn't support q.
-                // However, the backend task didn't explicitly add ?q= to /api/groups.
-                // Let's assume /api/groups returns all (it's usually small) and we filter locally? 
-                // BUT current /api/groups is MANAGE_USERS only? 
-                // Wait. The directive said "Add search endpoints for Users and Groups". 
-                // I only did User. I should check /api/groups permissions.
-                // If /api/groups is protected, I need to fix it too!
-                // For this component, I will try to fetch.
+                // Return default list if empty
+                const endpoint = type === 'USER' 
+                    ? (input ? `/api/users?q=${input}` : `/api/users`)
+                    : (input ? `/api/groups?q=${input}` : `/api/groups`);
                 
                 try {
                     const res = await fetch(endpoint);
                     if (res.ok) {
                         const data = await res.json();
-                        callback(data);
+                        callback(data || []);
                     } else {
                          callback([]);
                     }

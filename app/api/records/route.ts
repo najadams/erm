@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { writeFile } from 'fs/promises';
 import { join } from 'path';
 import crypto from 'crypto';
-import { hasPermission } from '@/lib/permissions';
+import { hasPermission, ROLES } from '@/lib/permissions';
 import { assertTransitionAllowed, LifecycleError } from '@/lib/lifecycle';
 
 export const dynamic = 'force-dynamic';
@@ -144,6 +144,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const userRole = (session.user as any)?.role;
+
+  // Check upload restriction
+  if (userRole !== ROLES.ADMIN) {
+      const setting = await prisma.systemSetting.findUnique({ where: { key: 'ALLOW_USER_UPLOADS' } });
+      const allowed = setting ? JSON.parse(setting.value) : true;
+      if (!allowed) {
+          return NextResponse.json({ error: 'Uploads are currently disabled by the administrator.' }, { status: 403 });
+      }
+  }
+
   try {
     console.log('[API] POST /records - Content-Type:', request.headers.get('content-type'));
     
@@ -233,7 +244,7 @@ export async function POST(request: NextRequest) {
           }
     
           // Validate required fields
-          const requiredFields = template.templateFields.filter(tf => tf.required);
+          const requiredFields = template.templateFields.filter((tf: any) => tf.required);
           const missingFields = requiredFields.filter((tf: any) => {
               const val = metadataValues[tf.metadataFieldId];
               // Allow false (boolean) and 0 (number), only reject null/undefined/empty string
@@ -534,6 +545,51 @@ export async function POST(request: NextRequest) {
           data: metadataEntries
         });
       }
+
+      // 4. Access Control (Shared Users & Groups)
+      // Parse JSON from formData (safely)
+      const rawSharedUsers = formData.get('sharedUsers');
+      const rawSharedGroups = formData.get('sharedGroups');
+      const visibility = formData.get('visibility') as string; // 'PRIVATE', 'DEPARTMENT', 'SHARED', 'PUBLIC'
+
+      let sharedUsers: string[] = [];
+      let sharedGroups: string[] = [];
+      
+      try {
+          if (rawSharedUsers) sharedUsers = JSON.parse(rawSharedUsers as string);
+          if (rawSharedGroups) sharedGroups = JSON.parse(rawSharedGroups as string);
+      } catch (e) { console.error('Error parsing access JSON:', e); }
+
+      // Create Explicit Access Entries
+      if (sharedUsers.length > 0) {
+          await tx.recordAccess.createMany({
+              data: sharedUsers.map(uid => ({
+                  recordId: record.id,
+                  principalType: 'USER',
+                  userId: uid,
+                  level: 'VIEW', // Default level for shared
+                  accessType: 'ALLOW'
+              }))
+          });
+      }
+
+      if (sharedGroups.length > 0) {
+          await tx.recordAccess.createMany({
+              data: sharedGroups.map(gid => ({
+                  recordId: record.id,
+                  principalType: 'GROUP',
+                  groupId: gid,
+                  level: 'VIEW',
+                  accessType: 'ALLOW'
+              }))
+          });
+      }
+      
+      // Handle Visibility Shortcuts
+      // If 'DEPARTMENT' visibility, ensure departmentId is set (it should be from form, but we can double check logic)
+      // If 'PUBLIC', maybe create a special group access? For now, we assume 'PUBLIC' means wide open which might be handled by ACS logic checking for a 'PUBLIC' flag if we had one.
+      // Current ACS logic relies on RecordAccess or Ownership/Dept/Project.
+      // If visibility is 'DEPARTMENT' and no departmentId was set, we might have an issue, but frontend validates that.
 
       // 4. Audit Log
       await tx.auditLog.create({

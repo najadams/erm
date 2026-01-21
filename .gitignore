@@ -57,3 +57,7 @@ cleanup_users.js
 verify_search_fail.js
 verify_versioning.js
 verify_access_control.js
+verify_security_breach.js
+verify*
+cleanu*
+.gitignore
