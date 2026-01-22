@@ -40,6 +40,11 @@ model User {
   
   // Record Access
   accessPermissions RecordAccess[]
+
+  // GIPC Project Relations
+  ownedProjects       Project[]       @relation("ProjectOwner")
+  projectMemberships  ProjectMember[]
+  addedProjectRecords ProjectRecord[]
 }
 
 model Group {
@@ -318,6 +323,11 @@ model Record {
 
   @@index([versionGroupId])
   @@unique([referenceNumber, versionNumber]) // Ensure uniqueness per version
+
+  // GIPC Relations
+  registeredCompanyId String?
+  registeredCompany   RegisteredCompany? @relation(fields: [registeredCompanyId], references: [id])
+  projectRecords      ProjectRecord[]
 }
 
 enum RetentionTrigger {
@@ -529,4 +539,73 @@ model SystemSetting {
   value       String   // JSON value or simple string
   description String?
   updatedAt   DateTime @updatedAt
+}
+
+// ---------------------------------------------------------
+// GIPC SPECIFIC MODELS
+// ---------------------------------------------------------
+
+model RegisteredCompany {
+  id                String   @id @default(uuid())
+  name              String
+  registrationNumber String  @unique
+  investorType      String   // "FOREIGN", "LOCAL", "JOINT_VENTURE"
+  sector            String?
+  tin               String?
+  contactDetails    String?  // JSON or text
+
+  // Relations
+  records           Record[] // All records related to this company
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  status      String   @default("DRAFT") // DRAFT, ACTIVE, FROZEN, CLOSED, ARCHIVED
+  
+  startDate   DateTime?
+  endDate     DateTime?
+  
+  // Governance
+  visibility  String   @default("PRIVATE") // PRIVATE, ORG, RESTRICTED
+  ownerUserId String
+  owner       User     @relation("ProjectOwner", fields: [ownerUserId], references: [id])
+  
+  // Relations
+  members     ProjectMember[]
+  projectRecords ProjectRecord[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ProjectMember {
+  id          String   @id @default(uuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  role        String   // MANAGER, CONTRIBUTOR, VIEW_ONLY
+  joinedAt    DateTime @default(now())
+  
+  @@unique([projectId, userId])
+}
+
+model ProjectRecord {
+  id              String   @id @default(uuid())
+  projectId       String
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  recordId        String
+  record          Record   @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  versionGroupId  String? // Optional: Pin to specific version or track latest
+  
+  addedById       String
+  addedBy         User     @relation(fields: [addedById], references: [id])
+  addedAt         DateTime @default(now())
+  
+  @@unique([projectId, recordId])
 }

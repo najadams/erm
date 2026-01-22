@@ -101,12 +101,40 @@ export class ACS {
     }
 
     // 6. PROJECT / CASE MEMBERSHIP
-    // If record belongs to a project, and user is in that project group -> ALLOW
+    // Legacy Group Check
     if (record.projectId) {
       const inProject = user.groups.some((g: any) => g.id === record.projectId);
       if (inProject && ['VIEW', 'READ', 'EDIT'].includes(action)) return true;
-      // Note: Project member usually implies EDIT permissions? 
-      // For now, let's assume Project Member = Full Participant (View/Read/Edit)
+    }
+
+    // 6b. GIPC PROJECT MEMBERSHIP
+    const projectAccess = await prisma.projectRecord.findFirst({
+        where: {
+            recordId: recordId,
+            project: {
+                members: { some: { userId: userId } }
+            }
+        },
+        include: {
+            project: { select: { status: true } }
+        }
+    });
+
+    if (projectAccess) {
+        // If Project is Frozen, only allow Read
+        if (projectAccess.project.status === 'FROZEN') {
+             if (['VIEW', 'READ'].includes(action)) return true;
+        } else {
+             // Active Project: Allow VIEW/READ/EDIT
+             if (['VIEW', 'READ', 'EDIT'].includes(action)) return true;
+             // DELETE: Restrict to Manager
+             if (action === 'DELETE') {
+                 const member = await prisma.projectMember.findUnique({
+                     where: { projectId_userId: { projectId: projectAccess.projectId, userId } }
+                 });
+                 if (member?.role === 'MANAGER') return true;
+             }
+        }
     }
 
     // 7. DEPARTMENT VISIBILITY
@@ -185,8 +213,19 @@ export class ACS {
             // 2. Department Member (View Only)
             ...(user.departmentId ? [{ departmentId: user.departmentId }] : []),
             
-            // 3. Project Member
+            // 3. Project Member (Legacy)
             { projectId: { in: userGroupsIds } },
+
+            // 4. GIPC Project Membership
+            {
+               projectRecords: {
+                   some: {
+                       project: {
+                           members: { some: { userId: userId } }
+                       }
+                   }
+               }
+            },
 
             // 4. Explicit ACL Allow
             {

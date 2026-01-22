@@ -15,12 +15,11 @@ import IconButton from '@mui/material/IconButton';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import TreeView from '@mui/lab/TreeView';
-import TreeItem from '@mui/lab/TreeItem';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import FolderIcon from '@mui/icons-material/Folder';
 import DescriptionIcon from '@mui/icons-material/Description';
+import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import List from '@mui/material/List';
@@ -28,6 +27,19 @@ import ListItem from '@mui/material/ListItem';
 import Collapse from '@mui/material/Collapse';
 import Chip from '@mui/material/Chip';
 
+// DnD Kit
+import {
+  DndContext,
+  useDraggable,
+  useDroppable,
+  DragOverlay,
+  DragEndEvent,
+  DragStartEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
 
 interface ClassificationNode {
   id: string;
@@ -46,6 +58,156 @@ interface ClassificationNode {
   };
 }
 
+// -------------------------------------------------------------
+// Draggable Node Component
+// -------------------------------------------------------------
+interface DraggableNodeProps {
+  node: ClassificationNode;
+  expanded: string[];
+  onToggle: (id: string) => void;
+  onEdit: (node: ClassificationNode, parentId?: string) => void;
+  onDelete: (node: ClassificationNode) => void;
+  depth?: number;
+}
+
+function DraggableNode({ node, expanded, onToggle, onEdit, onDelete, depth = 0 }: DraggableNodeProps) {
+  const isExpanded = expanded.includes(node.id);
+  const hasChildren = node.children && node.children.length > 0;
+  
+  // DnD Hooks
+  const { attributes, listeners, setNodeRef: setDraggableRef, transform, isDragging } = useDraggable({
+    id: node.id,
+    data: node,
+  });
+
+  const { setNodeRef: setDroppableRef, isOver, active } = useDroppable({
+    id: node.id,
+    data: node,
+    disabled: node.level >= 3, // Cannot drop INTO a Level 3 node
+  });
+
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 999 : 'auto',
+  };
+
+  const recordCount = node._count?.records || 0;
+  const childCount = node._count?.children || 0;
+  const canDelete = recordCount === 0 && childCount === 0;
+  const canAddChild = node.level < 3;
+
+  // Prevent dropping onto itself or descendants (visual feedback)
+  const isValidDrop = isOver && active?.id !== node.id; 
+  // Note: True descendant check requires tree traversal, but basic self-check helps.
+  
+  return (
+    <React.Fragment>
+      <div 
+        ref={setDroppableRef} 
+        style={{ 
+           backgroundColor: isValidDrop ? 'rgba(25, 118, 210, 0.12)' : 'transparent',
+           borderRadius: 4
+        }}
+      >
+        <ListItem
+          disablePadding
+          ref={setDraggableRef}
+          style={style}
+          sx={{ display: 'block', mb: 0.5 }}
+        >
+          <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              p: 1, 
+              pl: (depth * 2) + 1, // Indent based on hierarchy depth in UI
+              border: isValidDrop ? '2px dashed #1976d2' : '1px solid transparent',
+              borderRadius: 1,
+              '&:hover': { bgcolor: 'action.hover' } 
+          }}>
+              {/* Drag Handle */}
+              <IconButton 
+                size="small" 
+                {...attributes} 
+                {...listeners} 
+                sx={{ cursor: 'grab', mr: 0.5, color: 'text.disabled' }}
+              >
+                 <DragIndicatorIcon fontSize="small" />
+              </IconButton>
+              
+              {/* Expand Toggle */}
+              <IconButton 
+                  size="small" 
+                  onClick={() => hasChildren && onToggle(node.id)} 
+                  sx={{ visibility: hasChildren ? 'visible' : 'hidden', mr: 0.5 }}
+              >
+                  {isExpanded ? <ExpandMoreIcon fontSize="small" /> : <ChevronRightIcon fontSize="small" />}
+              </IconButton>
+              
+              {/* Icon */}
+              {node.level === 1 ? <FolderIcon color="primary" sx={{ mr: 1 }} /> : 
+               node.level === 2 ? <FolderIcon color="action" sx={{ mr: 1 }} /> : 
+               <DescriptionIcon color="action" sx={{ mr: 1 }} />}
+              
+              <Typography variant="body1" sx={{ flexGrow: 1, fontWeight: node.level === 1 ? 'bold' : 'normal' }}>
+                  {node.name}
+              </Typography>
+
+              {/* Chips */}
+              <Box sx={{ display: 'flex', gap: 1, mr: 2 }}>
+                  {node.securityLevel && node.securityLevel > 1 && (
+                      <Chip label={`L${node.securityLevel}`} size="small" color="warning" variant="outlined" sx={{ height: 20, fontSize: '0.7rem' }} />
+                  )}
+                  {node.code && <Chip label={node.code} size="small" variant="outlined" sx={{ height: 20, fontSize: '0.7rem' }} />}
+                  {recordCount > 0 && <Chip label={recordCount} size="small" color="primary" sx={{ height: 20, fontSize: '0.7rem' }} />}
+              </Box>
+
+              {/* Actions */}
+              <Box>
+                  {canAddChild && (
+                      <IconButton size="small" onClick={() => onEdit(undefined as any, node.id)}>
+                          <AddIcon fontSize="small" />
+                      </IconButton>
+                  )}
+                  <IconButton size="small" onClick={() => onEdit(node)}>
+                      <EditIcon fontSize="small" />
+                  </IconButton>
+                  {canDelete && (
+                      <IconButton size="small" onClick={() => onDelete(node)}>
+                          <DeleteIcon fontSize="small" />
+                      </IconButton>
+                  )}
+              </Box>
+          </Box>
+        </ListItem>
+      </div>
+      
+      {hasChildren && (
+          <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+              <List component="div" disablePadding>
+                  {node.children!.map(child => (
+                       <DraggableNode 
+                          key={child.id} 
+                          node={child} 
+                          expanded={expanded} 
+                          onToggle={onToggle}
+                          onEdit={onEdit}
+                          onDelete={onDelete}
+                          depth={depth + 1}
+                       />
+                  ))}
+              </List>
+          </Collapse>
+      )}
+    </React.Fragment>
+  );
+}
+
+
+// -------------------------------------------------------------
+// Main Page
+// -------------------------------------------------------------
+
 export default function ClassificationsPage() {
   const [nodes, setNodes] = useState<ClassificationNode[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,6 +222,16 @@ export default function ClassificationsPage() {
   });
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string[]>([]);
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+
+  // DnD Sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+        activationConstraint: {
+            distance: 8,
+        },
+    })
+  );
 
   useEffect(() => {
     fetchClassifications();
@@ -72,9 +244,11 @@ export default function ClassificationsPage() {
       if (!res.ok) throw new Error('Failed to fetch classifications');
       const data = await res.json();
       setNodes(data);
-      // Auto-expand all nodes
-      const allIds = data.map((n: ClassificationNode) => n.id);
-      setExpanded(allIds);
+      // Auto-expand all nodes initially for better visibility
+      if (expanded.length === 0) {
+          const allIds = data.map((n: ClassificationNode) => n.id);
+          setExpanded(allIds);
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -82,17 +256,13 @@ export default function ClassificationsPage() {
     }
   };
 
-  const buildTree = (nodes: ClassificationNode[]): ClassificationNode[] => {
+  const buildTree = (inputNodes: ClassificationNode[]): ClassificationNode[] => {
     const nodeMap = new Map<string, ClassificationNode>();
     const roots: ClassificationNode[] = [];
-
-    // Create map of all nodes
-    nodes.forEach(node => {
+    inputNodes.forEach(node => {
       nodeMap.set(node.id, { ...node, children: [] });
     });
-
-    // Build tree structure
-    nodes.forEach(node => {
+    inputNodes.forEach(node => {
       const nodeWithChildren = nodeMap.get(node.id)!;
       if (node.parentId) {
         const parent = nodeMap.get(node.parentId);
@@ -104,9 +274,57 @@ export default function ClassificationsPage() {
         roots.push(nodeWithChildren);
       }
     });
-
     return roots;
   };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveDragId(event.active.id as string);
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveDragId(null);
+
+    if (!over) return;
+    
+    // Logic: Dragging 'active' ONTO 'over' makes 'active' a child of 'over'
+    const draggedId = active.id as string;
+    const targetParentId = over.id as string;
+
+    if (draggedId === targetParentId) return;
+
+    // Check circular or move validity (prevent dropping parent into child)
+    // We can do a quick client-side check if we have the tree structure handy
+    // But API also validates.
+    
+    // Find the dragged node to verify it's not already a child of target
+    const draggedNode = nodes.find(n => n.id === draggedId);
+    if (draggedNode?.parentId === targetParentId) return; // No change
+
+    // Construct Reparent Request
+    try {
+        setLoading(true); // Optimistic UI could be better, but safety first
+        const res = await fetch(`/api/classifications/${draggedId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                parentId: targetParentId
+            })
+        });
+
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.error || 'Failed to move');
+        }
+
+        // Refresh
+        await fetchClassifications();
+    } catch (e: any) {
+        alert(`Move failed: ${e.message}`);
+        setLoading(false);
+    }
+  };
+
 
   const handleOpenDialog = (node?: ClassificationNode, parentId?: string) => {
     if (node) {
@@ -194,91 +412,27 @@ export default function ClassificationsPage() {
     setExpanded(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
-  const renderTree = (node: ClassificationNode) => {
-    const hasChildren = node.children && node.children.length > 0;
-    const recordCount = node._count?.records || 0;
-    const childCount = node._count?.children || 0;
-    const canDelete = recordCount === 0 && childCount === 0;
-    const canAddChild = node.level < 3;
-    const isExpanded = expanded.includes(node.id);
-
-    return (
-      <React.Fragment key={node.id}>
-        <ListItem
-          disablePadding
-          sx={{ display: 'block' }}
-        >
-            <Box sx={{ display: 'flex', alignItems: 'center', p: 1, pl: node.level * 2, '&:hover': { bgcolor: 'action.hover' } }}>
-                <IconButton size="small" onClick={() => hasChildren && handleToggle(node.id)} sx={{ visibility: hasChildren ? 'visible' : 'hidden' }}>
-                    {isExpanded ? <ExpandMoreIcon /> : <ChevronRightIcon />}
-                </IconButton>
-                
-                {node.level === 1 ? <FolderIcon color="primary" sx={{ mr: 1 }} /> : 
-                 node.level === 2 ? <FolderIcon color="action" sx={{ mr: 1 }} /> : 
-                 <DescriptionIcon color="action" sx={{ mr: 1 }} />}
-                
-                <Typography variant="body1" sx={{ flexGrow: 1, fontWeight: node.level === 1 ? 'bold' : 'normal' }}>
-                    {node.name}
-                </Typography>
-
-                {/* Badges/Chips */}
-                <Box sx={{ display: 'flex', gap: 1, mr: 2 }}>
-                    {node.securityLevel && node.securityLevel > 1 && (
-                        <Chip label={`Level ${node.securityLevel}`} size="small" color="warning" variant="outlined" />
-                    )}
-                    {node.code && <Chip label={node.code} size="small" variant="outlined" />}
-                    {recordCount > 0 && <Chip label={`${recordCount} records`} size="small" color="primary" />}
-                    {!node.isActive && <Chip label="Inactive" size="small" color="error" />}
-                </Box>
-
-                {/* Actions */}
-                <Box>
-                    {canAddChild && (
-                        <IconButton size="small" onClick={() => handleOpenDialog(undefined, node.id)}>
-                            <AddIcon fontSize="small" />
-                        </IconButton>
-                    )}
-                    <IconButton size="small" onClick={() => handleOpenDialog(node)}>
-                        <EditIcon fontSize="small" />
-                    </IconButton>
-                    {canDelete && (
-                        <IconButton size="small" onClick={() => handleDelete(node)}>
-                            <DeleteIcon fontSize="small" />
-                        </IconButton>
-                    )}
-                </Box>
-            </Box>
-        </ListItem>
-        {hasChildren && (
-            <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-                <List component="div" disablePadding>
-                    {node.children!.map(child => renderTree(child))}
-                </List>
-            </Collapse>
-        )}
-      </React.Fragment>
-    );
-  };
-
   const treeData = buildTree(nodes);
-  console.log('ClassificationsPage: nodes:', nodes.length, 'treeData:', treeData.length);
 
   return (
-      <React.Fragment>
+      <DndContext 
+        sensors={sensors} 
+        onDragStart={handleDragStart} 
+        onDragEnd={handleDragEnd}
+      >
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
           <Box>
             <Typography variant="h4" fontWeight="bold" color="text.primary">
               Classifications
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              Manage your 3-level classification hierarchy
+              Manage hierarchy. Drag items to reparent.
             </Typography>
           </Box>
           <Button
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => handleOpenDialog()}
-            // disabled={nodes.some(n => n.level === 1 && !n.parentId)}
           >
             Add Level 1
           </Button>
@@ -290,7 +444,7 @@ export default function ClassificationsPage() {
           </Alert>
         )}
 
-        <Paper sx={{ p: 3 }}>
+        <Paper sx={{ p: 3, minHeight: 400 }}>
           {loading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
               <CircularProgress />
@@ -303,10 +457,28 @@ export default function ClassificationsPage() {
             </Box>
           ) : (
             <List>
-              {treeData.map(root => renderTree(root))}
+              {treeData.map(root => (
+                  <DraggableNode 
+                    key={root.id} 
+                    node={root} 
+                    expanded={expanded} 
+                    onToggle={handleToggle}
+                    onDelete={handleDelete}
+                    onEdit={handleOpenDialog}
+                  />
+              ))}
             </List>
           )}
         </Paper>
+
+        <DragOverlay>
+            {activeDragId ? (
+                <Paper sx={{ p: 1, display: 'flex', alignItems: 'center', width: 200, opacity: 0.8 }}>
+                    <DragIndicatorIcon sx={{ mr: 1 }} />
+                    <Typography>{nodes.find(n => n.id === activeDragId)?.name}</Typography>
+                </Paper>
+            ) : null}
+        </DragOverlay>
 
         {/* Create/Edit Dialog */}
         <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
@@ -388,6 +560,6 @@ export default function ClassificationsPage() {
             </Button>
           </DialogActions>
         </Dialog>
-      </React.Fragment>
+      </DndContext>
   );
 }

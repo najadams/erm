@@ -196,6 +196,14 @@ export async function POST(request: NextRequest) {
     const groupId = formData.get('groupId') as string || undefined;
     const parentId = formData.get('parentId') as string || null;
     
+    // GIPC Fields
+    const registeredCompanyId = formData.get('registeredCompanyId') as string || null;
+    // If projectId is provided here, we treat it as the NEW Project model ID (unless it matches a group format?)
+    // For safety, let's look for a specific 'gipcProjectId' or just reuse 'projectId' and check existence.
+    // Given the field name collision with legacy 'projectId' (Group), let's prioritize the new 'projectId' logic
+    // IF the user is using the new UI.
+    const rawProjectId = formData.get('projectId') as string || null;
+    
     // Versioning Fields
     const linkedRecordId = formData.get('linkedRecordId') as string | null;
     
@@ -483,9 +491,26 @@ export async function POST(request: NextRequest) {
       const verificationBypassed = (initialStatus === 'ACTIVE');
 
       // 1. Create Record Container
-      // Map groupId to projectId if it's a valid Group ID (assuming UI sends groupId for project context)
-      // Note: We should probably validate if the group is actually a project, but for now we map it.
-      const projectId = groupId;
+      // Legacy Group Project logic:
+      let legacyProjectId: string | undefined = undefined;
+      let newProjectId: string | undefined = undefined;
+
+      if (rawProjectId) {
+         // Check if this ID belongs to the new Project table
+         const proj = await tx.project.findUnique({ where: { id: rawProjectId } });
+         if (proj) {
+             newProjectId = rawProjectId;
+         } else {
+             // Fallback to legacy Group check? Or just assign to legacy field if it matches group logic?
+             // For now, if not found in Project, assume it might be legacy or just ignore.
+             // If groupId was passed separately, it's handled below.
+         }
+      }
+      
+      // Map groupId to legacyProjectId if it wasn't a new Project
+      if (groupId && !newProjectId) {
+          legacyProjectId = groupId;
+      }
 
       // Handle Versioning Updates (if linked)
       if (linkedRecordId && versionGroupId) {
@@ -524,7 +549,8 @@ export async function POST(request: NextRequest) {
             templateVersion: templateVersion ? parseInt(templateVersion) : undefined,
           }),
           departmentId, // Optional
-          projectId,   // New: Project/Case Link
+          projectId: legacyProjectId,   // Legacy Group Link
+          registeredCompanyId, // GIPC Company Link
           ownerUserId: userId,
           referenceNumber, // Generated ID
           parentId,
@@ -563,6 +589,19 @@ export async function POST(request: NextRequest) {
         await tx.recordMetadata.createMany({
           data: metadataEntries
         });
+      }
+
+      // 3b. Create ProjectRecord Link (GIPC)
+      if (newProjectId) {
+          await tx.projectRecord.create({
+              data: {
+                  projectId: newProjectId,
+                  recordId: record.id,
+                  addedById: userId,
+                  // versionGroupId is optional, can be updated later or inferred
+                  versionGroupId
+              }
+          });
       }
 
       // 4. Access Control (Shared Users & Groups)
@@ -653,7 +692,7 @@ export async function POST(request: NextRequest) {
             title,
             status: initialStatus,
             verificationBypassed,
-            projectId,
+            projectId: newProjectId || legacyProjectId,
             ...(appliedRecordTypeId && { recordTypeId: appliedRecordTypeId }),
             ...(classificationNodeId && { classificationNodeId, templateVersion }),
             versionGroupId,
