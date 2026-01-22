@@ -35,6 +35,20 @@ async function main() {
     data: { name: 'GIPC Enterprise', status: 'ACTIVE' }
   })
   console.log(`Created Organization: ${org.name}`)
+  console.log(`Created Organization: ${org.name}`)
+
+  // 1.5 Create System Groups (Everyone)
+  const EVERYONE_GROUP_ID = '00000000-0000-0000-0000-000000000000';
+  await prisma.group.upsert({
+    where: { id: EVERYONE_GROUP_ID },
+    update: {},
+    create: {
+        id: EVERYONE_GROUP_ID,
+        name: 'Everyone (System)',
+        type: 'SYSTEM'
+    }
+  });
+  console.log('Created System Groups.');
 
   // 2. Create Departments & Groups
   const deptsData = [

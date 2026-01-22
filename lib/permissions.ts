@@ -17,6 +17,8 @@ export const ROLES = {
   AUDITOR: 'AUDITOR'
 } as const;
 
+export const EVERYONE_GROUP_ID = '00000000-0000-0000-0000-000000000000'; // Special Group ID for "Organization-wide" access
+
 export type Role = keyof typeof ROLES;
 
 export const PERMISSIONS = {

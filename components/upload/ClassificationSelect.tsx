@@ -150,13 +150,16 @@ export default function ClassificationSelect({
         />
       )}
       renderOption={(props, option) => {
+          // Extract key to avoid spreading it (MUI/React warning fix)
+          const { key, ...otherProps } = props as any;
+          
           // Custom rendering to show hierarchy nicely
           const l1 = option.parent?.parent?.name;
           const l2 = option.parent?.name;
           const l3 = option.name;
           
           return (
-            <li {...props}>
+            <li key={key} {...otherProps}>
                 <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                     <Typography variant="body1">{l3}</Typography>
                     {(l1 || l2) && (

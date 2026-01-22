@@ -76,8 +76,8 @@ export default function AccessControl({ data, onChange }: AccessControlProps) {
         >
           <FormControlLabel value="PRIVATE" control={<Radio />} label="🔒 Private (Only me + Admins)" />
           <FormControlLabel value="SHARED" control={<Radio />} label="👥 Shared (Selected users/groups)" />
-          <FormControlLabel value="DEPARTMENT" control={<Radio />} label="🌐 Department-wide" />
-          <FormControlLabel value="PUBLIC" control={<Radio />} label="🏢 Organization-wide" />
+          {/* <FormControlLabel value="DEPARTMENT" control={<Radio />} label="🌐 Department-wide" /> */}
+          {/* <FormControlLabel value="PUBLIC" control={<Radio />} label="🏢 Organization-wide" /> */}
         </RadioGroup>
       </FormControl>
 

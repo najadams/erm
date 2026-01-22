@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 
 import Autocomplete from '@mui/material/Autocomplete';
 import TextField from '@mui/material/TextField';
@@ -25,6 +26,7 @@ import VersioningControl, { Record } from '@/components/upload/VersioningControl
 
 
 export default function UploadPage() {
+  const { data: session } = useSession();
   const router = useRouter();
   const [uploading, setUploading] = useState(false);
   
@@ -69,6 +71,27 @@ export default function UploadPage() {
   const [linkedRecord, setLinkedRecord] = useState<Record | null>(null);
 
   // Internal search state moved to component
+  const userRole = (session?.user as any)?.role;
+  const [uploadsAllowed, setUploadsAllowed] = useState(true);
+
+  useEffect(() => {
+      // Check system setting
+      fetch('/api/settings/system')
+        .then(res => res.json())
+        .then(data => {
+            if (data.allowUserUploads !== undefined) setUploadsAllowed(data.allowUserUploads);
+        })
+        .catch(console.error);
+  }, []);
+
+  const isUploadBlocked = !uploadsAllowed && userRole !== 'ADMIN';
+
+  useEffect(() => {
+      if (isUploadBlocked) {
+          alert('Uploads are currently disabled by the administrator.');
+          router.push('/');
+      }
+  }, [isUploadBlocked, router]);
 
   const handleFileSelect = (selectedFile: File, fileChecksum: string) => {
     setFile(selectedFile);

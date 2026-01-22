@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { AccessType } from '@prisma/client';
 import { writeFile } from 'fs/promises';
 import { join } from 'path';
 import crypto from 'crypto';
-import { hasPermission, ROLES } from '@/lib/permissions';
+import { hasPermission, ROLES, EVERYONE_GROUP_ID } from '@/lib/permissions';
 import { assertTransitionAllowed, LifecycleError } from '@/lib/lifecycle';
 
 export const dynamic = 'force-dynamic';
@@ -148,10 +149,28 @@ export async function POST(request: NextRequest) {
 
   // Check upload restriction
   if (userRole !== ROLES.ADMIN) {
-      const setting = await prisma.systemSetting.findUnique({ where: { key: 'ALLOW_USER_UPLOADS' } });
-      const allowed = setting ? JSON.parse(setting.value) : true;
-      if (!allowed) {
-          return NextResponse.json({ error: 'Uploads are currently disabled by the administrator.' }, { status: 403 });
+      try {
+          const setting = await prisma.systemSetting.findUnique({ where: { key: 'ALLOW_USER_UPLOADS' } });
+          // If setting exists, parse it. If not, default to true.
+          // Handle potential JSON parse errors by defaulting to true (fail open for usability)
+          let allowed = true;
+          if (setting) {
+             try {
+                 allowed = JSON.parse(setting.value);
+             } catch (e) {
+                 console.error('Error parsing ALLOW_USER_UPLOADS setting:', e);
+                 // If value is simple string "true"/"false" not in JSON format (e.g. legacy), handle it? 
+                 // But JSON.parse handles "true" and "false" boolean strings.
+                 allowed = true; 
+             }
+          }
+          
+          if (!allowed) {
+              return NextResponse.json({ error: 'Uploads are currently disabled by the administrator.' }, { status: 403 });
+          }
+      } catch (e) {
+          console.error('Failed to check upload restriction:', e);
+          // Default to allowing if check fails to prevent blocking everyone on system error
       }
   }
 
@@ -556,33 +575,64 @@ export async function POST(request: NextRequest) {
       let sharedGroups: string[] = [];
       
       try {
-          if (rawSharedUsers) sharedUsers = JSON.parse(rawSharedUsers as string);
-          if (rawSharedGroups) sharedGroups = JSON.parse(rawSharedGroups as string);
-      } catch (e) { console.error('Error parsing access JSON:', e); }
+          if (rawSharedUsers) {
+             sharedUsers = JSON.parse(rawSharedUsers as string);
+             console.log('[API] Parsed sharedUsers:', sharedUsers.length, sharedUsers);
+          }
+          if (rawSharedGroups) {
+             sharedGroups = JSON.parse(rawSharedGroups as string);
+             console.log('[API] Parsed sharedGroups:', sharedGroups.length, sharedGroups);
+          }
+
+          // Handle Visibility Shortcuts (Organization-Wide)
+          if (visibility === 'PUBLIC') {
+              console.log('[API] Visibility PUBLIC: Adding Everyone Group Access');
+              if (!sharedGroups.includes(EVERYONE_GROUP_ID)) {
+                  sharedGroups.push(EVERYONE_GROUP_ID);
+              }
+          }
+
+      } catch (e) { console.error('[API] Error parsing access JSON:', e); }
 
       // Create Explicit Access Entries
       if (sharedUsers.length > 0) {
-          await tx.recordAccess.createMany({
-              data: sharedUsers.map(uid => ({
-                  recordId: record.id,
-                  principalType: 'USER',
-                  userId: uid,
-                  level: 'VIEW', // Default level for shared
-                  accessType: 'ALLOW'
-              }))
-          });
+          console.log('[API] Creating RecordAccess for Users...');
+          try {
+              const res = await tx.recordAccess.createMany({
+                  data: sharedUsers.map(uid => ({
+                      recordId: record.id,
+                      principalType: 'USER',
+                      userId: uid,
+                      level: 'VIEW', // Default level for shared
+                      accessType: AccessType.ALLOW
+                  }))
+              });
+              console.log('[API] RecordAccess Created (Users):', res.count);
+          } catch (accessErr) {
+              console.error('[API] CRITICAL: Failed to create User RecordAccess:', accessErr);
+              throw accessErr; // Re-throw to fail transaction (so we see the error in frontend)
+          }
+      } else {
+          console.log('[API] No sharedUsers to add.');
       }
 
       if (sharedGroups.length > 0) {
-          await tx.recordAccess.createMany({
-              data: sharedGroups.map(gid => ({
-                  recordId: record.id,
-                  principalType: 'GROUP',
-                  groupId: gid,
-                  level: 'VIEW',
-                  accessType: 'ALLOW'
-              }))
-          });
+          console.log('[API] Creating RecordAccess for Groups...');
+          try {
+              await tx.recordAccess.createMany({
+                  data: sharedGroups.map(gid => ({
+                      recordId: record.id,
+                      principalType: 'GROUP',
+                      groupId: gid,
+                      level: 'VIEW',
+                      accessType: AccessType.ALLOW
+                  }))
+              });
+              console.log('[API] RecordAccess Created (Groups)');
+          } catch (accessErr) {
+               console.error('[API] CRITICAL: Failed to create Group RecordAccess:', accessErr);
+               throw accessErr;
+          }
       }
       
       // Handle Visibility Shortcuts

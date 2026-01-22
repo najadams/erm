@@ -94,6 +94,7 @@ export default function Dashboard() {
             color="secondary" 
             startIcon={<CloudUploadIcon />}
             onClick={() => setUploadModalOpen(true)}
+            // onClick={() => router.push('/upload')}
           >
             Upload Record
           </Button>

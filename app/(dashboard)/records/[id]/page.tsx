@@ -243,6 +243,9 @@ export default function RecordDetailsPage() {
                   sx={{ fontWeight: 'bold', textTransform: 'capitalize' }}
                 />
               </Box>
+              <Typography variant="subtitle1" color="primary.main" fontWeight="medium" sx={{ mb: 0.5 }}>
+                 {record.referenceNumber || 'No Reference Number'}
+              </Typography>
               <Typography color="text.secondary">
                 Type: <strong>{record.recordType?.name || 'General'}</strong> • 
                 Uploaded by <strong style={{ color: '#0f172a' }}>{record.user?.name || 'Unknown'}</strong> on {new Date(record.createdAt).toLocaleDateString()}

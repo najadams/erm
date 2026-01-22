@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { User, Record, AccessLevel, AccessType, Prisma } from '@prisma/client';
-import { ROLES } from '@/lib/permissions';
+import { ROLES, EVERYONE_GROUP_ID } from '@/lib/permissions';
 
 export type Action = 'VIEW' | 'READ' | 'EDIT' | 'DELETE' | 'FULL';
 
@@ -22,6 +22,10 @@ export class ACS {
     });
 
     if (!user) return false;
+
+    // Inject Implicit "Everyone" Group
+    // @ts-ignore
+    user.groups.push({ id: EVERYONE_GROUP_ID, name: 'Everyone', type: 'SYSTEM' });
 
     // Fix for "Department vs Group" disconnect (Same as getWhereClause):
     if (user.departmentId) {
@@ -133,6 +137,8 @@ export class ACS {
     }
 
     const userGroupsIds = user.groups.map((g: any) => g.id);
+    userGroupsIds.push(EVERYONE_GROUP_ID); // Inject Everyone Group ID
+
     const userClearance = user.clearanceLevel ?? 1;
 
     // Fix for "Department vs Group" disconnect:

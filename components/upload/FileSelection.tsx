@@ -61,6 +61,19 @@ export default function FileSelection({ onFileSelect, onClassificationSelect, de
   // Note: We cast session.user to any because strict typing might not have 'role' yet, 
   // but it is available in the custom session callback.
   const isAdmin = (session?.user as any)?.role === 'ADMIN';
+  const [uploadsAllowed, setUploadsAllowed] = useState(true);
+
+  useEffect(() => {
+      fetch('/api/settings/system')
+        .then(res => res.json())
+        .then(data => {
+          console.log('System Settings:', data);
+            if (data.allowUserUploads !== undefined) setUploadsAllowed(data.allowUserUploads);
+        })
+        .catch(console.error);
+  }, []);
+
+  const isBlocked = !isAdmin && !uploadsAllowed;
 
   // Fetch helper
   const fetchNodes = async (level: number, parentId: string | null = null) => {
@@ -75,14 +88,14 @@ export default function FileSelection({ onFileSelect, onClassificationSelect, de
 
   // Initial Fetch (Level 1)
   useEffect(() => {
-    if (isAdmin) { // Only fetch if allowed
+    if (!isBlocked) { // Only fetch if allowed
         setLoadingLevel1(true);
         fetchNodes(1)
         .then(data => setLevel1Nodes(data))
         .catch(err => console.error(err))
         .finally(() => setLoadingLevel1(false));
     }
-  }, [isAdmin]);
+  }, [isBlocked]);
 
   // Handlers
   const handleLevel1Change = async (nodeId: string) => {
@@ -189,10 +202,10 @@ export default function FileSelection({ onFileSelect, onClassificationSelect, de
     return <CircularProgress />;
   }
 
-  if (!isAdmin) {
+  if (isBlocked) {
     return (
         <Alert severity="error" sx={{ mt: 2 }}>
-            Permission Denied: Only Administrators are allowed to upload files via this interface.
+            Permission Denied: Uploads are currently disabled by the administrator.
         </Alert>
     );
   }

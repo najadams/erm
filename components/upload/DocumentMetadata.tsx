@@ -50,15 +50,12 @@ export default function DocumentMetadata({
 
         <Grid container spacing={3}>
             <Grid size={{ xs: 12, md: 6 }}>
-                <ClassificationSelect
-                    value={data.classificationNodeId || null}
-                    onChange={(val) => {
-                        onChange('classificationNodeId', val);
-                        // Optional: Clear legacy type if needed, or keep for fallback
-                        // onChange('type', 'Legacy Replaced'); 
-                    }}
+                <TextField
                     label="Classification (Record Type)"
-                    required
+                    fullWidth
+                    value={template?.classificationNode?.name || 'Selected Record Type'}
+                    disabled
+                    helperText="Classification cannot be changed during upload"
                 />
             </Grid>
             <Grid size={{ xs: 12, md: 6 }}>
