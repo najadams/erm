@@ -56,7 +56,9 @@ export async function POST(request: NextRequest) {
         name, 
         registrationNumber, 
         investorType, 
-        sector, 
+        sector,
+        subSectors,
+        strategicTags, 
         tin, 
         contactDetails 
     } = body;
@@ -80,6 +82,8 @@ export async function POST(request: NextRequest) {
         registrationNumber,
         investorType,
         sector,
+        subSectors,
+        strategicTags,
         tin,
         contactDetails: contactDetails ? JSON.stringify(contactDetails) : undefined
       }

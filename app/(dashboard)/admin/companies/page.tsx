@@ -19,6 +19,10 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import Alert from '@mui/material/Alert';
 import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import Tooltip from "@mui/material/Tooltip";
+
+import { SECTORS, INVESTOR_TYPES, SUB_SECTORS, STRATEGIC_TAGS } from '@/lib/constants';
 
 import { DataGrid, GridColDef, GridRenderCellParams, GridToolbar } from '@mui/x-data-grid';
 
@@ -28,6 +32,8 @@ interface Company {
   registrationNumber: string;
   investorType: string;
   sector?: string;
+  subSectors?: string[];
+  strategicTags?: string[];
   tin?: string;
   contactDetails?: string;
   _count?: {
@@ -35,12 +41,7 @@ interface Company {
   };
 }
 
-const INVESTOR_TYPES = [
-    { value: 'FOREIGN', label: 'Foreign Investor' },
-    { value: 'LOCAL', label: 'Local Investor' },
-    { value: 'JOINT_VENTURE', label: 'Joint Venture' },
-    { value: 'GOVERNMENT', label: 'Government/State' }
-];
+
 
 export default function CompaniesPage() {
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -55,6 +56,8 @@ export default function CompaniesPage() {
       registrationNumber: '',
       investorType: 'FOREIGN',
       sector: '',
+      subSectors: [] as string[],
+      strategicTags: [] as string[],
       tin: '',
       contactDetails: ''
   });
@@ -85,6 +88,8 @@ export default function CompaniesPage() {
               registrationNumber: company.registrationNumber,
               investorType: company.investorType,
               sector: company.sector || '',
+              subSectors: company.subSectors || [],
+              strategicTags: company.strategicTags || [],
               tin: company.tin || '',
               contactDetails: company.contactDetails ? JSON.parse(company.contactDetails) : '' // Handle simple string vs JSON check? API stores it as JSON string but we treat it as string in form for now. Wait, schema says JSON or text? Schema says "String? // JSON or text". Let's assume text for simple integration or specialized Address object. Let's use simple Text Area.
           });
@@ -105,6 +110,8 @@ export default function CompaniesPage() {
               registrationNumber: '',
               investorType: 'FOREIGN',
               sector: '',
+              subSectors: [],
+              strategicTags: [],
               tin: '',
               contactDetails: ''
           });
@@ -193,9 +200,14 @@ export default function CompaniesPage() {
     {
       field: 'actions',
       headerName: 'Actions',
-      width: 120,
+      width: 160,
       renderCell: (params: GridRenderCellParams) => (
         <Box>
+           <Tooltip title="View Dashboard">
+            <IconButton size="small" color="primary" onClick={() => window.location.href = `/companies/${params.row.id}`}>
+                <VisibilityIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
           <IconButton size="small" onClick={() => handleOpen(params.row)}>
             <EditIcon fontSize="small" />
           </IconButton>
@@ -267,11 +279,44 @@ export default function CompaniesPage() {
                       ))}
                   </TextField>
                   <TextField 
-                      label="Sector (Optional)" 
+                      label="Primary Sector" 
+                      select 
                       fullWidth 
                       value={formData.sector}
-                      onChange={e => setFormData({...formData, sector: e.target.value})}
-                  />
+                      onChange={e => setFormData({...formData, sector: e.target.value, subSectors: []})}
+                  >
+                        {SECTORS.map(s => (
+                            <MenuItem key={s} value={s}>{s}</MenuItem>
+                        ))}
+                  </TextField>
+
+                  {formData.sector && SUB_SECTORS[formData.sector] && (
+                       <TextField 
+                          label="Sub-sectors" 
+                          select 
+                          fullWidth 
+                          SelectProps={{ multiple: true }} 
+                          value={formData.subSectors}
+                          onChange={e => setFormData({...formData, subSectors: typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value as string[] })}
+                      >
+                            {SUB_SECTORS[formData.sector].map(s => (
+                                <MenuItem key={s} value={s}>{s}</MenuItem>
+                            ))}
+                      </TextField>
+                  )}
+
+                   <TextField 
+                      label="Strategic Tags" 
+                      select 
+                      fullWidth 
+                      SelectProps={{ multiple: true }} 
+                      value={formData.strategicTags}
+                      onChange={e => setFormData({...formData, strategicTags: typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value as string[] })}
+                  >
+                        {STRATEGIC_TAGS.map(s => (
+                            <MenuItem key={s} value={s}>{s}</MenuItem>
+                        ))}
+                  </TextField>
                   <TextField 
                       label="TIN (Tax ID)" 
                       fullWidth 

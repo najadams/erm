@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
   const recordTypeId = searchParams.get('recordTypeId');
   const classificationNodeId = searchParams.get('classificationNodeId');
   const registeredCompanyId = searchParams.get('registeredCompanyId');
+  const sector = searchParams.get('sector');
 
   // 1. Build Search/Filter Clause
   const filters: any[] = [];
@@ -58,6 +59,15 @@ export async function GET(request: NextRequest) {
 
   if (status) filters.push({ status });
   if (projectId) filters.push({ projectId });
+  if (registeredCompanyId) filters.push({ registeredCompanyId });
+  
+  if (sector) {
+      filters.push({
+          registeredCompany: {
+              sector: { equals: sector, mode: 'insensitive' }
+          }
+      });
+  }
   if (departmentId) filters.push({ departmentId });
   
   // Legacy/Generic Group Filter (matches either Dept or Project)
@@ -338,18 +348,7 @@ export async function POST(request: NextRequest) {
         // Determine Version Group
         versionGroupId = previousRecord.versionGroupId || crypto.randomUUID(); // If null, start a new group
         
-        // Determine Version Number
-        // Optimized: Read before upload to determine path.
-        if (!previousRecord.versionGroupId) {
-             nextVersionNumber = (previousRecord.versionNumber || 1) + 1;
-        } else {
-             // Find max version in this group
-             const maxVer = await prisma.record.aggregate({
-                 where: { versionGroupId },
-                 _max: { versionNumber: true }
-             });
-             nextVersionNumber = (maxVer._max.versionNumber || 1) + 1;
-        }
+        // Version Number is now calculated INSIDE the transaction to prevent races.
     } else {
         // New Record -> New Version Group
         versionGroupId = crypto.randomUUID();
@@ -419,6 +418,38 @@ export async function POST(request: NextRequest) {
              appliedRecordTypeId = linkedRecordType.id;
          }
       }
+
+      // --- MOVED INSIDE TRANSACTION FOR SAFETY ---
+      // Determine Version Number (Inside Lock if possible, or just closer to write)
+      let nextVersionNumber = 1;
+
+      if (linkedRecordId && versionGroupId) {
+         // IDEAL SOLUTION: Explicit Row Locking to prevent race conditions
+         // We lock the rows for this versionGroup so no one else can insert/update until we are done.
+         // Note: Using standard Prisma model names which usually map to "ModelName" in Postgres.
+         try {
+             const result: any[] = await tx.$queryRaw`
+                SELECT "versionNumber" 
+                FROM "Record" 
+                WHERE "versionGroupId" = ${versionGroupId} 
+                ORDER BY "versionNumber" DESC 
+                LIMIT 1 
+                FOR UPDATE
+             `;
+             
+             const currentMax = result.length > 0 ? result[0].versionNumber : 0;
+             nextVersionNumber = currentMax + 1;
+         } catch (e) {
+             console.error('Locking query failed, falling back to aggregate (less safe):', e);
+             // Fallback if raw query fails (e.g. table name mismatch)
+             const maxVer = await tx.record.aggregate({
+                 where: { versionGroupId },
+                 _max: { versionNumber: true }
+             });
+             nextVersionNumber = (maxVer._max.versionNumber || 0) + 1;
+         }
+      }
+      // -------------------------------------------
 
       let referenceNumber: string | undefined = undefined;
 
@@ -761,6 +792,15 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('Upload Error:', error);
+    
+    // Handle Prisma Unique Constraint Violation
+    if (error.code === 'P2002') {
+        return NextResponse.json({ 
+            error: 'Concurrent version update detected. Please try uploading again.',
+            details: 'Version Race Condition'
+        }, { status: 409 });
+    }
+
     return NextResponse.json({ error: 'Upload failed', details: error.message }, { status: 500 });
   }
 }

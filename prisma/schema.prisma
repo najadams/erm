@@ -328,6 +328,7 @@ model Record {
 
   @@index([versionGroupId])
   @@unique([referenceNumber, versionNumber]) // Ensure uniqueness per version
+  @@unique([versionGroupId, versionNumber])  // GIPC FIX: Versioning Race Condition
 
   // GIPC Relations
   registeredCompanyId String?
@@ -555,7 +556,9 @@ model RegisteredCompany {
   name              String
   registrationNumber String  @unique
   investorType      String   // "FOREIGN", "LOCAL", "JOINT_VENTURE"
-  sector            String?
+  sector            String?  // Primary Core Sector (e.g. "Agriculture")
+  subSectors        String[] // Secondary Sub-sectors (e.g. "Crop farming")
+  strategicTags     String[] // GIPC Strategic Tags (e.g. "Export-oriented")
   tin               String?
   contactDetails    String?  // JSON or text
 

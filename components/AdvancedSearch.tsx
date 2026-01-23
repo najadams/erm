@@ -21,6 +21,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import { debounce } from 'lodash';
+import { SECTORS } from '@/lib/constants';
 
 interface Group {
   id: string;
@@ -41,6 +42,8 @@ export interface FilterState {
   tag: string;
   uploader: string;
   recordTypeId: string;
+  registeredCompanyId: string;
+  sector: string;
 }
 
 interface AdvancedSearchProps {
@@ -58,10 +61,13 @@ export default function AdvancedSearch({ onSearch, initialValues, recordTypes = 
     endDate: initialValues?.endDate || '',
     tag: initialValues?.tag || '',
     uploader: initialValues?.uploader || '',
-    recordTypeId: initialValues?.recordTypeId || ''
+    recordTypeId: initialValues?.recordTypeId || '',
+    registeredCompanyId: initialValues?.registeredCompanyId || '',
+    sector: initialValues?.sector || ''
   });
 
   const [groups, setGroups] = useState<Group[]>([]);
+  const [companies, setCompanies] = useState<any[]>([]);
   const [expanded, setExpanded] = useState(false);
   
   // Count active filters (excluding search query 'q')
@@ -80,6 +86,14 @@ export default function AdvancedSearch({ onSearch, initialValues, recordTypes = 
         if (Array.isArray(data)) setGroups(data);
       })
       .catch(err => console.error('Failed to load groups', err));
+
+    // Fetch companies
+    fetch('/api/companies')
+      .then(res => res.ok ? res.json() : [])
+      .then(data => {
+          if (Array.isArray(data)) setCompanies(data);
+      })
+      .catch(err => console.error('Failed to load companies', err));
   }, []);
 
   // Debounced Search Trigger
@@ -120,7 +134,9 @@ export default function AdvancedSearch({ onSearch, initialValues, recordTypes = 
         endDate: '',
         tag: '',
         uploader: '',
-        recordTypeId: ''
+        recordTypeId: '',
+        registeredCompanyId: '',
+        sector: ''
     };
     setFilters(emptyFilters);
     onSearch(emptyFilters);
@@ -245,7 +261,8 @@ export default function AdvancedSearch({ onSearch, initialValues, recordTypes = 
 
           <Grid container spacing={2}>
             {/* Row 1: Type, Status, Group */}
-            <Grid size={{ xs: 12, sm: 4 }}>
+            {/* Row 1: Type, Company, Status, Group */}
+            <Grid size={{ xs: 12, sm: 3 }}>
               <TextField 
                 select 
                 fullWidth 
@@ -258,9 +275,39 @@ export default function AdvancedSearch({ onSearch, initialValues, recordTypes = 
                   <MenuItem key={t.id} value={t.id}>{t.name}</MenuItem>
                 ))}
               </TextField>
+            <Grid size={{ xs: 12, sm: 3 }}>
+              <TextField 
+                select 
+                fullWidth 
+                label="Registered Company" 
+                value={filters.registeredCompanyId} 
+                onChange={(e) => handleFilterChange('registeredCompanyId', e.target.value)}
+              >
+                <MenuItem value="">All Companies</MenuItem>
+                {companies.map(c => (
+                  <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
+                ))}
+              </TextField>
             </Grid>
 
-            <Grid size={{ xs: 12, sm: 4 }}>
+            {/* SECTOR FILTER */}
+            <Grid size={{ xs: 12, sm: 3 }}>
+              <TextField 
+                select 
+                fullWidth 
+                label="Sector" 
+                value={filters.sector} 
+                onChange={(e) => handleFilterChange('sector', e.target.value)}
+              >
+                <MenuItem value="">All Sectors</MenuItem>
+                {SECTORS.map(s => (
+                  <MenuItem key={s} value={s}>{s}</MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            </Grid>
+
+            <Grid size={{ xs: 12, sm: 3 }}>
               <TextField 
                 select 
                 fullWidth 
@@ -275,7 +322,7 @@ export default function AdvancedSearch({ onSearch, initialValues, recordTypes = 
               </TextField>
             </Grid>
             
-            <Grid size={{ xs: 12, sm: 4 }}>
+            <Grid size={{ xs: 12, sm: 3 }}>
               <TextField 
                 select 
                 fullWidth 

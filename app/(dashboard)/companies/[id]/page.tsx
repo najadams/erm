@@ -10,18 +10,16 @@ import Stack from '@mui/material/Stack';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import FolderIcon from '@mui/icons-material/Folder';
 import BusinessIcon from '@mui/icons-material/Business';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import CompanyRecordList from '@/components/CompanyRecordList';
 import ClassificationBrowser from '@/components/ClassificationBrowser';
 
-interface PageProps {
-  params: {
-    id: string;
-  };
-}
-
-export default function CompanyDashboard({ params }: PageProps) {
+export default function CompanyDashboard() {
   const router = useRouter();
+  const params = useParams();
+  const id = params?.id as string;
+  // Fallback if id is not yet available (though usually it is in client component after hydration)
+  const displayId = id || '';
   const [company, setCompany] = useState<any>(null);
   const [records, setRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,14 +29,14 @@ export default function CompanyDashboard({ params }: PageProps) {
     const fetchData = async () => {
         try {
             // 1. Fetch Company
-            const compRes = await fetch(`/api/companies/${params.id}`);
+            const compRes = await fetch(`/api/companies/${id}`);
             if (compRes.ok) {
                 const compData = await compRes.json();
                 setCompany(compData);
             }
 
             // 2. Fetch Records with optional classification filter
-            let recordsUrl = `/api/records?registeredCompanyId=${params.id}`;
+            let recordsUrl = `/api/records?registeredCompanyId=${id}`;
             if (selectedClassificationId) {
                 recordsUrl += `&classificationNodeId=${selectedClassificationId}`;
             }
@@ -55,8 +53,8 @@ export default function CompanyDashboard({ params }: PageProps) {
         }
     };
     
-    fetchData();
-  }, [params.id, selectedClassificationId]);
+    if (id) fetchData();
+  }, [id, selectedClassificationId]);
 
   return (
     <Box sx={{ flexGrow: 1, p: 4, bgcolor: '#f8fafc', minHeight: '100vh' }}>
@@ -83,10 +81,18 @@ export default function CompanyDashboard({ params }: PageProps) {
                         </Typography>
                         <Stack direction="row" spacing={2} alignItems="center">
                             <Typography variant="body2" color="text.secondary">
-                                #{company?.registrationNumber || params.id}
+                                #{company?.registrationNumber || displayId}
                             </Typography>
-                            <Chip size="small" label={company?.sector || 'Sector N/A'} />
+                            <Chip size="small" label={company?.sector || 'Sector N/A'} color="primary" variant="outlined" />
                             <Chip size="small" label={company?.investorType || 'Type N/A'} variant="outlined" />
+                        </Stack>
+                        <Stack direction="row" spacing={1} sx={{ mt: 1 }} flexWrap="wrap" useFlexGap>
+                            {company?.subSectors?.map((sub: string) => (
+                                <Chip key={sub} size="small" label={sub} sx={{ bgcolor: 'action.hover' }} />
+                            ))}
+                            {company?.strategicTags?.map((tag: string) => (
+                                <Chip key={tag} size="small" label={tag} color="success" variant="filled" />
+                            ))}
                         </Stack>
                     </>
                 )}
@@ -115,7 +121,7 @@ export default function CompanyDashboard({ params }: PageProps) {
                 <Typography variant="h6" fontWeight="600">
                     Documents
                 </Typography>
-                <Button variant="contained" onClick={() => router.push(`/upload?companyId=${params.id}`)}>
+                <Button variant="contained" onClick={() => router.push(`/upload?companyId=${id}`)}>
                     Upload New
                 </Button>
             </Box>

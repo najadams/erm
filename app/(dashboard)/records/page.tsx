@@ -34,7 +34,9 @@ function RecordsContent() {
       endDate: '',
       tag: '',
       uploader: '',
-      recordTypeId: ''
+      recordTypeId: '',
+      registeredCompanyId: '',
+      sector: ''
   });
   const [records, setRecords] = useState<Record[]>([]);
   const [recordTypes, setRecordTypes] = useState<any[]>([]); // Flat list or grouped
@@ -66,6 +68,8 @@ function RecordsContent() {
     if (filters.startDate) params.set('startDate', filters.startDate);
     if (filters.endDate) params.set('endDate', filters.endDate);
     if (filters.recordTypeId) params.set('recordTypeId', filters.recordTypeId);
+    if (filters.registeredCompanyId) params.set('registeredCompanyId', filters.registeredCompanyId);
+    if (filters.sector) params.set('sector', filters.sector);
 
     fetch(`/api/records?${params.toString()}`)
       .then(res => {

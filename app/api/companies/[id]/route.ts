@@ -59,7 +59,9 @@ export async function PUT(
             name, 
             registrationNumber, 
             investorType, 
-            sector, 
+            sector,
+            subSectors,
+            strategicTags, 
             tin, 
             contactDetails 
         } = body;
@@ -87,6 +89,8 @@ export async function PUT(
                 registrationNumber,
                 investorType,
                 sector,
+                subSectors,
+                strategicTags,
                 tin,
                 contactDetails: contactDetails ? JSON.stringify(contactDetails) : undefined
             }
