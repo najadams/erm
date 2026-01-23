@@ -176,6 +176,7 @@ function ParentRecordSelect({ value, onChange }: { value: string | undefined, on
 
         if (inputValue === '') {
             setOptions(selectedOption ? [selectedOption] : []);
+            setLoading(false);
             return undefined;
         }
 

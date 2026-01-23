@@ -236,10 +236,10 @@ export default function CompaniesPage() {
       </Paper>
 
       {/* Create/Edit Dialog */}
-      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+      <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
           <DialogTitle>{editingCompany ? 'Edit Company' : 'Add Registered Company'}</DialogTitle>
           <DialogContent>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3, pt: 1 }}>
                   <TextField 
                       label="Company Name" 
                       fullWidth 
@@ -278,15 +278,17 @@ export default function CompaniesPage() {
                       value={formData.tin}
                       onChange={e => setFormData({...formData, tin: e.target.value})}
                   />
-                  <TextField 
-                      label="Contact Details / Address" 
-                      fullWidth 
-                      multiline
-                      rows={3}
-                      value={formData.contactDetails}
-                      onChange={e => setFormData({...formData, contactDetails: e.target.value})}
-                      helperText="Enter address or contact info (saved as text)"
-                  />
+                  <Box sx={{ gridColumn: '1 / -1' }}>
+                    <TextField 
+                        label="Contact Details / Address" 
+                        fullWidth 
+                        multiline
+                        rows={3}
+                        value={formData.contactDetails}
+                        onChange={e => setFormData({...formData, contactDetails: e.target.value})}
+                        helperText="Enter address or contact info (saved as text)"
+                    />
+                  </Box>
               </Box>
           </DialogContent>
           <DialogActions>
