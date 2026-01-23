@@ -12,6 +12,7 @@ import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
+import Autocomplete from '@mui/material/Autocomplete'; // Added
 
 
 // Match Prisma ClassificationNode partially
@@ -31,13 +32,23 @@ interface FileSelectionProps {
   existingFileError?: string | null;
   description?: string;
   onDescriptionChange?: (value: string) => void;
+  // New: Company Selection
+  onCompanySelect?: (companyId: string | null) => void;
+  selectedCompanyId?: string | null;
 }
 
 // ... imports
 import { useSession } from 'next-auth/react';
 import Alert from '@mui/material/Alert';
 
-export default function FileSelection({ onFileSelect, onClassificationSelect, description = '', onDescriptionChange }: FileSelectionProps) {
+export default function FileSelection({ 
+    onFileSelect, 
+    onClassificationSelect, 
+    description = '', 
+    onDescriptionChange,
+    onCompanySelect, // Destructure
+    selectedCompanyId // Destructure
+}: FileSelectionProps) {
   const { data: session } = useSession();
   const [dragActive, setDragActive] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -55,7 +66,13 @@ export default function FileSelection({ onFileSelect, onClassificationSelect, de
 
   const [loadingLevel1, setLoadingLevel1] = useState(false);
   const [loadingLevel2, setLoadingLevel2] = useState(false);
+
   const [loadingLevel3, setLoadingLevel3] = useState(false);
+
+
+  // Company State
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [loadingCompanies, setLoadingCompanies] = useState(false);
 
   // Permission Check
   // Note: We cast session.user to any because strict typing might not have 'role' yet, 
@@ -72,6 +89,20 @@ export default function FileSelection({ onFileSelect, onClassificationSelect, de
         })
         .catch(console.error);
   }, []);
+
+  // Fetch Companies
+  useEffect(() => {
+      if (onCompanySelect) {
+          setLoadingCompanies(true);
+          fetch('/api/companies')
+              .then(res => res.json())
+              .then(data => {
+                  if (Array.isArray(data)) setCompanies(data);
+              })
+              .catch(console.error)
+              .finally(() => setLoadingCompanies(false));
+      }
+  }, [onCompanySelect]);
 
   const isBlocked = !isAdmin && !uploadsAllowed;
 
@@ -212,7 +243,22 @@ export default function FileSelection({ onFileSelect, onClassificationSelect, de
 
   return (
     <Box sx={{ mb: 4 }}>
-      <Typography variant="h6" gutterBottom>1. Classification</Typography>
+      {/* Step 0: Context (Company) */}
+      {onCompanySelect && (
+          <Box sx={{ mb: 4 }}>
+              <Typography variant="h6" gutterBottom>1. Company Context</Typography>
+              <Autocomplete
+                  options={companies}
+                  getOptionLabel={(option) => `${option.name} (${option.registrationNumber})`}
+                  loading={loadingCompanies}
+                  value={companies.find(c => c.id === selectedCompanyId) || null}
+                  onChange={(_, newValue) => onCompanySelect(newValue ? newValue.id : null)}
+                  renderInput={(params) => <TextField {...params} label="Select Company (Optional)" placeholder="Search by name or reg number..." />}
+              />
+          </Box>
+      )}
+
+      <Typography variant="h6" gutterBottom>{onCompanySelect ? '2. Classification' : '1. Classification'}</Typography>
       
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 4 }}>
         {/* Level 1 */}
@@ -264,7 +310,7 @@ export default function FileSelection({ onFileSelect, onClassificationSelect, de
         </Box>
       </Box>
 
-      <Typography variant="h6" gutterBottom>2. File Upload</Typography>
+      <Typography variant="h6" gutterBottom>{onCompanySelect ? '3. File Upload' : '2. File Upload'}</Typography>
       <Paper 
         variant="outlined" 
         sx={{ 
@@ -321,7 +367,7 @@ export default function FileSelection({ onFileSelect, onClassificationSelect, de
         )}
       </Paper>
 
-      <Typography variant="h6" gutterBottom>3. Description</Typography>
+      <Typography variant="h6" gutterBottom>{onCompanySelect ? '4. Description' : '3. Description'}</Typography>
       <Box sx={{ mb: 2 }}>
         <TextField
           label="File Description"

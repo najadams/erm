@@ -71,15 +71,16 @@ export class ACS {
 
     if (!record) return false;
 
-    // 3. OWNER ACCESS
-    if (record.ownerUserId === userId) return true;
-
-    // 4. ABAC: SECURITY CLEARANCE CHECK (CRITICAL)
+    // 3. ABAC: SECURITY CLEARANCE CHECK (CRITICAL)
+    // Moved above Owner check to ensure Clearance serves as a hard intersection/filter even for owners.
     const recordSecurityLevel = record.classificationNode?.securityLevel ?? 1;
     const userClearance = user.clearanceLevel ?? 1;
     if (userClearance < recordSecurityLevel) {
       return false; // Hard Fail: Insufficient Clearance
     }
+
+    // 4. OWNER ACCESS
+    if (record.ownerUserId === userId) return true;
 
     // 5. ACL: RECORD-LEVEL OVERRIDES (Highest Priority after Admin/Clearance)
     // Check for explicit DENY first

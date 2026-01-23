@@ -293,6 +293,19 @@ export default function RecordDetailsPage() {
                     <Typography>{record.description || '-'}</Typography>
                  </Box>
 
+                 {/* Company Context */}
+                 <Box>
+                    <Typography variant="caption" color="text.secondary" fontWeight="bold">REGISTERED COMPANY</Typography>
+                    <Typography>
+                        {record.companySnapshotName || record.registeredCompany?.name || '-'}
+                    </Typography>
+                    {record.companySnapshotRegNo && (
+                        <Typography variant="caption" color="text.secondary">
+                            Reg: {record.companySnapshotRegNo}
+                        </Typography>
+                    )}
+                 </Box>
+
                   {/* Department & Project */}
                   <Box>
                      <Typography variant="caption" color="text.secondary" fontWeight="bold">DEPARTMENT</Typography>

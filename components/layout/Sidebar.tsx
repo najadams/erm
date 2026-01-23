@@ -27,6 +27,8 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import GavelIcon from '@mui/icons-material/Gavel';
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import SecurityIcon from '@mui/icons-material/Security';
+import BusinessIcon from '@mui/icons-material/Business';
+
 import ExtensionIcon from '@mui/icons-material/Extension';
 import Collapse from '@mui/material/Collapse';
 
@@ -41,8 +43,6 @@ interface NavItem {
 }
 
 import { ROLES, mapLegacyRole } from '@/lib/permissions';
-
-// ... imports
 
 // Lifecycle Navigation Structure
 const WORKSPACE_NAV: NavItem[] = [
@@ -64,6 +64,7 @@ const GOVERNANCE_NAV: NavItem[] = [
 
 const ADMIN_NAV: NavItem[] = [
   { label: 'System Health', icon: <AssessmentIcon />, href: '/admin/system-health', requiresRole: [ROLES.ADMIN, ROLES.AUDITOR] },
+  { label: 'Registered Companies', icon: <BusinessIcon />, href: '/admin/companies', requiresRole: [ROLES.ADMIN, ROLES.RECORDS_OFFICER] },
   { label: 'System Audit Logs', icon: <SecurityIcon />, href: '/admin/audit', requiresRole: [ROLES.ADMIN, ROLES.AUDITOR] }, 
   { label: 'Classifications', icon: <CategoryIcon />, href: '/admin/classifications', requiresRole: [ROLES.ADMIN, ROLES.RECORDS_OFFICER] },
   { label: 'Metadata Templates', icon: <ArticleIcon />, href: '/admin/metadata-templates', requiresRole: [ROLES.ADMIN, ROLES.RECORDS_OFFICER] },

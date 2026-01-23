@@ -6,7 +6,7 @@ import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation'; // Added useSearchParams
 import { useSession } from 'next-auth/react';
 
 import Autocomplete from '@mui/material/Autocomplete';
@@ -28,6 +28,9 @@ import VersioningControl, { Record } from '@/components/upload/VersioningControl
 export default function UploadPage() {
   const { data: session } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialCompanyId = searchParams.get('companyId');
+
   const [uploading, setUploading] = useState(false);
   
   // Form State
@@ -44,7 +47,8 @@ export default function UploadPage() {
     effectiveDate: '',
     retentionPeriod: '',
     classificationNodeId: '',
-    parentId: ''
+    parentId: '',
+    registeredCompanyId: initialCompanyId || '' // New field
   });
 
   const [access, setAccess] = useState({
@@ -132,6 +136,11 @@ export default function UploadPage() {
     formData.append('file', file);
     formData.append('checksum', checksum);
     
+    // Core Fields
+    if (metadata.registeredCompanyId) {
+        formData.append('registeredCompanyId', metadata.registeredCompanyId);
+    }
+
     // Append Metadata
     Object.entries(metadata).forEach(([key, value]) => {
         formData.append(key, value);
@@ -256,6 +265,8 @@ export default function UploadPage() {
                 setTemplate(null);
             }
         }} 
+        selectedCompanyId={metadata.registeredCompanyId}
+        onCompanySelect={(id) => handleMetadataChange('registeredCompanyId', id || '')}
       />
       
       {file && (

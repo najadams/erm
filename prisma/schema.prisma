@@ -280,6 +280,11 @@ model Record {
   referenceNumber String?  // Non-unique at column level to allow versions to share it
   status        String   @default("DRAFT") // DRAFT, ACTIVE, ARCHIVED
   
+  // Context & Snapshots (Record-Centric Architecture)
+  contextType          String?  // COMPANY, PROJECT, NONE
+  companySnapshotName  String?  // Immutable snapshot of company name at creation
+  companySnapshotRegNo String?  // Immutable snapshot of registration number at creation
+  
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   

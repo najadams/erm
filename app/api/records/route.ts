@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
   const endDate = searchParams.get('endDate');
   const recordTypeId = searchParams.get('recordTypeId');
   const classificationNodeId = searchParams.get('classificationNodeId');
+  const registeredCompanyId = searchParams.get('registeredCompanyId');
 
   // 1. Build Search/Filter Clause
   const filters: any[] = [];
@@ -71,7 +72,26 @@ export async function GET(request: NextRequest) {
 
   if (uploaderId) filters.push({ ownerUserId: uploaderId });
   if (recordTypeId) filters.push({ recordTypeId });
-  if (classificationNodeId) filters.push({ classificationNodeId });
+  if (classificationNodeId) {
+    // Deep filter: Expand selection to include all descendants (Level 1 -> 2 -> 3)
+    const node = await prisma.classificationNode.findUnique({
+        where: { id: classificationNodeId },
+        include: { children: { include: { children: true } } }
+    });
+
+    if (node) {
+        const ids = [node.id];
+        node.children.forEach(c => {
+            ids.push(c.id);
+            if (c.children) c.children.forEach(gc => ids.push(gc.id));
+        });
+        
+        filters.push({ classificationNodeId: { in: ids } });
+    } else {
+        filters.push({ classificationNodeId: 'INVALID_ID' }); 
+    }
+  }
+  if (registeredCompanyId) filters.push({ registeredCompanyId });
   
   if (startDate || endDate) {
     const dateFilter: any = {};
@@ -145,6 +165,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // Debug Session
+  // console.log('[API] Session:', session);
+  
   const userRole = (session.user as any)?.role;
 
   // Check upload restriction
@@ -304,9 +327,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Validate Permissions (Must have EDIT on target)
-        // Assuming `hasPermission` checks role, but for specific record access we might need `getAccessibleRecordsClause` equivalent or direct check.
-        // For MVP/Speed, we rely on the fact that the user could SEE the record to select it (via search) and we check global CREATE/EDIT permissions.
-        // Ideally: await checkRecordAccess(userId, linkedRecordId, 'EDIT');
+        // Assuming `hasPermission` checks role. Ideally we check specific record access here.
 
         // Validate Classification Consistency
         if (classificationNodeId && previousRecord.classificationNodeId !== classificationNodeId) {
@@ -318,8 +339,7 @@ export async function POST(request: NextRequest) {
         versionGroupId = previousRecord.versionGroupId || crypto.randomUUID(); // If null, start a new group
         
         // Determine Version Number
-        // We generally increment based on the *max* in the group, to avoid race conditions or branching.
-        // If we just generated a new GroupId, we are V2 (prev is V1 implicitly).
+        // Optimized: Read before upload to determine path.
         if (!previousRecord.versionGroupId) {
              nextVersionNumber = (previousRecord.versionNumber || 1) + 1;
         } else {
@@ -335,6 +355,28 @@ export async function POST(request: NextRequest) {
         versionGroupId = crypto.randomUUID();
     }
 
+    // Pre-generate Record ID for Immutable Path
+    const newRecordId = crypto.randomUUID();
+
+    // Snapshot Company Details
+    let companySnapshotName: string | undefined;
+    let companySnapshotRegNo: string | undefined;
+    let contextType = 'NONE';
+
+    if (registeredCompanyId) {
+        const company = await prisma.registeredCompany.findUnique({
+            where: { id: registeredCompanyId }
+        });
+        if (company) {
+            companySnapshotName = company.name;
+            companySnapshotRegNo = company.registrationNumber;
+            contextType = 'COMPANY';
+        }
+    } else if (rawProjectId) {
+        // If primarily linked to a project (and no company), context is PROJECT
+        contextType = 'PROJECT';
+    }
+
     // Upload File (MinIO/S3)
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
@@ -345,17 +387,22 @@ export async function POST(request: NextRequest) {
     const calculatedChecksum = hash.digest('hex');
     
     const fileName = `${Date.now()}-${file.name.replace(/\s+/g, '_')}`;
+    // Immutable Path: records/{id}/v{version}/{filename}
+    // Note: We use the pre-generated newRecordId
+    const s3Key = `records/${newRecordId}/v${nextVersionNumber}/${fileName}`;
     
     // Put to Bucket
     await s3Client.send(new PutObjectCommand({
         Bucket: BUCKET_NAME,
-        Key: fileName,
+        Key: s3Key,
         Body: buffer,
         ContentType: file.type,
     }));
 
     // Generate URL (for localhost access)
-    const fileUrl = getPublicUrl(fileName);
+    // Note: getPublicUrl needs to handle the directory structure. 
+    // Assuming getPublicUrl just prepends the bucket URL or handles relative paths.
+    const fileUrl = getPublicUrl(s3Key);
 
     const userId = (session.user as any).id;
 
@@ -541,22 +588,28 @@ export async function POST(request: NextRequest) {
 
       const record = await tx.record.create({
         data: {
+          id: newRecordId, // Explicitly set ID
           title,
           status: initialStatus,
-          ...(appliedRecordTypeId && { recordTypeId: appliedRecordTypeId }), // Legacy support linked to Classification
+          ...(appliedRecordTypeId && { recordType: { connect: { id: appliedRecordTypeId } } }), // Legacy support linked to Classification
           ...(classificationNodeId && {
-            classificationNodeId,
+            classificationNode: { connect: { id: classificationNodeId } },
             templateVersion: templateVersion ? parseInt(templateVersion) : undefined,
           }),
-          departmentId, // Optional
-          projectId: legacyProjectId,   // Legacy Group Link
-          registeredCompanyId, // GIPC Company Link
-          ownerUserId: userId,
+          ...(departmentId && { department: { connect: { id: departmentId } } }), // Optional
+          ...(legacyProjectId && { project: { connect: { id: legacyProjectId } } }),   // Legacy Group Link
+          ...(registeredCompanyId && { registeredCompany: { connect: { id: registeredCompanyId } } }), // GIPC Company Link
+          ...(userId && { user: { connect: { id: userId } } }),
           referenceNumber, // Generated ID
-          parentId,
+          ...(parentId && { parent: { connect: { id: parentId } } }),
           dispositionDate, // calculated
-          retentionPolicyId: usedRetentionPolicyId,
+          ...(usedRetentionPolicyId && { retentionPolicy: { connect: { id: usedRetentionPolicyId } } }),
           
+          // Context & Snapshots
+          contextType: contextType || 'NONE',
+          companySnapshotName,
+          companySnapshotRegNo,
+
           // Versioning
           versionGroupId,
           versionNumber: nextVersionNumber,
@@ -568,7 +621,7 @@ export async function POST(request: NextRequest) {
       await tx.recordVersion.create({
         data: {
           recordId: record.id,
-          versionNumber: 1,
+          versionNumber: nextVersionNumber,  // Use the calculated version
           filePath: fileUrl,
           fileType: file.type || 'unknown',
           uploadedById: userId,
