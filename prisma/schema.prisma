@@ -58,6 +58,9 @@ model Group {
   sharedRecords Record[] @relation("GroupSharedRecords")
   projectRecords Record[] @relation("ProjectRecords")
   
+  // Magic String Removal (Link to Department)
+  departments Department[]
+  
   // Record Access
   accessPermissions RecordAccess[]
 
@@ -96,6 +99,10 @@ model Department {
   classifications ClassificationNode[]
   retentionPolicies RetentionPolicy[]
   
+  // Link to Group (Magic String Removal)
+  linkedGroupId  String?
+  linkedGroup    Group?       @relation(fields: [linkedGroupId], references: [id])
+
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 }
@@ -334,6 +341,10 @@ model Record {
   registeredCompanyId String?
   registeredCompany   RegisteredCompany? @relation(fields: [registeredCompanyId], references: [id])
   projectRecords      ProjectRecord[]
+
+  // FTS
+  search_vector       Unsupported("tsvector")?
+  @@index([search_vector], type: Gin)
 }
 
 enum RetentionTrigger {

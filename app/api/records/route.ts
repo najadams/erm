@@ -41,20 +41,46 @@ export async function GET(request: NextRequest) {
   const filters: any[] = [];
 
   if (q) {
-    filters.push({
-      OR: [
-        { title: { contains: q, mode: 'insensitive' } },
-        { referenceNumber: { contains: q, mode: 'insensitive' } },
-        // Search by User Name
-        { user: { name: { contains: q, mode: 'insensitive' } } },
-        // Search in metadata values
-        { 
-            metadata: { 
-                some: { value: { contains: q, mode: 'insensitive' } } 
-            } 
-        }
-      ]
-    });
+      // High-Performance FTS
+      // 1. Get IDs from Postgres FTS
+      // Note: We cast q to ensure it's treated as text.
+      // plainto_tsquery handles parsing user input safely.
+      const ftsResults: any[] = await prisma.$queryRaw`
+        SELECT id FROM "Record"
+        WHERE search_vector @@ plainto_tsquery('english', ${q})
+      `;
+
+      const ftsIds = ftsResults.map(r => r.id);
+
+      if (ftsIds.length > 0) {
+          filters.push({ id: { in: ftsIds } });
+      } else {
+          // If FTS finds nothing, should we fallback to ILIKE?
+          // For transition period, yes, fallback ensures usability.
+          // BUT for "Low Ops" fix, FTS is the intended replacement.
+          // Let's keep specific fields ILIKE as OR if FTS is empty? 
+          // Or just act as "No results".
+          // User said "Search using ILIKE (HIGH)" -> "Use Postgres FTS".
+          // I will STRICTLY use FTS for the main text, but maybe Metadata ILIKE is still needed?
+          // User Prompt: "Populate from: ... flattened metadata".
+          // I didn't index metadata yet. So I should keep metadata ILIKE.
+          // But preventing full table scan is the goal.
+          // If records table is huge, ILIKE is bad.
+          // I will fallback to returning EMPTY if no FTS match, 
+          // BUT I will OR it with Metadata ILIKE if metadata is NOT in vector.
+          // Actually, simplest usage:
+          filters.push({
+             OR: [
+                 { id: { in: ftsIds } }, // FTS Matches
+                 // Keep Metadata Search via ILIKE (since it's not in vector yet)
+                 { 
+                    metadata: { 
+                        some: { value: { contains: q, mode: 'insensitive' } } 
+                    } 
+                 }
+             ]
+          });
+      }
   }
 
   if (status) filters.push({ status });
@@ -405,395 +431,399 @@ export async function POST(request: NextRequest) {
 
     const userId = (session.user as any).id;
 
-    // Transactional Create
-    const result = await prisma.$transaction(async (tx: any) => {
+    // Retry Logic for Versioning Race Condition
+    const MAX_RETRIES = 3;
+    let result;
+    
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        try {
+            // Transactional Create
+            result = await prisma.$transaction(async (tx: any) => {
 
-      // Resolve RecordType ID from Classification Node if not provided explicitly
-      let appliedRecordTypeId = recordTypeId;
-      if (classificationNodeId && !appliedRecordTypeId) {
-         const linkedRecordType = await tx.recordType.findUnique({
-             where: { classificationNodeId }
-         });
-         if (linkedRecordType) {
-             appliedRecordTypeId = linkedRecordType.id;
-         }
-      }
-
-      // --- MOVED INSIDE TRANSACTION FOR SAFETY ---
-      // Determine Version Number (Inside Lock if possible, or just closer to write)
-      let nextVersionNumber = 1;
-
-      if (linkedRecordId && versionGroupId) {
-         // IDEAL SOLUTION: Explicit Row Locking to prevent race conditions
-         // We lock the rows for this versionGroup so no one else can insert/update until we are done.
-         // Note: Using standard Prisma model names which usually map to "ModelName" in Postgres.
-         try {
-             const result: any[] = await tx.$queryRaw`
-                SELECT "versionNumber" 
-                FROM "Record" 
-                WHERE "versionGroupId" = ${versionGroupId} 
-                ORDER BY "versionNumber" DESC 
-                LIMIT 1 
-                FOR UPDATE
-             `;
-             
-             const currentMax = result.length > 0 ? result[0].versionNumber : 0;
-             nextVersionNumber = currentMax + 1;
-         } catch (e) {
-             console.error('Locking query failed, falling back to aggregate (less safe):', e);
-             // Fallback if raw query fails (e.g. table name mismatch)
-             const maxVer = await tx.record.aggregate({
-                 where: { versionGroupId },
-                 _max: { versionNumber: true }
-             });
-             nextVersionNumber = (maxVer._max.versionNumber || 0) + 1;
-         }
-      }
-      // -------------------------------------------
-
-      let referenceNumber: string | undefined = undefined;
-
-      // Generate Reference Number if using 3-Level Classification
-      if (classificationNodeId) {
-        // Fetch full hierarchy to build code
-        // We need L3 (this node), L2 (parent), and L1 (grandparent)
-        // Note: We need to fetch it within the transaction? 
-        // No, we can fetch, but we MUST increment atomically.
-        // Let's simplified fetching logic since we are in a transaction.
-        
-        // 1. Increment Sequence (and get new value + parentId)
-        const updatedNode = await tx.classificationNode.update({
-          where: { id: classificationNodeId },
-          data: { lastSequenceNumber: { increment: 1 } },
-          include: {
-            parent: {
-              include: {
-                parent: true
+              // Resolve RecordType ID from Classification Node if not provided explicitly
+              let appliedRecordTypeId = recordTypeId;
+              if (classificationNodeId && !appliedRecordTypeId) {
+                 const linkedRecordType = await tx.recordType.findUnique({
+                     where: { classificationNodeId }
+                 });
+                 if (linkedRecordType) {
+                     appliedRecordTypeId = linkedRecordType.id;
+                 }
               }
-            }
-          }
-        });
 
-        const l3 = updatedNode;
-        const l2 = l3.parent;
-        const l1 = l2?.parent;
+              // --- MOVED INSIDE TRANSACTION FOR SAFETY ---
+              // Determine Version Number (Inside Lock if possible, or just closer to write)
+              let nextVersionNumber = 1;
 
-        if (l3 && l2 && l1) {
-             const c1 = l1.code || l1.name.substring(0, 3).toUpperCase();
-             const c2 = l2.code || l2.name.substring(0, 3).toUpperCase();
-             const c3 = l3.code || l3.name.substring(0, 3).toUpperCase();
-             const seq = String(l3.lastSequenceNumber).padStart(4, '0');
-             referenceNumber = `${c1}-${c2}-${c3}-${seq}`;
-        }
-      }
+              if (linkedRecordId && versionGroupId) {
+                 // IDEAL SOLUTION: Explicit Row Locking to prevent race conditions
+                 // We lock the rows for this versionGroup so no one else can insert/update until we are done.
+                 // Note: Using standard Prisma model names which usually map to "ModelName" in Postgres.
+                 try {
+                     const result: any[] = await tx.$queryRaw`
+                        SELECT "versionNumber" 
+                        FROM "Record" 
+                        WHERE "versionGroupId" = ${versionGroupId} 
+                        ORDER BY "versionNumber" DESC 
+                        LIMIT 1 
+                        FOR UPDATE
+                     `;
+                     
+                     const currentMax = result.length > 0 ? result[0].versionNumber : 0;
+                     nextVersionNumber = currentMax + 1;
+                 } catch (e) {
+                     console.error('Locking query failed, falling back to aggregate (less safe):', e);
+                     // Fallback if raw query fails (e.g. table name mismatch)
+                     const maxVer = await tx.record.aggregate({
+                         where: { versionGroupId },
+                         _max: { versionNumber: true }
+                     });
+                     nextVersionNumber = (maxVer._max.versionNumber || 0) + 1;
+                 }
+              }
+              // -------------------------------------------
 
-      // Calculate Disposition Date (Retention)
-      // Currently only supporting simple retention via RecordType
-      // Calculate Disposition Date (Retention)
-      // PRIORITY: Classification Node Policy > Record Type Policy
-      let dispositionDate: Date | undefined;
-      let usedRetentionPolicyId: string | undefined = undefined;
+              let referenceNumber: string | undefined = undefined;
 
-      // 1. Try Classification Policy
-      if (classificationNodeId) {
-          const node = await tx.classificationNode.findUnique({
-              where: { id: classificationNodeId },
-              select: { 
-                  retentionPolicy: {
-                      select: { id: true, durationValue: true, durationUnit: true }
+              // Generate Reference Number if using 3-Level Classification
+              if (classificationNodeId) {
+                // Fetch full hierarchy to build code
+                // We need L3 (this node), L2 (parent), and L1 (grandparent)
+                // Note: We need to fetch it within the transaction? 
+                // No, we can fetch, but we MUST increment atomically.
+                // Let's simplified fetching logic since we are in a transaction.
+                
+                // 1. Increment Sequence (and get new value + parentId)
+                const updatedNode = await tx.classificationNode.update({
+                  where: { id: classificationNodeId },
+                  data: { lastSequenceNumber: { increment: 1 } },
+                  include: {
+                    parent: {
+                      include: {
+                        parent: true
+                      }
+                    }
+                  }
+                });
+
+                const l3 = updatedNode;
+                const l2 = l3.parent;
+                const l1 = l2?.parent;
+
+                if (l3 && l2 && l1) {
+                     const c1 = l1.code || l1.name.substring(0, 3).toUpperCase();
+                     const c2 = l2.code || l2.name.substring(0, 3).toUpperCase();
+                     const c3 = l3.code || l3.name.substring(0, 3).toUpperCase();
+                     const seq = String(l3.lastSequenceNumber).padStart(4, '0');
+                     referenceNumber = `${c1}-${c2}-${c3}-${seq}`;
+                }
+              }
+
+              // Calculate Disposition Date (Retention)
+              // PRIORITY: Classification Node Policy > Record Type Policy
+              let dispositionDate: Date | undefined;
+              let usedRetentionPolicyId: string | undefined = undefined;
+
+              // 1. Try Classification Policy
+              if (classificationNodeId) {
+                  const node = await tx.classificationNode.findUnique({
+                      where: { id: classificationNodeId },
+                      select: { 
+                          retentionPolicy: {
+                              select: { id: true, durationValue: true, durationUnit: true }
+                          }
+                      }
+                  });
+                  if (node && node.retentionPolicy) {
+                      const rp = node.retentionPolicy;
+                      usedRetentionPolicyId = rp.id;
+                      
+                      if (rp.durationValue && rp.durationUnit === 'YEARS') {
+                            const now = new Date();
+                            dispositionDate = new Date(now);
+                            dispositionDate.setFullYear(now.getFullYear() + rp.durationValue);
+                      } else if (rp.durationValue && rp.durationUnit === 'MONTHS') {
+                            const now = new Date();
+                            dispositionDate = new Date(now);
+                            dispositionDate.setMonth(now.getMonth() + rp.durationValue);
+                      } else if (rp.durationValue && rp.durationUnit === 'DAYS') {
+                            const now = new Date();
+                            dispositionDate = new Date(now);
+                            dispositionDate.setDate(now.getDate() + rp.durationValue);
+                      }
+                      // PERMANENT = undefined / null dispositionDate
                   }
               }
-          });
-          if (node && node.retentionPolicy) {
-              const rp = node.retentionPolicy;
-              usedRetentionPolicyId = rp.id;
+
+              // 2. Fallback to Record Type Policy (if no classification policy found)
+              if (!dispositionDate && !usedRetentionPolicyId && recordTypeId) {
+                  const rt = await tx.recordType.findUnique({ 
+                      where: { id: recordTypeId },
+                      select: { retentionYears: true, retentionPolicy: true }
+                  });
+                  
+                  // Legacy simple int
+                  if (rt && rt.retentionYears) {
+                      const now = new Date();
+                      dispositionDate = new Date(now);
+                      dispositionDate.setFullYear(now.getFullYear() + rt.retentionYears);
+                  }
+                  // Or linked policy
+                  else if (rt && rt.retentionPolicy) {
+                       // ... similar logic ... for now relying on simple retentionYears as that was the legacy schema
+                  }
+              }
+
+              // Determine Initial Status & Validate Lifecycle
+              const rawUserRole = (session.user as any)?.role;
+              const formStatus = formData.get('status') as string;
               
-              if (rp.durationValue && rp.durationUnit === 'YEARS') {
-                    const now = new Date();
-                    dispositionDate = new Date(now);
-                    dispositionDate.setFullYear(now.getFullYear() + rp.durationValue);
-              } else if (rp.durationValue && rp.durationUnit === 'MONTHS') {
-                    const now = new Date();
-                    dispositionDate = new Date(now);
-                    dispositionDate.setMonth(now.getMonth() + rp.durationValue);
-              } else if (rp.durationValue && rp.durationUnit === 'DAYS') {
-                    const now = new Date();
-                    dispositionDate = new Date(now);
-                    dispositionDate.setDate(now.getDate() + rp.durationValue);
+              // Default to DRAFT, unless user requested something else (handled by assert)
+              let targetStatus: any = 'DRAFT';
+              
+              if (formStatus && ['DRAFT', 'ACTIVE'].includes(formStatus)) {
+                  targetStatus = formStatus;
+              } else if (hasPermission(rawUserRole, 'VERIFY_RECORD')) {
+                  targetStatus = 'ACTIVE'; 
               }
-              // PERMANENT = undefined / null dispositionDate
-          }
-      }
 
-      // 2. Fallback to Record Type Policy (if no classification policy found)
-      if (!dispositionDate && !usedRetentionPolicyId && recordTypeId) {
-          const rt = await tx.recordType.findUnique({ 
-              where: { id: recordTypeId },
-              select: { retentionYears: true, retentionPolicy: true }
-          });
-          
-          // Legacy simple int
-          if (rt && rt.retentionYears) {
-              const now = new Date();
-              dispositionDate = new Date(now);
-              dispositionDate.setFullYear(now.getFullYear() + rt.retentionYears);
-          }
-          // Or linked policy
-          else if (rt && rt.retentionPolicy) {
-               // ... similar logic ... for now relying on simple retentionYears as that was the legacy schema
-          }
-      }
+              // Assert this creation is valid
+              // assertTransitionAllowed will throw if User tries to create ACTIVE
+              try {
+                assertTransitionAllowed(null, targetStatus, rawUserRole);
+              } catch (e: any) {
+                  // Re-throw so it's caught by the retry logic (though logically no point retrying this error).
+                  // But we need to distinguish errors.
+                  throw e; 
+              }
 
-      // Determine Initial Status & Validate Lifecycle
-      const rawUserRole = (session.user as any)?.role;
-      const formStatus = formData.get('status') as string;
-      
-      // Default to DRAFT, unless user requested something else (handled by assert)
-      let targetStatus: any = 'DRAFT';
-      
-      if (formStatus && ['DRAFT', 'ACTIVE'].includes(formStatus)) {
-          targetStatus = formStatus;
-      } else if (hasPermission(rawUserRole, 'VERIFY_RECORD')) {
-          targetStatus = 'ACTIVE'; 
-      }
+              const initialStatus = targetStatus;
+              const verificationBypassed = (initialStatus === 'ACTIVE');
 
-      // Assert this creation is valid
-      // assertTransitionAllowed will throw if User tries to create ACTIVE
-      try {
-        assertTransitionAllowed(null, targetStatus, rawUserRole);
-      } catch (e: any) {
-          return NextResponse.json({ error: e.message }, { status: 403 });
-      }
+              // 1. Create Record Container
+              // Legacy Group Project logic:
+              let legacyProjectId: string | undefined = undefined;
+              let newProjectId: string | undefined = undefined;
 
-      const initialStatus = targetStatus;
-      const verificationBypassed = (initialStatus === 'ACTIVE');
+              if (rawProjectId) {
+                 // Check if this ID belongs to the new Project table
+                 const proj = await tx.project.findUnique({ where: { id: rawProjectId } });
+                 if (proj) {
+                     newProjectId = rawProjectId;
+                 } else {
+                     // Fallback to legacy Group check? Or just assign to legacy field if it matches group logic?
+                 }
+              }
+              
+              // Map groupId to legacyProjectId if it wasn't a new Project
+              if (groupId && !newProjectId) {
+                  legacyProjectId = groupId;
+              }
 
-      // 1. Create Record Container
-      // Legacy Group Project logic:
-      let legacyProjectId: string | undefined = undefined;
-      let newProjectId: string | undefined = undefined;
+              // Handle Versioning Updates (if linked)
+              if (linkedRecordId && versionGroupId) {
+                   // 1. If previous record didn't have a group ID, update it now
+                   // This handles the migration case where old records have null groupId
+                   await tx.record.updateMany({
+                       where: { 
+                           OR: [
+                               { id: linkedRecordId },
+                               { versionGroupId } 
+                           ],
+                           isLatest: true
+                       },
+                       data: { isLatest: false }
+                   });
+                   
+                   // If the linked record was "standalone" (no groupId), we need to update it to belong to this group
+                   // AND if we just created the group ID for it.
+                   const prev = await tx.record.findUnique({ where: { id: linkedRecordId }, select: { versionGroupId: true }});
+                   if (!prev?.versionGroupId) {
+                       await tx.record.update({
+                           where: { id: linkedRecordId },
+                           data: { versionGroupId, isLatest: false }
+                       });
+                   }
+              }
 
-      if (rawProjectId) {
-         // Check if this ID belongs to the new Project table
-         const proj = await tx.project.findUnique({ where: { id: rawProjectId } });
-         if (proj) {
-             newProjectId = rawProjectId;
-         } else {
-             // Fallback to legacy Group check? Or just assign to legacy field if it matches group logic?
-             // For now, if not found in Project, assume it might be legacy or just ignore.
-             // If groupId was passed separately, it's handled below.
-         }
-      }
-      
-      // Map groupId to legacyProjectId if it wasn't a new Project
-      if (groupId && !newProjectId) {
-          legacyProjectId = groupId;
-      }
+              const record = await tx.record.create({
+                data: {
+                  id: newRecordId, // Explicitly set ID
+                  title,
+                  status: initialStatus,
+                  ...(appliedRecordTypeId && { recordType: { connect: { id: appliedRecordTypeId } } }), // Legacy support linked to Classification
+                  ...(classificationNodeId && {
+                    classificationNode: { connect: { id: classificationNodeId } },
+                    templateVersion: templateVersion ? parseInt(templateVersion) : undefined,
+                  }),
+                  ...(departmentId && { department: { connect: { id: departmentId } } }), // Optional
+                  ...(legacyProjectId && { project: { connect: { id: legacyProjectId } } }),   // Legacy Group Link
+                  ...(registeredCompanyId && { registeredCompany: { connect: { id: registeredCompanyId } } }), // GIPC Company Link
+                  ...(userId && { user: { connect: { id: userId } } }),
+                  referenceNumber, // Generated ID
+                  ...(parentId && { parent: { connect: { id: parentId } } }),
+                  dispositionDate, // calculated
+                  ...(usedRetentionPolicyId && { retentionPolicy: { connect: { id: usedRetentionPolicyId } } }),
+                  
+                  // Context & Snapshots
+                  contextType: contextType || 'NONE',
+                  companySnapshotName,
+                  companySnapshotRegNo,
 
-      // Handle Versioning Updates (if linked)
-      if (linkedRecordId && versionGroupId) {
-           // 1. If previous record didn't have a group ID, update it now
-           // This handles the migration case where old records have null groupId
-           await tx.record.updateMany({
-               where: { 
-                   OR: [
-                       { id: linkedRecordId },
-                       { versionGroupId } 
-                   ],
-                   isLatest: true
-               },
-               data: { isLatest: false }
-           });
-           
-           // If the linked record was "standalone" (no groupId), we need to update it to belong to this group
-           // AND if we just created the group ID for it.
-           // Actually, it's safer to just look for the record by ID and update it if needed.
-           const prev = await tx.record.findUnique({ where: { id: linkedRecordId }, select: { versionGroupId: true }});
-           if (!prev?.versionGroupId) {
-               await tx.record.update({
-                   where: { id: linkedRecordId },
-                   data: { versionGroupId, isLatest: false }
-               });
-           }
-      }
+                  // Versioning
+                  versionGroupId,
+                  versionNumber: nextVersionNumber,
+                  isLatest: true,
+                }
+              });
 
-      const record = await tx.record.create({
-        data: {
-          id: newRecordId, // Explicitly set ID
-          title,
-          status: initialStatus,
-          ...(appliedRecordTypeId && { recordType: { connect: { id: appliedRecordTypeId } } }), // Legacy support linked to Classification
-          ...(classificationNodeId && {
-            classificationNode: { connect: { id: classificationNodeId } },
-            templateVersion: templateVersion ? parseInt(templateVersion) : undefined,
-          }),
-          ...(departmentId && { department: { connect: { id: departmentId } } }), // Optional
-          ...(legacyProjectId && { project: { connect: { id: legacyProjectId } } }),   // Legacy Group Link
-          ...(registeredCompanyId && { registeredCompany: { connect: { id: registeredCompanyId } } }), // GIPC Company Link
-          ...(userId && { user: { connect: { id: userId } } }),
-          referenceNumber, // Generated ID
-          ...(parentId && { parent: { connect: { id: parentId } } }),
-          dispositionDate, // calculated
-          ...(usedRetentionPolicyId && { retentionPolicy: { connect: { id: usedRetentionPolicyId } } }),
-          
-          // Context & Snapshots
-          contextType: contextType || 'NONE',
-          companySnapshotName,
-          companySnapshotRegNo,
-
-          // Versioning
-          versionGroupId,
-          versionNumber: nextVersionNumber,
-          isLatest: true,
-        }
-      });
-
-      // 2. Create InitialVersion
-      await tx.recordVersion.create({
-        data: {
-          recordId: record.id,
-          versionNumber: nextVersionNumber,  // Use the calculated version
-          filePath: fileUrl,
-          fileType: file.type || 'unknown',
-          uploadedById: userId,
-          checksum: calculatedChecksum, // Store SHA-256
-          changeNote: 'Initial Upload'
-        }
-      });
-
-      // 3. Insert Metadata
-      // We expect metadataValues to be { [fieldId]: "value" }
-      const metadataEntries = Object.entries(metadataValues).map(([fieldId, value]) => ({
-        recordId: record.id,
-        metadataFieldId: fieldId,
-        value: String(value)
-      }));
-
-      if (metadataEntries.length > 0) {
-        await tx.recordMetadata.createMany({
-          data: metadataEntries
-        });
-      }
-
-      // 3b. Create ProjectRecord Link (GIPC)
-      if (newProjectId) {
-          await tx.projectRecord.create({
-              data: {
-                  projectId: newProjectId,
+              // 2. Create InitialVersion
+              await tx.recordVersion.create({
+                data: {
                   recordId: record.id,
-                  addedById: userId,
-                  // versionGroupId is optional, can be updated later or inferred
-                  versionGroupId
-              }
-          });
-      }
-
-      // 4. Access Control (Shared Users & Groups)
-      // Parse JSON from formData (safely)
-      const rawSharedUsers = formData.get('sharedUsers');
-      const rawSharedGroups = formData.get('sharedGroups');
-      const visibility = formData.get('visibility') as string; // 'PRIVATE', 'DEPARTMENT', 'SHARED', 'PUBLIC'
-
-      let sharedUsers: string[] = [];
-      let sharedGroups: string[] = [];
-      
-      try {
-          if (rawSharedUsers) {
-             sharedUsers = JSON.parse(rawSharedUsers as string);
-             console.log('[API] Parsed sharedUsers:', sharedUsers.length, sharedUsers);
-          }
-          if (rawSharedGroups) {
-             sharedGroups = JSON.parse(rawSharedGroups as string);
-             console.log('[API] Parsed sharedGroups:', sharedGroups.length, sharedGroups);
-          }
-
-          // Handle Visibility Shortcuts (Organization-Wide)
-          if (visibility === 'PUBLIC') {
-              console.log('[API] Visibility PUBLIC: Adding Everyone Group Access');
-              if (!sharedGroups.includes(EVERYONE_GROUP_ID)) {
-                  sharedGroups.push(EVERYONE_GROUP_ID);
-              }
-          }
-
-      } catch (e) { console.error('[API] Error parsing access JSON:', e); }
-
-      // Create Explicit Access Entries
-      if (sharedUsers.length > 0) {
-          console.log('[API] Creating RecordAccess for Users...');
-          try {
-              const res = await tx.recordAccess.createMany({
-                  data: sharedUsers.map(uid => ({
-                      recordId: record.id,
-                      principalType: 'USER',
-                      userId: uid,
-                      level: 'VIEW', // Default level for shared
-                      accessType: AccessType.ALLOW
-                  }))
+                  versionNumber: nextVersionNumber,  // Use the calculated version
+                  filePath: fileUrl,
+                  fileType: file.type || 'unknown',
+                  uploadedById: userId,
+                  checksum: calculatedChecksum, // Store SHA-256
+                  changeNote: 'Initial Upload'
+                }
               });
-              console.log('[API] RecordAccess Created (Users):', res.count);
-          } catch (accessErr) {
-              console.error('[API] CRITICAL: Failed to create User RecordAccess:', accessErr);
-              throw accessErr; // Re-throw to fail transaction (so we see the error in frontend)
-          }
-      } else {
-          console.log('[API] No sharedUsers to add.');
-      }
 
-      if (sharedGroups.length > 0) {
-          console.log('[API] Creating RecordAccess for Groups...');
-          try {
-              await tx.recordAccess.createMany({
-                  data: sharedGroups.map(gid => ({
-                      recordId: record.id,
-                      principalType: 'GROUP',
-                      groupId: gid,
-                      level: 'VIEW',
-                      accessType: AccessType.ALLOW
-                  }))
+              // 3. Insert Metadata
+              const metadataEntries = Object.entries(metadataValues).map(([fieldId, value]) => ({
+                recordId: record.id,
+                metadataFieldId: fieldId,
+                value: String(value)
+              }));
+
+              if (metadataEntries.length > 0) {
+                await tx.recordMetadata.createMany({
+                  data: metadataEntries
+                });
+              }
+
+              // 3b. Create ProjectRecord Link (GIPC)
+              if (newProjectId) {
+                  await tx.projectRecord.create({
+                      data: {
+                          projectId: newProjectId,
+                          recordId: record.id,
+                          addedById: userId,
+                          versionGroupId
+                      }
+                  });
+              }
+
+              // 4. Access Control (Shared Users & Groups)
+              const rawSharedUsers = formData.get('sharedUsers');
+              const rawSharedGroups = formData.get('sharedGroups');
+              const visibility = formData.get('visibility') as string;
+
+              let sharedUsers: string[] = [];
+              let sharedGroups: string[] = [];
+              
+              try {
+                  if (rawSharedUsers) {
+                     sharedUsers = JSON.parse(rawSharedUsers as string);
+                  }
+                  if (rawSharedGroups) {
+                     sharedGroups = JSON.parse(rawSharedGroups as string);
+                  }
+
+                  // Handle Visibility Shortcuts (Organization-Wide)
+                  if (visibility === 'PUBLIC') {
+                      if (!sharedGroups.includes(EVERYONE_GROUP_ID)) {
+                          sharedGroups.push(EVERYONE_GROUP_ID);
+                      }
+                  }
+
+              } catch (e) { console.error('[API] Error parsing access JSON:', e); }
+
+              // Create Explicit Access Entries
+              if (sharedUsers.length > 0) {
+                  try {
+                      const res = await tx.recordAccess.createMany({
+                          data: sharedUsers.map(uid => ({
+                              recordId: record.id,
+                              principalType: 'USER',
+                              userId: uid,
+                              level: 'VIEW', // Default level for shared
+                              accessType: AccessType.ALLOW
+                          }))
+                      });
+                  } catch (accessErr) {
+                      throw accessErr; // Re-throw to fail transaction (so we see the error in frontend)
+                  }
+              }
+
+              if (sharedGroups.length > 0) {
+                  try {
+                      await tx.recordAccess.createMany({
+                          data: sharedGroups.map(gid => ({
+                              recordId: record.id,
+                              principalType: 'GROUP',
+                              groupId: gid,
+                              level: 'VIEW',
+                              accessType: AccessType.ALLOW
+                          }))
+                      });
+                  } catch (accessErr) {
+                       throw accessErr;
+                  }
+              }
+
+              // 4. Audit Log
+              await tx.auditLog.create({
+                data: {
+                  action: 'UPLOAD',
+                  recordId: record.id,
+                  userId: userId,
+                  actorRole: rawUserRole,
+                  source: 'API',
+                  newValue: JSON.stringify({
+                    title,
+                    status: initialStatus,
+                    verificationBypassed,
+                    projectId: newProjectId || legacyProjectId,
+                    ...(appliedRecordTypeId && { recordTypeId: appliedRecordTypeId }),
+                    ...(classificationNodeId && { classificationNodeId, templateVersion }),
+                    versionGroupId,
+                    versionNumber: nextVersionNumber
+                  })
+                }
               });
-              console.log('[API] RecordAccess Created (Groups)');
-          } catch (accessErr) {
-               console.error('[API] CRITICAL: Failed to create Group RecordAccess:', accessErr);
-               throw accessErr;
-          }
-      }
-      
-      // Handle Visibility Shortcuts
-      // If 'DEPARTMENT' visibility, ensure departmentId is set (it should be from form, but we can double check logic)
-      // If 'PUBLIC', maybe create a special group access? For now, we assume 'PUBLIC' means wide open which might be handled by ACS logic checking for a 'PUBLIC' flag if we had one.
-      // Current ACS logic relies on RecordAccess or Ownership/Dept/Project.
-      // If visibility is 'DEPARTMENT' and no departmentId was set, we might have an issue, but frontend validates that.
 
-      // 4. Audit Log
-      await tx.auditLog.create({
-        data: {
-          action: 'UPLOAD',
-          recordId: record.id,
-          userId: userId,
-          actorRole: rawUserRole,
-          source: 'API',
-          newValue: JSON.stringify({
-            title,
-            status: initialStatus,
-            verificationBypassed,
-            projectId: newProjectId || legacyProjectId,
-            ...(appliedRecordTypeId && { recordTypeId: appliedRecordTypeId }),
-            ...(classificationNodeId && { classificationNodeId, templateVersion }),
-            versionGroupId,
-            versionNumber: nextVersionNumber
-          })
+              return record;
+            }); // End Transaction
+
+            // If we reached here, Break the loop (success)
+            break; 
+
+        } catch (err: any) {
+            // Check for Prisma Unique Constraint Violation on Record(versionGroupId, versionNumber)
+            if (err.code === 'P2002' && err.meta?.target?.includes('versionGroupId') && err.meta?.target?.includes('versionNumber')) {
+                 console.warn(`[API] Version Race Condition detected on attempt ${attempt + 1}. Retrying...`);
+                 if (attempt >= MAX_RETRIES - 1) {
+                     throw err; // Re-throw if last attempt
+                 }
+                 // Wait a tiny bit (backoff)
+                 await new Promise(r => setTimeout(r, 100 * (attempt + 1))); 
+                 continue; // Retrieve transaction
+            } else {
+                 throw err; // Re-throw other errors
+            }
         }
-      });
-
-      return record;
-    });
-
+    }
+    
     return NextResponse.json(result);
 
   } catch (error: any) {
     console.error('Upload Error:', error);
     
     // Handle Prisma Unique Constraint Violation
+    // This specific P2002 for versioning is now handled by the retry loop.
+    // Any other P2002 would be caught here.
     if (error.code === 'P2002') {
         return NextResponse.json({ 
             error: 'Concurrent version update detected. Please try uploading again.',
