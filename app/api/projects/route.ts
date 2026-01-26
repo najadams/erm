@@ -16,20 +16,22 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const status = searchParams.get('status');
   const visibility = searchParams.get('visibility');
+  const registeredCompanyId = searchParams.get('registeredCompanyId');
 
   const where: any = {};
 
   if (status) {
       where.status = status;
   }
+  
+  if (registeredCompanyId) {
+      where.registeredCompanyId = registeredCompanyId;
+  }
 
   // Visibility Filter:
   // Projects I own OR Projects I am a member of OR Visible ORG projects
-  // Actually, filtering logic might be complex. 
-  // For now: Show all public/org projects AND my private projects (membership).
-  
   where.OR = [
-      { visibility: { in: ['ORG', 'RESTRICTED'] } }, // Simplify: If listed, you can see it exists. Access check is usually deeper.
+      { visibility: { in: ['ORG', 'RESTRICTED'] } }, 
       { ownerUserId: userId },
       { members: { some: { userId: userId } } }
   ];
@@ -40,6 +42,7 @@ export async function GET(request: NextRequest) {
       orderBy: { updatedAt: 'desc' },
       include: {
         owner: { select: { name: true, email: true } },
+        registeredCompany: { select: { name: true, registrationNumber: true } },
         _count: {
             select: { members: true, projectRecords: true }
         }
@@ -64,11 +67,29 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { name, description, status, visibility, startDate, endDate } = body;
+    const { 
+        name, 
+        description, 
+        status, 
+        visibility, 
+        startDate, 
+        endDate,
+        type,
+        priority,
+        sector,
+        registeredCompanyId 
+    } = body;
 
     if (!name) {
         return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
+
+    // Generate Reference Number
+    // Format: PRJ-{YYYY}-{SEQ}
+    const year = new Date().getFullYear();
+    const count = await prisma.project.count();
+    const sequence = (count + 1).toString().padStart(3, '0');
+    const referenceNumber = `PRJ-${year}-${sequence}`;
 
     const project = await prisma.project.create({
       data: {
@@ -78,6 +99,14 @@ export async function POST(request: NextRequest) {
         visibility: visibility || 'PRIVATE',
         startDate: startDate ? new Date(startDate) : undefined,
         endDate: endDate ? new Date(endDate) : undefined,
+        
+        // Governance Fields
+        type: type || 'INVESTMENT',
+        priority: priority || 'MEDIUM',
+        sector,
+        registeredCompanyId,
+        referenceNumber,
+
         ownerUserId: userId,
         // Add creator as MANAGER automatically
         members: {

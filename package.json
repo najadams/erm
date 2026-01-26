@@ -23,6 +23,7 @@
     "@mui/material": "^7.3.6",
     "@mui/material-nextjs": "^7.3.6",
     "@mui/x-data-grid": "^8.22.1",
+    "@mui/x-date-pickers": "^8.26.0",
     "@prisma/client": "^5.22.0",
     "@types/archiver": "^7.0.0",
     "@types/nodemailer": "^7.0.4",

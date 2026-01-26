@@ -47,6 +47,7 @@ import { ROLES, mapLegacyRole } from '@/lib/permissions';
 // Lifecycle Navigation Structure
 const WORKSPACE_NAV: NavItem[] = [
   { label: 'Dashboard', icon: <FolderIcon />, href: '/' }, 
+  { label: 'Projects', icon: <BusinessIcon />, href: '/projects' },
   { label: 'My Uploads', icon: <CloudUploadIcon />, href: '/upload/my-uploads' }, 
   { label: 'Pending Verification', icon: <FactCheckIcon />, href: '/upload/verification', requiresRole: [ROLES.ADMIN, ROLES.RECORDS_OFFICER, ROLES.APPROVER] },
 ];

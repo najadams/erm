@@ -575,26 +575,63 @@ model RegisteredCompany {
 
   // Relations
   records           Record[] // All records related to this company
+  projects          Project[]
   
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+}
+
+// Enums for Project Governance
+enum ProjectStatus {
+  DRAFT
+  SUBMITTED
+  IN_REVIEW
+  APPROVED
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  ARCHIVED
+}
+
+enum ProjectType {
+  INVESTMENT
+  EXPANSION
+  INCENTIVE
+  COMPLIANCE
+  OTHER
+}
+
+enum ProjectPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
 }
 
 model Project {
   id          String   @id @default(uuid())
   name        String
   description String?
-  status      String   @default("DRAFT") // DRAFT, ACTIVE, FROZEN, CLOSED, ARCHIVED
+  
+  // Governance Fields
+  referenceNumber String?          @unique // e.g. PRJ-2026-001
+  status          ProjectStatus    @default(DRAFT)
+  type            ProjectType      @default(INVESTMENT)
+  priority        ProjectPriority  @default(MEDIUM)
+  sector          String?          // Specific sector for this project (snapshot or override)
   
   startDate   DateTime?
   endDate     DateTime?
   
-  // Governance
+  // Visibility & Ownership
   visibility  String   @default("PRIVATE") // PRIVATE, ORG, RESTRICTED
   ownerUserId String
   owner       User     @relation("ProjectOwner", fields: [ownerUserId], references: [id])
   
   // Relations
+  registeredCompanyId String?
+  registeredCompany   RegisteredCompany? @relation(fields: [registeredCompanyId], references: [id])
+  
   members     ProjectMember[]
   projectRecords ProjectRecord[]
   
