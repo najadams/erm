@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { 
     Container, 
     Box, 
@@ -18,6 +19,7 @@ import Link from 'next/link';
 import OverviewTab from '@/components/projects/tabs/OverviewTab';
 import CompanyTab from '@/components/projects/tabs/CompanyTab';
 import MembersTab from '@/components/projects/tabs/MembersTab';
+import RecordsTab from '@/components/projects/tabs/RecordsTab';
 
 interface ProjectDetails {
   id: string;
@@ -51,6 +53,8 @@ function TabPanel(props: { children?: React.ReactNode; index: number; value: num
 
 export default function ProjectDetailsPage() {
   const params = useParams();
+  const { data: session } = useSession();
+  const currentUser = session?.user as { id: string; role?: string; } | undefined;
   const id = params?.id as string;
   const [project, setProject] = useState<ProjectDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -103,7 +107,7 @@ export default function ProjectDetailsPage() {
              <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)}>
                 <Tab label="Overview" />
                 <Tab label="Company" />
-                <Tab label="Records" disabled />
+                <Tab label="Records" />
                 <Tab label="Members" />
              </Tabs>
         </Paper>
@@ -117,11 +121,16 @@ export default function ProjectDetailsPage() {
         </TabPanel>
         
         <TabPanel value={tabValue} index={2}>
-            <Typography>Records integration coming soon...</Typography>
+            <RecordsTab />
         </TabPanel>
         
         <TabPanel value={tabValue} index={3}>
-            <MembersTab members={project.members} />
+            <MembersTab 
+                members={project.members} 
+                projectId={project.id}
+                currentUser={currentUser}
+                onUpdate={fetchProject}
+            />
         </TabPanel>
 
     </Container>
