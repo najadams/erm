@@ -8,7 +8,8 @@ export const dynamic = 'force-dynamic';
 async function isAdminOrManager() {
   const session = await getServerSession(authOptions);
   const role = (session?.user as any)?.role;
-  return role === 'ADMIN' || role === 'RECORDS_MANAGER' || role === 'MANAGER';
+  // Use valid roles from lib/permissions.ts (RECORDS_MANAGER and MANAGER are invalid)
+  return role === 'ADMIN' || role === 'RECORDS_OFFICER';
 }
 
 export async function PATCH(

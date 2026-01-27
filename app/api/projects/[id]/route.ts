@@ -189,3 +189,72 @@ export async function PATCH(
     return NextResponse.json({ error: 'Failed to update project', details: error.message }, { status: 500 });
   }
 }
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const session = await getServerSession(authOptions);
+
+  if (!session || !session.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const userId = (session.user as any).id;
+  const userRole = (session.user as any).role;
+  const id = params.id;
+
+  try {
+    const project = await prisma.project.findUnique({
+      where: { id },
+      include: {
+        _count: { select: { projectRecords: true } },
+        members: true
+      }
+    });
+
+    if (!project) {
+      return NextResponse.json({ error: 'Not Found' }, { status: 404 });
+    }
+
+    // Only Owner or Admin can delete
+    const proj = project as any;
+    const isOwner = proj.ownerUserId === userId;
+    const isAdmin = userRole === 'ADMIN';
+
+    if (!isOwner && !isAdmin) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    // Prevent deletion if project has linked records
+    if (proj._count.projectRecords > 0) {
+      return NextResponse.json({
+        error: 'Cannot delete project with linked records. Remove records first.'
+      }, { status: 400 });
+    }
+
+    await prisma.$transaction([
+      // Remove all members first
+      prisma.projectMember.deleteMany({ where: { projectId: id } }),
+      // Delete project
+      prisma.project.delete({ where: { id } }),
+      // Audit log
+      prisma.auditLog.create({
+        data: {
+          action: 'PROJECT_DELETED',
+          userId,
+          actorRole: userRole,
+          source: 'API',
+          projectId: null, // Can't reference deleted project
+          details: `Deleted project: ${proj.name}`
+        }
+      })
+    ]);
+
+    return NextResponse.json({ success: true });
+
+  } catch (error: any) {
+    console.error('Delete Project Error:', error);
+    return NextResponse.json({ error: 'Failed to delete project' }, { status: 500 });
+  }
+}

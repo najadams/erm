@@ -55,32 +55,11 @@ export async function GET(request: NextRequest) {
       if (ftsIds.length > 0) {
           filters.push({ id: { in: ftsIds } });
       } else {
-          // If FTS finds nothing, should we fallback to ILIKE?
-          // For transition period, yes, fallback ensures usability.
-          // BUT for "Low Ops" fix, FTS is the intended replacement.
-          // Let's keep specific fields ILIKE as OR if FTS is empty? 
-          // Or just act as "No results".
-          // User said "Search using ILIKE (HIGH)" -> "Use Postgres FTS".
-          // I will STRICTLY use FTS for the main text, but maybe Metadata ILIKE is still needed?
-          // User Prompt: "Populate from: ... flattened metadata".
-          // I didn't index metadata yet. So I should keep metadata ILIKE.
-          // But preventing full table scan is the goal.
-          // If records table is huge, ILIKE is bad.
-          // I will fallback to returning EMPTY if no FTS match, 
-          // BUT I will OR it with Metadata ILIKE if metadata is NOT in vector.
-          // Actually, simplest usage:
+          // FTS found nothing - use ILIKE fallback on title only (indexed)
+          // This ensures we don't return empty results when the search term
+          // exists in the title but not in the FTS vector
           filters.push({
-             OR: [
-                 { id: { in: ftsIds } }, // FTS Matches
-                 // Keep Metadata Search via ILIKE (since it's not in vector yet)
-                 { 
-                    // Search in JSONB using path? Or text search?
-                    // Prisma doesn't easily support "search ANY value in JSON".
-                    // For now, we rely on FTS or Title.
-                    // If we really need JSON text search, we need Raw Query or specific known fields.
-                    // Let's remove the generic metadata search here to avoid errors and rely on FTS.
-                 }
-             ]
+              title: { contains: q, mode: 'insensitive' }
           });
       }
   }
@@ -180,8 +159,6 @@ export async function GET(request: NextRequest) {
               }
             }
           }
-        },
-          }
         }
         // Metadata is a scalar JSONB field, no include needed
       }
@@ -270,6 +247,9 @@ export async function POST(request: NextRequest) {
     const rawMetadata = formData.get('metadata') as string;
     const metadataValues = JSON.parse(rawMetadata || '{}');
 
+    // Final metadata to be stored - will be mapped from UUID keys to field names
+    let finalMetadata: Record<string, any> = {};
+
     // Validation - support both old (recordTypeId) and new (classificationNodeId) systems
     if (!file || !title) {
       return NextResponse.json({ error: 'Missing required fields: file and title' }, { status: 400 });
@@ -347,21 +327,17 @@ export async function POST(request: NextRequest) {
           
           // Map Metadata: UUID -> Name for Storage
           // User Requirement: "WHERE metadata->>'amount' > 1000"
-          const mappedMetadata: Record<string, any> = {};
           template.templateFields.forEach((tf: any) => {
              const key = tf.metadataFieldId;
              const val = metadataValues[key];
              const fieldName = tf.metadataField.name; // e.g. "investmentAmount"
-             
+
              if (val !== undefined) {
-                 mappedMetadata[fieldName] = val; // Store by Name
+                 finalMetadata[fieldName] = val; // Store by Name
              }
           });
 
-          // Also handle legacy/extra fields that might be sent but not in template?
-          // For strict governance, we only save what is in the template.
-          // BUT if `metadataValues` contains keys not in template (e.g. system fields?), should we keep them?
-          // Current logic: strict template adherence.
+          // Strict template adherence - only save what is in the template
           
     } else {
          // Classification ID but NO Template?
@@ -374,27 +350,25 @@ export async function POST(request: NextRequest) {
                  where: { id: recordTypeId },
                  include: { metadataFields: { include: { metadataField: true } } }
              });
-             
+
              if (rt) {
-                 // Do similar mapping
-                 const mappedMetadata: Record<string, any> = {};
+                 // Map UUID keys to field names for legacy record types
                  rt.metadataFields.forEach((def: any) => {
                      const key = def.metadataField.id;
                      const val = metadataValues[key];
                      const fieldName = def.metadataField.name;
-                     if (val !== undefined) mappedMetadata[fieldName] = val;
+                     if (val !== undefined) finalMetadata[fieldName] = val;
                  });
-                 // Assign to a variable to be used in create
-                 // Hack: modifying the const metadataValues or creating a new scope variable?
-                 // create block uses `metadataValues`.
-                 // I need to hoist `mappedMetadata` or re-assign.
-                 // Const `metadataValues` can't be reassigned. 
-                 
-                 // Solution: Let's create `finalMetadata` variable.
              }
          }
     }
   }
+
+    // If no mapping occurred (no template or legacy record type), use raw metadataValues
+    // This ensures backwards compatibility for records without defined templates
+    if (Object.keys(finalMetadata).length === 0) {
+        finalMetadata = metadataValues;
+    }
 
     // Versioning Validation & Setup
     let versionGroupId: string | undefined;
@@ -718,7 +692,7 @@ export async function POST(request: NextRequest) {
                   companySnapshotRegNo,
                   
                   // Metadata (JSONB)
-                  metadata: metadataValues,
+                  metadata: finalMetadata,
 
                   // Versioning
                   versionGroupId,

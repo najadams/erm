@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { validateEmail } from '@/lib/validation';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,6 +27,10 @@ export async function POST(request: NextRequest) {
 
     if (!email || !name || !reason) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    if (!validateEmail(email)) {
+      return NextResponse.json({ error: 'Invalid email format' }, { status: 400 });
     }
 
     // Check existing

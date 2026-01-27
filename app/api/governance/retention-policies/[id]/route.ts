@@ -1,4 +1,3 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
@@ -6,6 +5,38 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { ROLES } from '@/lib/permissions';
 
 export const dynamic = 'force-dynamic';
+
+export async function GET(
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    try {
+        const { id } = await params;
+
+        const policy = await prisma.retentionPolicy.findUnique({
+            where: { id },
+            include: {
+                recordTypes: { select: { id: true, name: true, code: true } },
+                classificationNodes: { select: { id: true, name: true, level: true } },
+                _count: { select: { records: true } }
+            }
+        });
+
+        if (!policy) {
+            return NextResponse.json({ error: 'Retention policy not found' }, { status: 404 });
+        }
+
+        return NextResponse.json(policy);
+    } catch (error: any) {
+        console.error('GET Retention Policy Error:', error);
+        return NextResponse.json({ error: 'Failed to fetch policy' }, { status: 500 });
+    }
+}
 
 export async function DELETE(
     request: NextRequest,

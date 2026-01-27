@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { validateEmail } from '@/lib/validation';
 
 export const dynamic = 'force-dynamic';
 
@@ -64,6 +65,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     }
 
+    if (!validateEmail(email)) {
+      return NextResponse.json({ error: 'Invalid email format' }, { status: 400 });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = await prisma.user.create({
@@ -117,6 +122,49 @@ export async function PATCH(request: NextRequest) {
         const { password: _, ...safeUser } = user;
         return NextResponse.json(safeUser);
     } catch (error) {
+        console.error('Update User Error:', error);
         return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
+    }
+}
+
+export async function DELETE(request: NextRequest) {
+    if (!await isAdmin()) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+
+    try {
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
+
+        if (!id) return NextResponse.json({ error: 'Missing User ID' }, { status: 400 });
+
+        // Check for owned records and projects
+        const user = await prisma.user.findUnique({
+            where: { id },
+            include: { _count: { select: { records: true, ownedProjects: true } } }
+        });
+
+        if (!user) {
+            return NextResponse.json({ error: 'User not found' }, { status: 404 });
+        }
+
+        if (user._count.records > 0 || user._count.ownedProjects > 0) {
+            return NextResponse.json({
+                error: 'Cannot delete user with owned records or projects. Reassign ownership first.',
+                counts: user._count
+            }, { status: 400 });
+        }
+
+        // Soft delete: Deactivate instead of hard delete
+        const deactivated = await prisma.user.update({
+            where: { id },
+            data: {
+                isActive: false,
+                email: `deleted_${Date.now()}_${user.email}` // Prevent email reuse
+            }
+        });
+
+        return NextResponse.json({ success: true, deactivated: true });
+    } catch (error) {
+        console.error('Delete User Error:', error);
+        return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 });
     }
 }

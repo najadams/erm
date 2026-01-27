@@ -8,8 +8,8 @@ export const dynamic = 'force-dynamic';
 async function checkPermission(session: any) {
     if (!session || !session.user) return false;
     const role = (session.user as any).role;
-    // Allow Admin and Records Manager
-    return ['ADMIN', 'RECORDS_MANAGER', 'AUDITOR'].includes(role); 
+    // Allow Admin, Records Officer (valid role from lib/permissions.ts), and Auditor
+    return ['ADMIN', 'RECORDS_OFFICER', 'AUDITOR'].includes(role);
 }
 
 export async function GET(

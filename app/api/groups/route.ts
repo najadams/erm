@@ -30,7 +30,12 @@ export async function GET(request: NextRequest) {
        orderBy: { name: 'asc' }
     });
     return NextResponse.json(groups);
-  } catch (error) {
+  } catch (error: any) {
+    console.error('[API] GET Groups Error:', {
+        message: error.message,
+        code: error.code,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
     return NextResponse.json({ error: 'Failed to fetch groups' }, { status: 500 });
   }
 }
@@ -51,7 +56,12 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(group, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
+    console.error('[API] POST Group Error:', {
+        message: error.message,
+        code: error.code,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
     return NextResponse.json({ error: 'Failed to create group' }, { status: 500 });
   }
 }

@@ -289,10 +289,11 @@ export async function DELETE(
         }
 
         // 2. Strict Lifecycle Safeguard
-        const LOCKED_STATES = ['ACTIVE', 'VERIFIED', 'ARCHIVED', 'DISPOSED'];
+        // These statuses are defined in schema.prisma RecordStatus enum
+        const LOCKED_STATES = ['REGISTERED', 'LOCKED', 'ARCHIVED'];
         if (record.status && LOCKED_STATES.includes(record.status)) {
-             return NextResponse.json({ 
-                 error: `Cannot delete Official Record in '${record.status}' state. This requires a formal Disposition process.` 
+             return NextResponse.json({
+                 error: `Cannot delete Official Record in '${record.status}' state. This requires a formal Disposition process.`
              }, { status: 403 });
         }
 
