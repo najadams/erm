@@ -2,7 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { User, Record, AccessLevel, AccessType, Prisma } from '@prisma/client';
 import { ROLES, EVERYONE_GROUP_ID } from '@/lib/permissions';
 
-export type Action = 'VIEW' | 'READ' | 'EDIT' | 'DELETE' | 'FULL';
+export type Action = 'VIEW' | 'COMMENT' | 'EDIT_METADATA' | 'EDIT_CONTENT' | 'GOVERNANCE' | 'DELETE' | 'FULL';
 
 /**
  * Access Control Service (ACS)
@@ -58,7 +58,7 @@ export class ACS {
 
     // 1. GLOBAL ADMIN / AUDITOR OVERRIDES
     if (user.role === ROLES.ADMIN) return true;
-    if (user.role === ROLES.AUDITOR && ['VIEW', 'READ'].includes(action)) return true;
+    if (user.role === ROLES.AUDITOR && ['VIEW', 'COMMENT'].includes(action)) return true;
 
     // 2. FETCH RESOURCE CONTEXT
     const record = await prisma.record.findUnique({
@@ -100,9 +100,6 @@ export class ACS {
     if (explicitAllow) {
       // Check Level sufficiency
       if (this.isLevelSufficient(explicitAllow.level, action)) return true;
-    if (explicitAllow) {
-      // Check Level sufficiency
-      if (this.isLevelSufficient(explicitAllow.level, action)) return true;
     }
 
     // 5b. ACL: COMPANY-LEVEL OVERRIDES
@@ -124,7 +121,7 @@ export class ACS {
     // Legacy Group Check
     if (record.projectId) {
       const inProject = user.groups.some((g: any) => g.id === record.projectId);
-      if (inProject && ['VIEW', 'READ', 'EDIT'].includes(action)) return true;
+      if (inProject && ['VIEW', 'COMMENT', 'EDIT_METADATA', 'EDIT_CONTENT'].includes(action)) return true;
     }
 
     // 6b. GIPC PROJECT MEMBERSHIP
@@ -142,11 +139,11 @@ export class ACS {
 
     if (projectAccess) {
         // If Project is Frozen, only allow Read
-        if (projectAccess.project.status === 'FROZEN') {
-             if (['VIEW', 'READ'].includes(action)) return true;
+        if (projectAccess.project.status === 'ON_HOLD') {
+             if (['VIEW', 'COMMENT'].includes(action)) return true;
         } else {
-             // Active Project: Allow VIEW/READ/EDIT
-             if (['VIEW', 'READ', 'EDIT'].includes(action)) return true;
+             // Active Project: Allow VIEW/COMMENT/EDIT
+             if (['VIEW', 'COMMENT', 'EDIT_METADATA', 'EDIT_CONTENT'].includes(action)) return true;
              // DELETE: Restrict to Manager
              if (action === 'DELETE') {
                  const member = await prisma.projectMember.findUnique({
@@ -161,7 +158,7 @@ export class ACS {
     // If record belongs to User's Department -> ALLOW VIEW/READ
     // But usually NOT Edit unless Owner or Project member.
     if (record.departmentId && record.departmentId === user.departmentId) {
-      if (['VIEW', 'READ'].includes(action)) return true;
+      if (['VIEW', 'COMMENT'].includes(action)) return true;
     }
 
     return false;
@@ -258,6 +255,21 @@ export class ACS {
                   ]
                 }
               }
+            },
+
+            // 5. Company Access Permissions
+            {
+               registeredCompany: {
+                   accessPermissions: {
+                       some: {
+                           accessType: 'ALLOW',
+                           OR: [
+                               { userId: userId },
+                               { groupId: { in: userGroupsIds } }
+                           ]
+                       }
+                   }
+               }
             }
           ]
         },
@@ -294,22 +306,26 @@ export class ACS {
   }
 
   // Helper: Compare AccessLevels
-  // VIEW < READ < EDIT < FULL
+  // VIEW < COMMENT < EDIT_METADATA < EDIT_CONTENT < GOVERNANCE < FULL
   private static isLevelSufficient(granted: AccessLevel, requested: Action): boolean {
     const levels = {
       [AccessLevel.VIEW]: 1,
-      [AccessLevel.READ]: 2,
-      [AccessLevel.EDIT]: 3,
-      [AccessLevel.FULL]: 4
+      [AccessLevel.COMMENT]: 2,
+      [AccessLevel.EDIT_METADATA]: 3,
+      [AccessLevel.EDIT_CONTENT]: 4,
+      [AccessLevel.GOVERNANCE]: 5,
+      [AccessLevel.FULL]: 6
     };
     
     // Map Action to required level
     const requirements = {
       'VIEW': 1,
-      'READ': 2,
-      'EDIT': 3,
-      'DELETE': 4,
-      'FULL': 4
+      'COMMENT': 2,
+      'EDIT_METADATA': 3,
+      'EDIT_CONTENT': 4,
+      'GOVERNANCE': 5,
+      'DELETE': 6,
+      'FULL': 6
     };
 
     const grantedVal = levels[granted] || 0;

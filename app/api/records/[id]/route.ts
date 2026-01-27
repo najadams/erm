@@ -30,7 +30,14 @@ export async function GET(
     if (!hasAccess) {
         const limitedRecord = await prisma.record.findUnique({
              where: { id },
-             select: { id: true, title: true, referenceNumber: true, status: true, recordType: { select: { name: true } } }
+             select: { 
+                 id: true, 
+                 title: true, 
+                 referenceNumber: true, 
+                 status: true, 
+                 recordType: { select: { name: true } },
+                 registeredCompany: { select: { id: true, name: true } } 
+             }
         });
         
         if (!limitedRecord) return NextResponse.json({ error: 'Record not found' }, { status: 404 });
@@ -55,9 +62,8 @@ export async function GET(
             }
           }
         },
-        metadata: {
-          include: { metadataField: true }
-        },
+
+        // metadata scalar automatically included
         versions: {
           orderBy: { versionNumber: 'desc' },
           include: { uploadedBy: { select: { name: true } } }
@@ -74,6 +80,8 @@ export async function GET(
       return NextResponse.json({ error: 'Record not found' }, { status: 404 });
     }
 
+    const canDownload = await ACS.evaluate((session.user as any).id, id, 'COMMENT');
+
     let project = null;
     if ((record as any).projectId) {
         project = await prisma.group.findUnique({ 
@@ -82,7 +90,16 @@ export async function GET(
         });
     }
 
-    return NextResponse.json({ ...record, project });
+    // Sanitize response based on download permission
+    const responseData = { ...record, project, canDownload };
+    if (!canDownload) {
+        responseData.versions = responseData.versions.map((v: any) => ({
+            ...v,
+            filePath: null
+        }));
+    }
+
+    return NextResponse.json(responseData);
   } catch (error) {
     console.error('Fetch Record Error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
@@ -106,58 +123,130 @@ export async function PATCH(
   
   try {
       const body = await request.json();
-      const { status } = body;
+      const { status, metadata } = body;
       
-      // We only support Status update for now via this specific route usage?
-      // Or should we support metadata update? 
-      // For Governance Automation, we need Status update.
-      
-      if (!status) {
-          return NextResponse.json({ error: 'Only status updates supported currently' }, { status: 400 });
+      if (!status && !metadata) {
+          return NextResponse.json({ error: 'No fields to update provided' }, { status: 400 });
       }
 
-      // 1. Fetch current
+      // 1. Fetch current record with Metadata
       const record = await prisma.record.findUnique({
-          where: { id }
+          where: { id },
+          include: { recordType: true } // Need type? Maybe not if just generic validation.
       });
 
       if (!record) {
           return NextResponse.json({ error: 'Record not found' }, { status: 404 });
       }
 
-      // 2. Validate Transition
-      try {
-          // Cast string to RecordStatus (runtime check is inside assertTransitionAllowed via STATE_TRANSITIONS)
-          // But TS needs help.
-          assertTransitionAllowed(
-              record.status as RecordStatus, 
-              status as RecordStatus, 
-              user.role
-          );
-      } catch (e: any) {
-          return NextResponse.json({ error: e.message }, { status: 403 });
+      // --- STATUS UPDATE ---
+      if (status) {
+          try {
+              assertTransitionAllowed(
+                  record.status as RecordStatus, 
+                  status as RecordStatus, 
+                  user.role
+              );
+          } catch (e: any) {
+              return NextResponse.json({ error: e.message }, { status: 403 });
+          }
+
+          const updated = await prisma.record.update({
+              where: { id },
+              data: { status }
+          });
+
+          await prisma.auditLog.create({
+              data: {
+                  action: 'UPDATE_STATUS',
+                  recordId: id,
+                  userId: user.id,
+                  actorRole: user.role,
+                  source: 'API',
+                  oldValue: record.status,
+                  newValue: status
+              }
+          });
+          
+          if (!metadata) return NextResponse.json(updated);
       }
 
-      // 3. Update
-      const updated = await prisma.record.update({
-          where: { id },
-          data: { status }
-      });
-
-      // 4. Audit
-      await prisma.auditLog.create({
-          data: {
-              action: 'UPDATE_STATUS',
-              recordId: id,
-              userId: user.id,
-              actorRole: user.role,
-              source: 'API',
-              oldValue: record.status,
-              newValue: status
+      // --- METADATA UPDATE ---
+      if (metadata) {
+          // 1. Validation (Zod)
+          const { validateMetadata, IMMUTABLE_FIELDS_WHEN_REGISTERED, validateMetadataField } = await import('@/lib/metadata-validation');
+          
+          let validatedMetadata: any = {};
+          try {
+              // We support partial updates? Or full? 
+              // Usually PATCH is partial.
+              // So validate each field individually.
+              Object.entries(metadata).forEach(([k, v]) => {
+                  validatedMetadata[k] = validateMetadataField(k, v);
+              });
+          } catch (e: any) {
+               return NextResponse.json({ error: e.message }, { status: 400 });
           }
-      });
 
-      return NextResponse.json(updated);
+          // 2. Immutability Check
+          const LOCKED_STATES = ['REGISTERED', 'ACTIVE', 'ARCHIVED', 'LOCKED'];
+          const isLocked = LOCKED_STATES.includes(record.status);
+          const isAdmin = hasPermission(user.role, 'MANAGE_USERS'); // Admin proxy
+          
+          if (isLocked && !isAdmin) {
+              const changedImmutableFields = Object.keys(validatedMetadata).filter(key => {
+                  if (IMMUTABLE_FIELDS_WHEN_REGISTERED.includes(key)) {
+                      // Check if value actually changed
+                      const oldVal = (record.metadata as any)?.[key];
+                      const newVal = validatedMetadata[key];
+                      return JSON.stringify(oldVal) !== JSON.stringify(newVal);
+                  }
+                  return false;
+              });
+
+              if (changedImmutableFields.length > 0) {
+                  return NextResponse.json({ 
+                      error: `Cannot modify immutable fields in ${record.status} state: ${changedImmutableFields.join(', ')}` 
+                  }, { status: 403 });
+              }
+          }
+
+          // 3. Diff for Audit
+          const auditEntries: any[] = [];
+          const oldMetadata = (record.metadata || {}) as Record<string, any>;
+          const newMergedMetadata = { ...oldMetadata, ...validatedMetadata };
+
+          Object.keys(validatedMetadata).forEach(key => {
+              const oldVal = oldMetadata[key];
+              const newVal = validatedMetadata[key];
+              if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
+                  auditEntries.push({
+                      action: 'UPDATE_METADATA',
+                      recordId: id,
+                      userId: user.id,
+                      actorRole: user.role,
+                      source: 'API',
+                      metadata: { field: key }, // Store field name in metadata col? Or just in details?
+                      oldValue: String(oldVal), // potential truncation if huge
+                      newValue: String(newVal)
+                  });
+              }
+          });
+
+          if (auditEntries.length > 0) {
+              await prisma.$transaction([
+                  prisma.record.update({
+                      where: { id },
+                      data: { metadata: newMergedMetadata }
+                  }),
+                  prisma.auditLog.createMany({ data: auditEntries })
+              ]);
+          }
+
+          return NextResponse.json({ success: true, changes: auditEntries.length });
+      }
+      
+      return NextResponse.json({ success: true });
 
   } catch (error: any) {
       console.error('Update Error:', error);

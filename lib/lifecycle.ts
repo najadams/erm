@@ -12,25 +12,17 @@
 
 import { hasPermission, Permission, Role } from './permissions';
 
-export type RecordStatus = 
-  | 'DRAFT'
-  | 'SUBMITTED'
-  | 'VERIFIED'
-  | 'ACTIVE'
-  | 'ARCHIVED'
-  | 'READY_FOR_DISPO' // Governance: Waiting for manager approval
-  | 'DISPOSED';
+import { RecordStatus } from '@prisma/client';
+
+export { RecordStatus };
 
 // Defines VALID transitions from a given state
 const STATE_TRANSITIONS: Record<RecordStatus, RecordStatus[]> = {
-    // Initial state (null) -> DRAFT or ACTIVE (if allowed)
-    DRAFT: ['SUBMITTED', 'ACTIVE', 'DISPOSED'], // Drafts can be deleted/disposed or submitted
-    SUBMITTED: ['DRAFT', 'VERIFIED', 'ACTIVE'], // Can be sent back to draft, verified (approved), or directly activated
-    VERIFIED: ['ACTIVE', 'DRAFT'], // Verified records become Active. Or sent back if issue found later.
-    ACTIVE: ['ARCHIVED', 'DRAFT', 'READY_FOR_DISPO'],  // Active -> Archived, or flagged for disposal
-    ARCHIVED: ['DISPOSED', 'ACTIVE', 'READY_FOR_DISPO'], // Can be restored, disposed directly, or flagged
-    READY_FOR_DISPO: ['DISPOSED', 'ACTIVE', 'ARCHIVED'], // Can be approved (DISPOSED) or rejected (back to ACTIVE/ARCHIVED)
-    DISPOSED: [] // Terminal state
+    DRAFT: ['SUBMITTED', 'REGISTERED', 'ARCHIVED'], 
+    SUBMITTED: ['DRAFT', 'REGISTERED'], 
+    REGISTERED: ['LOCKED', 'ARCHIVED'], 
+    LOCKED: ['REGISTERED', 'ARCHIVED'], 
+    ARCHIVED: ['REGISTERED'] 
 };
 
 export class LifecycleError extends Error {
@@ -55,39 +47,38 @@ export function assertTransitionAllowed(
     
     // 1. Initial Creation Logic
     if (currentStatus === null) {
-        if (targetStatus === 'DRAFT') return; // Anyone can create drafts (assuming workspace perm checked elsewhere)
+        if (targetStatus === 'DRAFT') return; 
         
-        if (targetStatus === 'ACTIVE' || targetStatus === 'VERIFIED') {
-             // BYPASS: Creating directly as Active requires Verification capability
-             if (!hasPermission(userRole, 'VERIFY_RECORD')) {
+        if (targetStatus === 'REGISTERED') {
+             // BYPASS: Creating directly as Registered requires Verification capability
+             if (!hasPermission(userRole, 'VERIFY_SUBMISSION')) {
                  throw new LifecycleError(`Role '${userRole}' cannot create records directly in '${targetStatus}' state. Must be DRAFT.`);
              }
              return;
         }
         
-        // Block creation in other states like ARCHIVED/DISPOSED directly (usually)
         throw new LifecycleError(`Cannot create record directly in '${targetStatus}' state.`);
     }
 
     // 2. State Machine Logic
     const validNextStates = STATE_TRANSITIONS[currentStatus];
-    if (!validNextStates.includes(targetStatus)) {
+    if (!validNextStates?.includes(targetStatus)) {
         throw new LifecycleError(`Invalid transition: '${currentStatus}' -> '${targetStatus}' is not allowed in the Lifecycle Graph.`);
     }
 
     // 3. Permission Checks for Transitions
     
-    // DRAFT -> ACTIVE (Bypass)
-    if (currentStatus === 'DRAFT' && targetStatus === 'ACTIVE') {
-        if (!hasPermission(userRole, 'VERIFY_RECORD')) {
-             throw new LifecycleError(`Role '${userRole}' cannot bypass verification (DRAFT -> ACTIVE).`);
+    // DRAFT -> REGISTERED (Bypass)
+    if (currentStatus === 'DRAFT' && targetStatus === 'REGISTERED') {
+        if (!hasPermission(userRole, 'VERIFY_SUBMISSION')) {
+             throw new LifecycleError(`Role '${userRole}' cannot bypass verification (DRAFT -> REGISTERED).`);
         }
     }
 
-    // SUBMITTED -> ACTIVE/VERIFIED
-    if (currentStatus === 'SUBMITTED' && (targetStatus === 'ACTIVE' || targetStatus === 'VERIFIED')) {
-        if (!hasPermission(userRole, 'VERIFY_RECORD') && !hasPermission(userRole, 'APPROVE_SUBMISSION')) {
-             throw new LifecycleError(`Role '${userRole}' cannot approve/verify submissions.`);
+    // SUBMITTED -> REGISTERED
+    if (currentStatus === 'SUBMITTED' && targetStatus === 'REGISTERED') {
+        if (!hasPermission(userRole, 'VERIFY_SUBMISSION')) {
+             throw new LifecycleError(`Role '${userRole}' cannot verify submissions.`);
         }
     }
 }

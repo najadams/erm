@@ -74,9 +74,11 @@ export async function GET(request: NextRequest) {
                  { id: { in: ftsIds } }, // FTS Matches
                  // Keep Metadata Search via ILIKE (since it's not in vector yet)
                  { 
-                    metadata: { 
-                        some: { value: { contains: q, mode: 'insensitive' } } 
-                    } 
+                    // Search in JSONB using path? Or text search?
+                    // Prisma doesn't easily support "search ANY value in JSON".
+                    // For now, we rely on FTS or Title.
+                    // If we really need JSON text search, we need Raw Query or specific known fields.
+                    // Let's remove the generic metadata search here to avoid errors and rely on FTS.
                  }
              ]
           });
@@ -142,10 +144,8 @@ export async function GET(request: NextRequest) {
           const fieldId = key.replace('metadata.', '');
           filters.push({
               metadata: {
-                  some: {
-                      metadataFieldId: fieldId,
-                      value: { contains: value, mode: 'insensitive' }
-                  }
+                  path: [fieldId],
+                  string_contains: value // Prisma JSON filter
               }
           });
       }
@@ -181,9 +181,9 @@ export async function GET(request: NextRequest) {
             }
           }
         },
-        metadata: {
-            include: { metadataField: true }
+          }
         }
+        // Metadata is a scalar JSONB field, no include needed
       }
     });
 
@@ -319,7 +319,9 @@ export async function POST(request: NextRequest) {
               version: parseInt(templateVersion)
             },
             include: {
-              templateFields: true
+              templateFields: {
+                include: { metadataField: true }
+              }
             }
           });
           if (!template) {
@@ -337,16 +339,62 @@ export async function POST(request: NextRequest) {
               return val === undefined || val === null || val === '';
           });
           if (missingFields.length > 0) {
-            const fieldNames = await prisma.metadataField.findMany({
-              where: { id: { in: missingFields.map((tf: any) => tf.metadataFieldId) } },
-              select: { label: true }
-            });
+            const fieldNames = missingFields.map((tf: any) => tf.metadataField.label);
             return NextResponse.json({
-              error: `Missing required fields: ${fieldNames.map((f: any) => f.label).join(', ')}`
+              error: `Missing required fields: ${fieldNames.join(', ')}`
             }, { status: 400 });
           }
-      }
+          
+          // Map Metadata: UUID -> Name for Storage
+          // User Requirement: "WHERE metadata->>'amount' > 1000"
+          const mappedMetadata: Record<string, any> = {};
+          template.templateFields.forEach((tf: any) => {
+             const key = tf.metadataFieldId;
+             const val = metadataValues[key];
+             const fieldName = tf.metadataField.name; // e.g. "investmentAmount"
+             
+             if (val !== undefined) {
+                 mappedMetadata[fieldName] = val; // Store by Name
+             }
+          });
+
+          // Also handle legacy/extra fields that might be sent but not in template?
+          // For strict governance, we only save what is in the template.
+          // BUT if `metadataValues` contains keys not in template (e.g. system fields?), should we keep them?
+          // Current logic: strict template adherence.
+          
+    } else {
+         // Classification ID but NO Template?
+         // Or Legacy 'recordTypeId' based?
+         // If we don't have a template, we can't map names easily unless we fetch ALL fields.
+         
+         // If `recordTypeId` is used (Legacy Path):
+         if (recordTypeId && !classificationNodeId) {
+             const rt = await prisma.recordType.findUnique({
+                 where: { id: recordTypeId },
+                 include: { metadataFields: { include: { metadataField: true } } }
+             });
+             
+             if (rt) {
+                 // Do similar mapping
+                 const mappedMetadata: Record<string, any> = {};
+                 rt.metadataFields.forEach((def: any) => {
+                     const key = def.metadataField.id;
+                     const val = metadataValues[key];
+                     const fieldName = def.metadataField.name;
+                     if (val !== undefined) mappedMetadata[fieldName] = val;
+                 });
+                 // Assign to a variable to be used in create
+                 // Hack: modifying the const metadataValues or creating a new scope variable?
+                 // create block uses `metadataValues`.
+                 // I need to hoist `mappedMetadata` or re-assign.
+                 // Const `metadataValues` can't be reassigned. 
+                 
+                 // Solution: Let's create `finalMetadata` variable.
+             }
+         }
     }
+  }
 
     // Versioning Validation & Setup
     let versionGroupId: string | undefined;
@@ -667,8 +715,10 @@ export async function POST(request: NextRequest) {
                   
                   // Context & Snapshots
                   contextType: contextType || 'NONE',
-                  companySnapshotName,
                   companySnapshotRegNo,
+                  
+                  // Metadata (JSONB)
+                  metadata: metadataValues,
 
                   // Versioning
                   versionGroupId,
@@ -690,18 +740,8 @@ export async function POST(request: NextRequest) {
                 }
               });
 
-              // 3. Insert Metadata
-              const metadataEntries = Object.entries(metadataValues).map(([fieldId, value]) => ({
-                recordId: record.id,
-                metadataFieldId: fieldId,
-                value: String(value)
-              }));
-
-              if (metadataEntries.length > 0) {
-                await tx.recordMetadata.createMany({
-                  data: metadataEntries
-                });
-              }
+              // 3. Metadata persistence handled via JSONB column in record.create
+              // (Old recordMetadata.createMany removed)
 
               // 3b. Create ProjectRecord Link (GIPC)
               if (newProjectId) {

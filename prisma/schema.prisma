@@ -166,7 +166,7 @@ model MetadataField {
   enumValues      String?              // JSON string
   
   recordTypes     RecordTypeMetadata[]
-  recordValues    RecordMetadata[]
+  // recordValues relation removed
   templateFields  TemplateField[]     // New: used in dynamic templates
 }
 
@@ -180,14 +180,8 @@ model RecordTypeMetadata {
   editable        Boolean       @default(true)
 }
 
-model RecordMetadata {
-  id              String        @id @default(uuid())
-  recordId        String
-  record          Record        @relation(fields: [recordId], references: [id], onDelete: Cascade)
-  metadataFieldId String
-  metadataField   MetadataField @relation(fields: [metadataFieldId], references: [id])
-  value           String        // Stores value or JSON string
-}
+// RecordMetadata table removed in favor of JSONB column on Record model
+// See Record model for 'metadata' field
 
 // ---------------------------------------------------------
 // DYNAMIC 3-LEVEL CLASSIFICATION SYSTEM
@@ -290,7 +284,10 @@ model Record {
   user          User?    @relation(fields: [ownerUserId], references: [id])
   
   referenceNumber String?  // Non-unique at column level to allow versions to share it
-  status        String   @default("DRAFT") // DRAFT, ACTIVE, ARCHIVED
+  status        RecordStatus   @default(DRAFT)
+  
+  classification Classification @default(OFFICIAL)
+  sensitivity    Sensitivity    @default(LOW)
   
   // Context & Snapshots (Record-Centric Architecture)
   contextType          String?  // COMPANY, PROJECT, NONE
@@ -300,8 +297,10 @@ model Record {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   
+  // Metadata (JSONB)
+  metadata      Json?
+  
   // Relations
-  metadata      RecordMetadata[]
   versions      RecordVersion[]
   auditLogs     AuditLog[]
   access        RecordAccess[]
@@ -351,6 +350,9 @@ model Record {
   // FTS
   search_vector       Unsupported("tsvector")?
   @@index([search_vector], type: Gin)
+  
+  // JSONB Index for Metadata
+  @@index([metadata(ops: JsonbOps)], type: Gin)
 }
 
 enum RetentionTrigger {
@@ -465,10 +467,12 @@ model RecordVersion {
 }
 
 enum AccessLevel {
-  VIEW   // See metadata/existence
-  READ   // See content/download
-  EDIT   // Modify metadata/content
-  FULL   // Admin/Delete/Perms
+  VIEW           // See metadata/existence only
+  COMMENT        // View + Comment
+  EDIT_METADATA  // Modify metadata (Draft/Submitted)
+  EDIT_CONTENT   // Modify content/files (Draft only)
+  GOVERNANCE     // Records Manager actions (Lock, Classify, Archive)
+  FULL           // Admin/System
 }
 
 enum AccessType {
@@ -534,6 +538,7 @@ model AuditLog {
   // Spec fields
   oldValue  String? // JSON
   newValue  String? // JSON
+  reason    String? // Governance justification
 }
 
 enum ResourceType {
@@ -567,7 +572,7 @@ model AccessRequest { // Unified Access Request (Record + Company)
   
   status      String      @default("PENDING") // PENDING, APPROVED, REJECTED
   reason      String
-  requestedLevel AccessLevel @default(READ)
+  requestedLevel AccessLevel @default(VIEW)
   
   // Approval
   approvedLevel AccessLevel?
@@ -588,6 +593,14 @@ model AccessRequest { // Unified Access Request (Record + Company)
 // ---------------------------------------------------------
 // INTEGRATIONS & SCALE
 // ---------------------------------------------------------
+
+enum RecordStatus {
+  DRAFT
+  SUBMITTED
+  REGISTERED
+  LOCKED
+  ARCHIVED
+}
 
 model ApiKey {
   id          String   @id @default(uuid())
@@ -738,4 +751,18 @@ model ProjectRecord {
   addedAt         DateTime @default(now())
   
   @@unique([projectId, recordId])
+}
+
+enum Sensitivity {
+  LOW
+  MODERATE
+  HIGH
+  CRITICAL
+}
+
+enum Classification {
+  OFFICIAL
+  OFFICIAL_CONFIDENTIAL
+  RESTRICTED
+  SECRET
 }
