@@ -16,16 +16,17 @@ export async function GET(request: NextRequest) {
     if (!await isAdminOrManager()) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
 
     try {
-        const requests = await prisma.recordAccessRequest.findMany({
+        const requests = await prisma.accessRequest.findMany({
             where: { status: 'PENDING' },
             include: {
                 requester: {
                     select: { id: true, name: true, email: true, department: true }
                 },
                 record: {
-                    select: { id: true, title: true, referenceNumber: true } // Removed securityLevel from select if not in Record model, but accessing it usually implies relations. Let's check prisma. 
-                    // Record model doesn't have securityLevel directly, it might be on classification. 
-                    // Let's stick to basic fields first.
+                    select: { id: true, title: true, referenceNumber: true }
+                },
+                registeredCompany: {
+                    select: { id: true, name: true, registrationNumber: true }
                 }
             },
             orderBy: { createdAt: 'desc' }

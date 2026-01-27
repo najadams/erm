@@ -65,7 +65,8 @@ export class ACS {
       where: { id: recordId },
       include: {
         classificationNode: true,
-        access: true
+        access: true,
+        registeredCompany: { select: { id: true, accessPermissions: true } }
       }
     });
 
@@ -99,6 +100,24 @@ export class ACS {
     if (explicitAllow) {
       // Check Level sufficiency
       if (this.isLevelSufficient(explicitAllow.level, action)) return true;
+    if (explicitAllow) {
+      // Check Level sufficiency
+      if (this.isLevelSufficient(explicitAllow.level, action)) return true;
+    }
+
+    // 5b. ACL: COMPANY-LEVEL OVERRIDES
+    if (record.registeredCompany) {
+         // Check if user has access to this company
+         // Note: We fetched accessPermissions with the record, but we need to filter valid ones.
+         // Prisma relation "accessPermissions" on registeredCompany is CompanyAccess[]
+         const companyAccess = (record.registeredCompany as any).accessPermissions.find((a: any) =>
+            a.accessType === AccessType.ALLOW &&
+            (a.userId === userId || user.groups.some((g: any) => g.id === a.groupId))
+         );
+         
+         if (companyAccess) {
+             if (this.isLevelSufficient(companyAccess.level, action)) return true;
+         }
     }
 
     // 6. PROJECT / CASE MEMBERSHIP

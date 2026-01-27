@@ -47,8 +47,9 @@ model User {
   addedProjectRecords ProjectRecord[]
   
   // Access Requests
-  requestedRecords    RecordAccessRequest[] @relation("Requester")
-  reviewedRequests    RecordAccessRequest[] @relation("Reviewer")
+  requests            AccessRequest[] @relation("Requester")
+  reviews             AccessRequest[] @relation("Reviewer")
+  companyPermissions  CompanyAccess[]
 }
 
 model Group {
@@ -58,8 +59,8 @@ model Group {
   users     User[]
   
   // Relations
-  // Relations
   sharedRecords Record[] @relation("GroupSharedRecords")
+  companyPermissions CompanyAccess[]
   projectRecords Record[] @relation("ProjectRecords")
   
   // Magic String Removal (Link to Department)
@@ -345,7 +346,7 @@ model Record {
   registeredCompanyId String?
   registeredCompany   RegisteredCompany? @relation(fields: [registeredCompanyId], references: [id])
   projectRecords      ProjectRecord[]
-  accessRequests      RecordAccessRequest[]
+  accessRequests      AccessRequest[]
 
   // FTS
   search_vector       Unsupported("tsvector")?
@@ -475,6 +476,27 @@ enum AccessType {
   DENY
 }
 
+model CompanyAccess {
+  id                String            @id @default(uuid())
+  registeredCompanyId String
+  registeredCompany RegisteredCompany @relation(fields: [registeredCompanyId], references: [id], onDelete: Cascade)
+  
+  userId            String?
+  user              User?             @relation(fields: [userId], references: [id])
+  groupId           String?
+  group             Group?            @relation(fields: [groupId], references: [id])
+  
+  level             AccessLevel       @default(VIEW)
+  accessType        AccessType        @default(ALLOW)
+  
+  grantedById       String?   // Audit who granted this
+  
+  expiresAt         DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+
 model RecordAccess {
   id            String    @id @default(uuid())
   recordId      String
@@ -514,7 +536,12 @@ model AuditLog {
   newValue  String? // JSON
 }
 
-model AccessRequest {
+enum ResourceType {
+  RECORD
+  COMPANY
+}
+
+model AccountRequest { // Renamed from AccessRequest
   id        String   @id @default(uuid())
   email     String   @unique
   name      String
@@ -523,25 +550,40 @@ model AccessRequest {
   createdAt DateTime @default(now())
 }
 
-model RecordAccessRequest {
+model AccessRequest { // Unified Access Request (Record + Company)
   id          String      @id @default(uuid())
-  recordId    String
-  record      Record      @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  
   requesterId String
   requester   User        @relation("Requester", fields: [requesterId], references: [id])
+  
+  resourceType ResourceType
+  
+  // Resource Links (One must be present)
+  recordId    String?
+  record      Record?     @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  
+  registeredCompanyId String?
+  registeredCompany   RegisteredCompany? @relation(fields: [registeredCompanyId], references: [id], onDelete: Cascade)
   
   status      String      @default("PENDING") // PENDING, APPROVED, REJECTED
   reason      String
   requestedLevel AccessLevel @default(READ)
   
+  // Approval
+  approvedLevel AccessLevel?
   reviewedById String?
   reviewedBy   User?       @relation("Reviewer", fields: [reviewedById], references: [id])
   reviewedAt   DateTime?
   rejectionReason String?
+  
+  expiresAt   DateTime?
 
   createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt // To track review time
+  updatedAt   DateTime    @updatedAt
 }
+
+// DEPRECATED: RecordAccessRequest replaced by unified AccessRequest
+// model RecordAccessRequest { ... }
 
 // ---------------------------------------------------------
 // INTEGRATIONS & SCALE
@@ -603,6 +645,10 @@ model RegisteredCompany {
   // Relations
   records           Record[] // All records related to this company
   projects          Project[]
+  
+  // Governance
+  accessPermissions CompanyAccess[]
+  accessRequests    AccessRequest[] 
   
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt

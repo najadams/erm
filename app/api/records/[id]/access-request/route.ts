@@ -21,10 +21,12 @@ export async function POST(
   }
 
   try {
+
     // Check if pending request exists
-    const existingRequest = await prisma.recordAccessRequest.findFirst({
+    const existingRequest = await prisma.accessRequest.findFirst({
       where: {
         recordId,
+        resourceType: 'RECORD',
         requesterId: (session.user as any).id,
         status: 'PENDING'
       }
@@ -34,8 +36,9 @@ export async function POST(
       return NextResponse.json({ error: 'You already have a pending request for this document' }, { status: 409 });
     }
 
-    const newRequest = await prisma.recordAccessRequest.create({
+    const newRequest = await prisma.accessRequest.create({
       data: {
+        resourceType: 'RECORD',
         recordId,
         requesterId: (session.user as any).id,
         reason,
@@ -63,9 +66,10 @@ export async function GET(
   const recordId = params.id;
 
   try {
-    const existingRequest = await prisma.recordAccessRequest.findFirst({
+    const existingRequest = await prisma.accessRequest.findFirst({
         where: {
             recordId,
+            resourceType: 'RECORD',
             requesterId: (session.user as any).id,
             status: 'PENDING'
         }

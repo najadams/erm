@@ -27,7 +27,7 @@ export async function PATCH(
   }
 
   try {
-    const accessRequest = await prisma.recordAccessRequest.findUnique({
+    const accessRequest = await prisma.accessRequest.findUnique({
         where: { id: requestId }
     });
 
@@ -42,7 +42,7 @@ export async function PATCH(
     const reviewerId = (session?.user as any).id;
 
     if (action === 'REJECT') {
-        const updated = await prisma.recordAccessRequest.update({
+        const updated = await prisma.accessRequest.update({
             where: { id: requestId },
             data: {
                 status: 'REJECTED',
@@ -55,33 +55,56 @@ export async function PATCH(
     }
 
     // APPROVE FLOW
-    // 1. Create RecordAccess
+    // 1. Create Access (Record or Company)
     // 2. Update Request Status
 
     const level = approvedLevel || accessRequest.requestedLevel || 'READ';
+    const resourceType = accessRequest.resourceType;
 
-    // Use transaction
-    const [updatedRequest, newAccess] = await prisma.$transaction([
-        prisma.recordAccessRequest.update({
+    const transactionSteps: any[] = [
+         prisma.accessRequest.update({
             where: { id: requestId },
             data: {
                 status: 'APPROVED',
                 reviewedById: reviewerId,
-                reviewedAt: new Date()
-            }
-        }),
-        prisma.recordAccess.create({
-            data: {
-                recordId: accessRequest.recordId,
-                userId: accessRequest.requesterId,
-                principalType: 'USER',
-                level: level,
-                accessType: 'ALLOW'
+                reviewedAt: new Date(),
+                approvedLevel: level
             }
         })
-    ]);
+    ];
 
-    return NextResponse.json({ request: updatedRequest, access: newAccess });
+    if (resourceType === 'RECORD' && accessRequest.recordId) {
+        transactionSteps.push(
+            prisma.recordAccess.create({
+                data: {
+                    recordId: accessRequest.recordId,
+                    userId: accessRequest.requesterId,
+                    principalType: 'USER',
+                    level: level,
+                    accessType: 'ALLOW'
+                }
+            })
+        );
+    } else if (resourceType === 'COMPANY' && accessRequest.registeredCompanyId) {
+        transactionSteps.push(
+            prisma.companyAccess.create({
+                data: {
+                    registeredCompanyId: accessRequest.registeredCompanyId,
+                    userId: accessRequest.requesterId,
+                    level: level,
+                    accessType: 'ALLOW',
+                    grantedById: reviewerId
+                }
+            })
+        );
+    } else {
+        return NextResponse.json({ error: 'Invalid resource type or missing ID' }, { status: 400 });
+    }
+
+    const results = await prisma.$transaction(transactionSteps);
+    // [updatedRequest, newAccess]
+    
+    return NextResponse.json({ request: results[0], access: results[1] });
 
   } catch (error) {
     console.error('Process Access Request Error:', error);

@@ -13,7 +13,7 @@ async function isAdmin() {
 export async function GET(request: NextRequest) {
     if (!await isAdmin()) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
 
-    const requests = await prisma.accessRequest.findMany({
+    const requests = await prisma.accountRequest.findMany({
         orderBy: { createdAt: 'desc' }
     });
     return NextResponse.json(requests);
@@ -34,12 +34,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Account with this email already exists' }, { status: 409 });
     }
 
-    const existingRequest = await prisma.accessRequest.findUnique({ where: { email } });
+    const existingRequest = await prisma.accountRequest.findUnique({ where: { email } });
     if (existingRequest) {
       return NextResponse.json({ error: 'Request already pending for this email' }, { status: 409 });
     }
 
-    const newRequest = await prisma.accessRequest.create({
+    const newRequest = await prisma.accountRequest.create({
       data: {
         email,
         name,
