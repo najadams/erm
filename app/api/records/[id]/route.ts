@@ -25,8 +25,21 @@ export async function GET(
     const id = params.id;
     // 1. Permission Check via Unified ACS
     const hasAccess = await ACS.evaluate((session.user as any).id, id, 'VIEW');
+    
+    // Fetch limited info if access denied
     if (!hasAccess) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        const limitedRecord = await prisma.record.findUnique({
+             where: { id },
+             select: { id: true, title: true, referenceNumber: true, status: true, recordType: { select: { name: true } } }
+        });
+        
+        if (!limitedRecord) return NextResponse.json({ error: 'Record not found' }, { status: 404 });
+
+        return NextResponse.json({ 
+            error: 'Forbidden', 
+            details: 'You do not have permission to view this record.',
+            limitedInfo: limitedRecord 
+        }, { status: 403 });
     }
 
     const record = await prisma.record.findUnique({

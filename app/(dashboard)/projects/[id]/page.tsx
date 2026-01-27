@@ -20,6 +20,7 @@ import OverviewTab from '@/components/projects/tabs/OverviewTab';
 import CompanyTab from '@/components/projects/tabs/CompanyTab';
 import MembersTab from '@/components/projects/tabs/MembersTab';
 import RecordsTab from '@/components/projects/tabs/RecordsTab';
+import ProjectWorkflow from '@/components/projects/ProjectWorkflow';
 
 interface ProjectDetails {
   id: string;
@@ -29,6 +30,7 @@ interface ProjectDetails {
   description: string;
   type: string;
   priority: string;
+  ownerUserId: string;
   registeredCompany: any;
   members: any[];
   visibility: string;
@@ -101,6 +103,13 @@ export default function ProjectDetailsPage() {
                 </Typography>
             </Box>
         </Box>
+
+        {/* Workflow */}
+        <ProjectWorkflow 
+            project={project} 
+            currentUser={currentUser} 
+            onStatusChange={fetchProject} 
+        />
 
         {/* Tabs */}
         <Paper square elevation={0} sx={{ borderBottom: 1, borderColor: 'divider' }}>

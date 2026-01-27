@@ -30,6 +30,7 @@ import Select from '@mui/material/Select';
 import InputLabel from '@mui/material/InputLabel';
 import FormControl from '@mui/material/FormControl';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import LockPersonIcon from '@mui/icons-material/LockPerson';
 import UserSearch from '@/components/UserSearch';
 
 import { useRouter, useParams } from 'next/navigation';
@@ -41,6 +42,8 @@ export default function RecordDetailsPage() {
   const { data: session } = useSession();
   const id = params?.id as string;
   const [record, setRecord] = React.useState<any>(null);
+  const [accessDenied, setAccessDenied] = React.useState(false);
+  const [limitedInfo, setLimitedInfo] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
   
   // Upload State
@@ -58,6 +61,13 @@ export default function RecordDetailsPage() {
       level: 'VIEW',
       accessType: 'ALLOW'
   });
+
+  // Request Access State
+  const [openRequestDialog, setOpenRequestDialog] = React.useState(false);
+  const [requestReason, setRequestReason] = React.useState('');
+  const [requestLevel, setRequestLevel] = React.useState('READ');
+  const [existingRequest, setExistingRequest] = React.useState<any>(null);
+  const [submittingRequest, setSubmittingRequest] = React.useState(false);
 
   const userRole = (session?.user as any)?.role || 'USER';
   const userId = (session?.user as any)?.id;
@@ -85,15 +95,37 @@ export default function RecordDetailsPage() {
   React.useEffect(() => {
     if (id) {
         fetch(`/api/records/${id}`)
-        .then(res => {
+        .then(async (res) => {
+            if (res.status === 403) {
+                const data = await res.json();
+                setLimitedInfo(data.limitedInfo);
+                setAccessDenied(true);
+                return null;
+            }
             if (!res.ok) throw new Error('Not found');
             return res.json();
         })
-        .then(data => setRecord(data))
+        .then(data => {
+            if (data) setRecord(data);
+        })
         .catch(() => setRecord(null))
         .finally(() => setLoading(false));
     }
   }, [id]);
+
+  // Check for existing access request
+  React.useEffect(() => {
+    if (id && !canManageAccess) { // Only check if current user is not owner/admin
+        fetch(`/api/records/${id}/access-request`)
+        .then(res => res.json())
+        .then(data => {
+            if (data && data.status) {
+                setExistingRequest(data);
+            }
+        })
+        .catch(err => console.error(err));
+    }
+  }, [id, canManageAccess]);
 
   const handleRequestVerification = async (recordId: string) => {
       if (!confirm('Submit this record for verification? You will not be able to edit it while it is under review.')) return;
@@ -206,7 +238,134 @@ export default function RecordDetailsPage() {
       }
   };
 
+  const handleSubmitRequest = async () => {
+      if (!requestReason) return alert('Please provide a reason');
+      setSubmittingRequest(true);
+      try {
+          const res = await fetch(`/api/records/${id}/access-request`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ reason: requestReason, requestedLevel: requestLevel })
+          });
+          
+          if (res.ok) {
+              const newReq = await res.json();
+              setExistingRequest(newReq);
+              setOpenRequestDialog(false);
+              alert('Request submitted successfully');
+          } else {
+              const err = await res.json();
+              alert(err.error || 'Submission failed');
+          }
+      } catch (e) {
+          alert('Error submitting request');
+      } finally {
+          setSubmittingRequest(false);
+      }
+  };
+
   if (loading) return <Box sx={{ p: 4, textAlign: 'center' }}>Loading...</Box>;
+
+  // Access Denied View
+  if (accessDenied) {
+      return (
+          <Box sx={{ p: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+              <SecurityIcon sx={{ fontSize: 60, color: 'text.secondary', opacity: 0.5 }} />
+              <Typography variant="h4" fontWeight="bold">Access Restricted</Typography>
+              <Typography color="text.secondary" maxWidth={600} textAlign="center">
+                  You do not have permission to view the full details or content of this record used in <strong>{limitedInfo?.recordType?.name || 'System'}</strong>.
+              </Typography>
+              
+              {limitedInfo && (
+                  <Paper sx={{ p: 3, width: '100%', maxWidth: 600, border: '1px solid #e2e8f0' }}>
+                      <Box sx={{ display: 'grid', gap: 2 }}>
+                          <Box>
+                              <Typography variant="caption" color="text.secondary" fontWeight="bold">REFERENCE NUMBER</Typography>
+                              <Typography variant="body1">{limitedInfo.referenceNumber || 'N/A'}</Typography>
+                          </Box>
+                          <Box>
+                              <Typography variant="caption" color="text.secondary" fontWeight="bold">TITLE</Typography>
+                              <Typography variant="body1" fontWeight="bold">{limitedInfo.title}</Typography>
+                          </Box>
+                      </Box>
+                  </Paper>
+              )}
+
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                  <Button variant="outlined" onClick={() => router.back()}>Go Back</Button>
+                  <Button 
+                    variant={existingRequest ? "outlined" : "contained"} 
+                    color={existingRequest ? "warning" : "primary"}
+                    startIcon={<LockPersonIcon />}
+                    onClick={() => setOpenRequestDialog(true)}
+                    disabled={!!existingRequest}
+                  >
+                      {existingRequest ? `Request ${existingRequest.status}` : "Request Access"}
+                  </Button>
+              </Box>
+
+             {/* Reuse the Request Dialog */}
+             <Dialog open={openRequestDialog} onClose={() => setOpenRequestDialog(false)} maxWidth="sm" fullWidth>
+            <DialogTitle>Request Access to Record</DialogTitle>
+            <DialogContent>
+                <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    <Typography color="text.secondary">
+                        Please explain why you need access to this restricted record. The owner will review your request.
+                    </Typography>
+                    
+                    {existingRequest && (
+                        <Paper sx={{ p: 2, bgcolor: 'warning.light' }}>
+                            <Typography variant="subtitle2">Existing Request Status: {existingRequest.status}</Typography>
+                            <Typography variant="body2">Submitted on: {new Date(existingRequest.createdAt).toLocaleDateString()}</Typography>
+                        </Paper>
+                    )}
+
+                    {!existingRequest && (
+                    <>
+                        <FormControl fullWidth>
+                            <InputLabel>Requested Level</InputLabel>
+                            <Select
+                                value={requestLevel}
+                                label="Requested Level"
+                                onChange={(e) => setRequestLevel(e.target.value)}
+                            >
+                                <MenuItem value="READ">READ (Download & View)</MenuItem>
+                                <MenuItem value="EDIT">EDIT (Modify Metadata)</MenuItem>
+                                <MenuItem value="FULL">FULL (Manage Permissions)</MenuItem>
+                            </Select>
+                        </FormControl>
+
+                        <TextField
+                            label="Reason for Access"
+                            fullWidth
+                            multiline
+                            rows={3}
+                            value={requestReason}
+                            onChange={(e) => setRequestReason(e.target.value)}
+                            placeholder="Please explain why you need access to this record..."
+                        />
+                    </>
+                    )}
+                </Box>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={() => setOpenRequestDialog(false)}>Close</Button>
+                {!existingRequest && (
+                    <Button 
+                        variant="contained" 
+                        onClick={handleSubmitRequest}
+                        disabled={!requestReason || submittingRequest}
+                    >
+                        {submittingRequest ? 'Submitting...' : 'Submit Request'}
+                    </Button>
+                )}
+            </DialogActions>
+        </Dialog>
+
+          </Box>
+      );
+  }
+
   if (!record) return <Box sx={{ p: 4, textAlign: 'center' }}>Record not found.</Box>;
 
   // Get current version file
@@ -253,6 +412,19 @@ export default function RecordDetailsPage() {
             </Box>
             
             <Box sx={{ display: 'flex', gap: 2 }}>
+               {/* Request Access Button - Show if user doesn't have edit/full access and isn't owner/admin */}
+               {!canManageAccess && (
+                   <Button
+                        variant={existingRequest ? "outlined" : "contained"}
+                        color={existingRequest ? "warning" : "primary"}
+                        startIcon={<LockPersonIcon />}
+                        onClick={() => setOpenRequestDialog(true)}
+                        disabled={!!existingRequest} // Disable if request pending? Or allow viewing status?
+                   >
+                        {existingRequest ? `Request ${existingRequest.status}` : "Request Access"}
+                   </Button>
+               )}
+
                <Button 
                  variant="outlined" 
                  startIcon={<CloudUploadIcon />}
@@ -637,6 +809,64 @@ export default function RecordDetailsPage() {
                 >
                     Grant Permission
                 </Button>
+            </DialogActions>
+        </Dialog>
+
+        {/* Request Access Dialog */}
+        <Dialog open={openRequestDialog} onClose={() => setOpenRequestDialog(false)} maxWidth="sm" fullWidth>
+            <DialogTitle>Request Access to Record</DialogTitle>
+            <DialogContent>
+                <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    <Typography color="text.secondary">
+                        You do not have sufficient permissions to view or edit this record. You can request access from the owner.
+                    </Typography>
+                    
+                    {existingRequest && (
+                        <Paper sx={{ p: 2, bgcolor: 'warning.light' }}>
+                            <Typography variant="subtitle2">Existing Request Status: {existingRequest.status}</Typography>
+                            <Typography variant="body2">Submitted on: {new Date(existingRequest.createdAt).toLocaleDateString()}</Typography>
+                        </Paper>
+                    )}
+
+                    {!existingRequest && (
+                    <>
+                        <FormControl fullWidth>
+                            <InputLabel>Requested Level</InputLabel>
+                            <Select
+                                value={requestLevel}
+                                label="Requested Level"
+                                onChange={(e) => setRequestLevel(e.target.value)}
+                            >
+                                <MenuItem value="READ">READ (Download & View)</MenuItem>
+                                <MenuItem value="EDIT">EDIT (Modify Metadata)</MenuItem>
+                                <MenuItem value="FULL">FULL (Manage Permissions)</MenuItem>
+                            </Select>
+                        </FormControl>
+
+                        <TextField
+                            label="Reason for Access"
+                            fullWidth
+                            multiline
+                            rows={3}
+                            value={requestReason}
+                            onChange={(e) => setRequestReason(e.target.value)}
+                            placeholder="Please explain why you need access to this record..."
+                        />
+                    </>
+                    )}
+                </Box>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={() => setOpenRequestDialog(false)}>Close</Button>
+                {!existingRequest && (
+                    <Button 
+                        variant="contained" 
+                        onClick={handleSubmitRequest}
+                        disabled={!requestReason || submittingRequest}
+                    >
+                        {submittingRequest ? 'Submitting...' : 'Submit Request'}
+                    </Button>
+                )}
             </DialogActions>
         </Dialog>
 

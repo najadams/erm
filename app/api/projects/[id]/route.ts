@@ -105,9 +105,50 @@ export async function PATCH(
     const isOwner = proj.ownerUserId === userId;
     const memberRec = proj.members.find((m: any) => m.userId === userId);
     const isManager = memberRec?.role === 'MANAGER';
+    const isContributor = memberRec?.role === 'CONTRIBUTOR';
 
-    if (!isOwner && !isManager) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (!isOwner && !isManager && !(isContributor && status === 'SUBMITTED' && proj.status === 'DRAFT')) {
+         // Allow Contributors to submit drafts, otherwise Strict
+         // If just updating metadata (not status), Contributors might be allowed if we wanted.
+         // For now, let's say Contributors can only edit if status is DRAFT.
+         if (isContributor && proj.status !== 'DRAFT') {
+             return NextResponse.json({ error: 'Forbidden: Contributors can only edit Drafts' }, { status: 403 });
+         }
+         // If neither, then Forbidden
+         if (!isContributor && !isOwner && !isManager) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+         }
+    }
+
+    // Status Transition Logic
+    if (status && status !== proj.status) {
+        // Valid Transitions
+        const allowedTransitions: Record<string, string[]> = {
+            'DRAFT': ['SUBMITTED', 'ARCHIVED'],
+            'SUBMITTED': ['IN_REVIEW', 'DRAFT', 'ARCHIVED'], // Draft = Reject back to draft
+            'IN_REVIEW': ['APPROVED', 'on_HOLD', 'DRAFT', 'ARCHIVED'],
+            'APPROVED': ['ACTIVE', 'ARCHIVED', 'COMPLETED'],
+            'ACTIVE': ['COMPLETED', 'ON_HOLD', 'ARCHIVED'],
+            'ON_HOLD': ['ACTIVE', 'ARCHIVED'],
+            'COMPLETED': ['ARCHIVED', 'ACTIVE'], // Reactivate?
+            'ARCHIVED': ['DRAFT'] // Restore
+        };
+
+        const allowed = allowedTransitions[proj.status] || [];
+        if (!allowed.includes(status)) {
+            return NextResponse.json({ error: `Invalid status transition from ${proj.status} to ${status}` }, { status: 400 });
+        }
+
+        // Permission Checks for Status
+        // Managers/Owners can do anything.
+        // Contributors can ONLY do DRAFT -> SUBMITTED.
+        if (isContributor && !isManager && !isOwner) {
+            if (proj.status === 'DRAFT' && status === 'SUBMITTED') {
+                // OK
+            } else {
+                 return NextResponse.json({ error: 'Forbidden: Contributors can only Submit projects' }, { status: 403 });
+            }
+        }
     }
 
     const updated = await prisma.project.update({
@@ -124,6 +165,22 @@ export async function PATCH(
             endDate: endDate ? new Date(endDate) : undefined,
         } as any
     });
+
+    // Audit Log for Status Change
+    if (status && status !== proj.status) {
+        await prisma.auditLog.create({
+            data: {
+                action: 'PROJECT_STATUS_CHANGE',
+                userId,
+                actorRole: (session.user as any).role,
+                source: 'WEB',
+                projectId: id,
+                details: `Status changed from ${proj.status} to ${status}`,
+                oldValue: proj.status,
+                newValue: status
+            }
+        });
+    }
 
     return NextResponse.json(updated);
 

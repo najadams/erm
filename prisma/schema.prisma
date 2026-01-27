@@ -45,6 +45,10 @@ model User {
   ownedProjects       Project[]       @relation("ProjectOwner")
   projectMemberships  ProjectMember[]
   addedProjectRecords ProjectRecord[]
+  
+  // Access Requests
+  requestedRecords    RecordAccessRequest[] @relation("Requester")
+  reviewedRequests    RecordAccessRequest[] @relation("Reviewer")
 }
 
 model Group {
@@ -341,6 +345,7 @@ model Record {
   registeredCompanyId String?
   registeredCompany   RegisteredCompany? @relation(fields: [registeredCompanyId], references: [id])
   projectRecords      ProjectRecord[]
+  accessRequests      RecordAccessRequest[]
 
   // FTS
   search_vector       Unsupported("tsvector")?
@@ -498,6 +503,8 @@ model AuditLog {
   userAgent String?
   recordId  String?
   record    Record?  @relation(fields: [recordId], references: [id], onDelete: SetNull)
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
   userId    String
   user      User     @relation(fields: [userId], references: [id])
   timestamp DateTime @default(now())
@@ -514,6 +521,26 @@ model AccessRequest {
   reason    String
   status    String   @default("PENDING") // PENDING, APPROVED, REJECTED
   createdAt DateTime @default(now())
+}
+
+model RecordAccessRequest {
+  id          String      @id @default(uuid())
+  recordId    String
+  record      Record      @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  requesterId String
+  requester   User        @relation("Requester", fields: [requesterId], references: [id])
+  
+  status      String      @default("PENDING") // PENDING, APPROVED, REJECTED
+  reason      String
+  requestedLevel AccessLevel @default(READ)
+  
+  reviewedById String?
+  reviewedBy   User?       @relation("Reviewer", fields: [reviewedById], references: [id])
+  reviewedAt   DateTime?
+  rejectionReason String?
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt // To track review time
 }
 
 // ---------------------------------------------------------
@@ -634,6 +661,7 @@ model Project {
   
   members     ProjectMember[]
   projectRecords ProjectRecord[]
+  auditLogs   AuditLog[]
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
