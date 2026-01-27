@@ -109,7 +109,7 @@ export async function DELETE(
     }
 
     await prisma.$transaction([
-      prisma.recordTypeMetadataField.deleteMany({ where: { recordTypeId: params.id } }),
+      prisma.recordTypeMetadata.deleteMany({ where: { recordTypeId: params.id } }),
       prisma.recordType.delete({ where: { id: params.id } })
     ]);
 

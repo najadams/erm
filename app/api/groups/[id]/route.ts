@@ -40,13 +40,12 @@ export async function PUT(
 
     try {
         const { id } = await params;
-        const { name, description, type, userIds } = await request.json();
+        const { name, type, userIds } = await request.json();
 
         const group = await prisma.group.update({
             where: { id },
             data: {
                 name,
-                description,
                 type,
                 users: userIds ? { set: userIds.map((uid: string) => ({ id: uid })) } : undefined
             }

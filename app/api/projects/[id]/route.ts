@@ -175,7 +175,6 @@ export async function PATCH(
                 actorRole: (session.user as any).role,
                 source: 'WEB',
                 projectId: id,
-                details: `Status changed from ${proj.status} to ${status}`,
                 oldValue: proj.status,
                 newValue: status
             }
@@ -246,7 +245,7 @@ export async function DELETE(
           actorRole: userRole,
           source: 'API',
           projectId: null, // Can't reference deleted project
-          details: `Deleted project: ${proj.name}`
+          oldValue: JSON.stringify({ name: proj.name, id: proj.id })
         }
       })
     ]);

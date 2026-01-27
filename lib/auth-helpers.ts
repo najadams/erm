@@ -64,7 +64,7 @@ export async function requireRole(...roles: (keyof typeof ROLES)[]): Promise<Aut
   const auth = await requireAuth();
   if (!auth.authorized) return auth;
 
-  const validRoles = roles.map(r => ROLES[r]);
+  const validRoles: string[] = roles.map(r => ROLES[r]);
   if (!validRoles.includes(auth.userRole)) {
     return {
       ...auth,

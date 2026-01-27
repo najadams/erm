@@ -11,5 +11,5 @@ export function validateEmailWithError(email: string): { valid: boolean; error?:
     if (result.success) {
         return { valid: true };
     }
-    return { valid: false, error: result.error.errors[0]?.message || 'Invalid email format' };
+    return { valid: false, error: result.error.issues[0]?.message || 'Invalid email format' };
 }

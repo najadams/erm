@@ -153,12 +153,12 @@ export async function DELETE(request: NextRequest) {
             }, { status: 400 });
         }
 
-        // Soft delete: Deactivate instead of hard delete
-        const deactivated = await prisma.user.update({
+        // Soft delete: Mark email as deleted to prevent reuse
+        // Note: User model doesn't have isActive field, so we rely on email prefix
+        await prisma.user.update({
             where: { id },
             data: {
-                isActive: false,
-                email: `deleted_${Date.now()}_${user.email}` // Prevent email reuse
+                email: `deleted_${Date.now()}_${user.email}` // Prevent email reuse, marks as deleted
             }
         });
 
