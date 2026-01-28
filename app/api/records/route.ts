@@ -105,11 +105,10 @@ export async function GET(request: NextRequest) {
         
         filters.push({ classificationNodeId: { in: ids } });
     } else {
-        filters.push({ classificationNodeId: 'INVALID_ID' }); 
+        filters.push({ classificationNodeId: 'INVALID_ID' });
     }
   }
-  if (registeredCompanyId) filters.push({ registeredCompanyId });
-  
+
   if (startDate || endDate) {
     const dateFilter: any = {};
     if (startDate) dateFilter.gte = new Date(startDate);
@@ -184,7 +183,9 @@ export async function POST(request: NextRequest) {
   const userRole = (session.user as any)?.role;
 
   // Check upload restriction
-  if (userRole !== ROLES.ADMIN) {
+  // ADMIN and RECORDS_OFFICER can bypass upload restrictions
+  const canBypassUploadRestriction = userRole === ROLES.ADMIN || hasPermission(userRole, 'VIEW_ALL_RECORDS');
+  if (!canBypassUploadRestriction) {
       try {
           const setting = await prisma.systemSetting.findUnique({ where: { key: 'ALLOW_USER_UPLOADS' } });
           // If setting exists, parse it. If not, default to true.
@@ -195,12 +196,12 @@ export async function POST(request: NextRequest) {
                  allowed = JSON.parse(setting.value);
              } catch (e) {
                  console.error('Error parsing ALLOW_USER_UPLOADS setting:', e);
-                 // If value is simple string "true"/"false" not in JSON format (e.g. legacy), handle it? 
+                 // If value is simple string "true"/"false" not in JSON format (e.g. legacy), handle it?
                  // But JSON.parse handles "true" and "false" boolean strings.
-                 allowed = true; 
+                 allowed = true;
              }
           }
-          
+
           if (!allowed) {
               return NextResponse.json({ error: 'Uploads are currently disabled by the administrator.' }, { status: 403 });
           }
@@ -246,6 +247,11 @@ export async function POST(request: NextRequest) {
     // Dynamic Metadata (JSON string)
     const rawMetadata = formData.get('metadata') as string;
     const metadataValues = JSON.parse(rawMetadata || '{}');
+
+    // Governance Fields
+    const classification = formData.get('classification') as string || 'OFFICIAL';
+    const sensitivity = formData.get('sensitivity') as string || 'LOW';
+    const isLegalHold = formData.get('isLegalHold') === 'true';
 
     // Final metadata to be stored - will be mapped from UUID keys to field names
     let finalMetadata: Record<string, any> = {};
@@ -689,8 +695,14 @@ export async function POST(request: NextRequest) {
                   
                   // Context & Snapshots
                   contextType: contextType || 'NONE',
+                  companySnapshotName,
                   companySnapshotRegNo,
-                  
+
+                  // Governance Fields
+                  classification: classification as any,
+                  sensitivity: sensitivity as any,
+                  isLegalHold,
+
                   // Metadata (JSONB)
                   metadata: finalMetadata,
 

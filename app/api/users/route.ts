@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
                       }
                   ]
               },
-              select: { id: true, name: true, email: true, department: { select: { id: true, name: true } } },
+              select: { id: true, name: true, email: true, department: { select: { id: true, name: true } }, isActive: true },
               take: 10
           });
           return NextResponse.json(users);
@@ -61,6 +61,7 @@ export async function GET(request: NextRequest) {
                   id: true,
                   name: true,
                   email: true,
+                  isActive: true,
                   role: true,
                   clearanceLevel: true,
                   departmentId: true,
@@ -85,7 +86,7 @@ export async function GET(request: NextRequest) {
        where: {
            NOT: { email: { startsWith: 'deleted_' } }
        },
-       select: { id: true, name: true, email: true, department: { select: { id: true, name: true } } },
+       select: { id: true, name: true, email: true, department: { select: { id: true, name: true } }, isActive: true },
        orderBy: { name: 'asc' },
        take: 50
      });
@@ -199,37 +200,24 @@ export async function DELETE(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
+        const reactivate = searchParams.get('reactivate') === 'true';
 
         if (!id) return NextResponse.json({ error: 'Missing User ID' }, { status: 400 });
 
-        // Check for owned records and projects
-        const user = await prisma.user.findUnique({
-            where: { id },
-            include: { _count: { select: { records: true, ownedProjects: true } } }
-        });
+        const user = await prisma.user.findUnique({ where: { id } });
+        if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-        if (!user) {
-            return NextResponse.json({ error: 'User not found' }, { status: 404 });
-        }
-
-        if (user._count.records > 0 || user._count.ownedProjects > 0) {
-            return NextResponse.json({
-                error: 'Cannot delete user with owned records or projects. Reassign ownership first.',
-                counts: user._count
-            }, { status: 400 });
-        }
-
-        // Soft delete: Mark email as deleted to prevent reuse
+        // Toggle Active State
         await prisma.user.update({
             where: { id },
             data: {
-                email: `deleted_${Date.now()}_${user.email}`
+                isActive: reactivate
             }
         });
 
-        return NextResponse.json({ success: true, deactivated: true });
+        return NextResponse.json({ success: true, isActive: reactivate });
     } catch (error) {
-        console.error('Delete User Error:', error);
-        return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 });
+        console.error('Toggle User Status Error:', error);
+        return NextResponse.json({ error: 'Failed to update user status' }, { status: 500 });
     }
 }

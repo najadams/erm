@@ -28,6 +28,10 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        if (!user.isActive) {
+            throw new Error('User is deactivated');
+        }
+
         const isPasswordValid = await bcrypt.compare(
           credentials.password,
           user.password

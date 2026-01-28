@@ -15,6 +15,7 @@ import TextField from '@mui/material/TextField';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
 import Chip from '@mui/material/Chip';
+import Alert from '@mui/material/Alert';
 
 import FileSelection from '@/components/upload/FileSelection';
 import DocumentMetadata from '@/components/upload/DocumentMetadata';
@@ -43,7 +44,8 @@ function UploadPageContent() {
   const initialCompanyId = searchParams.get('companyId');
 
   const [uploading, setUploading] = useState(false);
-  
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
   // Form State
   const [file, setFile] = useState<File | null>(null);
   const [checksum, setChecksum] = useState<string>('');
@@ -105,7 +107,9 @@ function UploadPageContent() {
         .catch(console.error);
   }, []);
 
-  const isUploadBlocked = !uploadsAllowed && !['ADMIN', 'RECORDS_OFFICER'].includes(userRole);
+  // ADMIN and RECORDS_OFFICER can bypass upload restrictions (matches backend check)
+  const canBypassUploadRestriction = userRole === 'ADMIN' || userRole === 'RECORDS_OFFICER';
+  const isUploadBlocked = !uploadsAllowed && !canBypassUploadRestriction;
   const isAdmin = userRole === 'ADMIN';
 
   useEffect(() => {
@@ -118,19 +122,10 @@ function UploadPageContent() {
   const handleFileSelect = (selectedFile: File, fileChecksum: string) => {
     setFile(selectedFile);
     setChecksum(fileChecksum);
-    
+
     // Auto-fill title if empty
     if (!metadata.title) {
         setMetadata(prev => ({ ...prev, title: selectedFile.name }));
-    }
-    
-    // Simulate API check for version
-    // In real implementation: fetch('/api/check-version', { checksum })...
-    // Mocking finding a duplicate for demonstration if filename contains "v2"
-    if (selectedFile.name.includes('v2')) {
-        setVersionInfo({ isNewVersion: true, version: 2 });
-    } else {
-        setVersionInfo(undefined);
     }
   };
 
@@ -153,6 +148,7 @@ function UploadPageContent() {
   const handleUpload = async () => {
     if (!file) return;
     setUploading(true);
+    setUploadError(null);
 
     const formData = new FormData();
     formData.append('file', file);
@@ -231,13 +227,13 @@ function UploadPageContent() {
         if (res.ok) {
             router.push('/');
         } else {
-            alert('Upload failed (mock)');
-            // For now, since DB migration failed, this will fail.
-            // But UI flow is demonstrated.
-            console.error('Upload failed', await res.text());
+            const data = await res.json().catch(() => ({ error: 'Upload failed' }));
+            setUploadError(data.error || 'Upload failed. Please try again.');
+            console.error('Upload failed:', data);
         }
     } catch (error) {
         console.error('Error uploading:', error);
+        setUploadError('An unexpected error occurred. Please try again.');
     } finally {
         setUploading(false);
     }
@@ -323,7 +319,13 @@ function UploadPageContent() {
                 onChange={handleComplianceChange}
                 isAdmin={isAdmin}
             />
-            
+
+            {uploadError && (
+                <Alert severity="error" sx={{ mb: 2 }} onClose={() => setUploadError(null)}>
+                    {uploadError}
+                </Alert>
+            )}
+
             <ReviewConfirm 
                 data={{ file, metadata, access, compliance, versionInfo }}
                 onCancel={() => router.push('/')}

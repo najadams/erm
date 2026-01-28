@@ -79,6 +79,7 @@ interface User {
   departmentId?: string;
   department?: Department;
   accountExpiresAt?: string;
+  isActive: boolean;
   groups?: Group[];
   createdAt: string;
   _count?: { records: number; ownedProjects: number };
@@ -252,26 +253,54 @@ export default function AdminUsersPage() {
     }
   };
 
+  const handleToggleStatus = async (user: User) => {
+    const action = user.isActive ? 'deactivate' : 'reactivate';
+    if (!confirm(`Are you sure you want to ${action} ${user.name}?`)) return;
+
+    try {
+      const res = await fetch(`/api/users?id=${user.id}&reactivate=${!user.isActive}`, { 
+          method: 'DELETE' // Using existing DELETE handler which we modified to handle toggle
+      });
+      
+      if (res.ok) {
+        fetchData();
+      } else {
+        alert('Failed to update user status');
+      }
+    } catch (err) {
+      alert('Network error');
+    }
+  };
+
+  // Deprecated mostly, but keeping for compatibility if generic delete needed
   const handleDeleteClick = (user: User) => {
     setUserToDelete(user);
     setDeleteDialog(true);
   };
 
+  // Not strictly used if we rely on handleToggleStatus, but good to keep for "hard delete" logic if ever needed
   const handleDeleteConfirm = async () => {
     if (!userToDelete) return;
 
+    // We can just call handleToggleStatus effectively if we want to channel it there, 
+    // but the DELETE endpoint now handles toggling if `reactivate` param is present, 
+    // or standard delete if not. 
+    // HOWEVER, the logic requested was to "deactivate" instead of delete.
+    // So let's route this to toggle status.
+    
+    // Actually, let's keep this as a "Deactivate" confirmation flow
     try {
-      const res = await fetch(`/api/users?id=${userToDelete.id}`, { method: 'DELETE' });
-      if (res.ok) {
-        setDeleteDialog(false);
-        setUserToDelete(null);
-        fetchData();
-      } else {
-        const data = await res.json();
-        alert(data.error || 'Failed to delete user');
-      }
-    } catch (err) {
-      alert('Network error');
+        const res = await fetch(`/api/users?id=${userToDelete.id}&reactivate=false`, { method: 'DELETE' });
+        if (res.ok) {
+            setDeleteDialog(false);
+            setUserToDelete(null);
+            fetchData();
+        } else {
+            const data = await res.json();
+            alert(data.error || 'Failed to deactivate user');
+        }
+    } catch(err) {
+        alert('Network error');
     }
   };
 
@@ -339,20 +368,28 @@ export default function AdminUsersPage() {
               <TableRow>
                 <TableCell>Name</TableCell>
                 <TableCell>Email</TableCell>
+                <TableCell>Status</TableCell>
                 <TableCell>Role</TableCell>
                 <TableCell>Clearance</TableCell>
                 <TableCell>Department</TableCell>
                 <TableCell>Groups</TableCell>
-                <TableCell>Expires</TableCell>
                 <TableCell>Joined</TableCell>
                 <TableCell align="right">Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {users.map((user) => (
-                <TableRow key={user.id} hover>
+                <TableRow key={user.id} hover sx={{ opacity: user.isActive ? 1 : 0.6 }}>
                   <TableCell>{user.name || '-'}</TableCell>
                   <TableCell>{user.email}</TableCell>
+                  <TableCell>
+                    <Chip 
+                        label={user.isActive ? 'Active' : 'Inactive'} 
+                        color={user.isActive ? 'success' : 'default'}
+                        size="small"
+                        variant={user.isActive ? 'filled' : 'outlined'}
+                    />
+                  </TableCell>
                   <TableCell>
                     <Chip
                       label={user.role}
@@ -377,14 +414,9 @@ export default function AdminUsersPage() {
                         <Chip key={g.id} label={g.name} size="small" variant="outlined" />
                       ))}
                       {(user.groups?.filter(g => g.type !== 'DEPARTMENT').length || 0) > 2 && (
-                        <Chip label={`+${(user.groups?.filter(g => g.type !== 'DEPARTMENT').length || 0) - 2}`} size="small" />
+                          <Chip label={`+${(user.groups?.filter(g => g.type !== 'DEPARTMENT').length || 0) - 2}`} size="small" />
                       )}
                     </Box>
-                  </TableCell>
-                  <TableCell>
-                    {user.accountExpiresAt
-                      ? new Date(user.accountExpiresAt).toLocaleDateString()
-                      : '-'}
                   </TableCell>
                   <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
                   <TableCell align="right">
@@ -393,15 +425,27 @@ export default function AdminUsersPage() {
                         <EditIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip title="Delete">
-                      <IconButton
-                        size="small"
-                        color="error"
-                        onClick={() => handleDeleteClick(user)}
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
+                    
+                    {user.isActive ? (
+                        <Tooltip title="Deactivate">
+                            <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => handleToggleStatus(user)}
+                            >
+                                <DeleteIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                    ) : (
+                        <Button 
+                            size="small" 
+                            variant="outlined" 
+                            color="primary" 
+                            onClick={() => handleToggleStatus(user)}
+                        >
+                            Reactivate
+                        </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
@@ -603,40 +647,7 @@ export default function AdminUsersPage() {
           </Button>
         </DialogActions>
       </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialog} onClose={() => setDeleteDialog(false)}>
-        <DialogTitle>Confirm Delete</DialogTitle>
-        <DialogContent>
-            {(userToDelete?._count?.records || 0) > 0 || (userToDelete?._count?.ownedProjects || 0) > 0 ? (
-              <Alert severity="warning" sx={{ mt: 2 }}>
-                <strong>Cannot delete user:</strong> This user owns {userToDelete?._count?.records} records and {userToDelete?._count?.ownedProjects} projects.
-                <br /><br />
-                Please reassign their records and projects to another user before deleting.
-              </Alert>
-            ) : (
-              <>
-                <Typography>
-                  Are you sure you want to deactivate user <strong>{userToDelete?.name}</strong> ({userToDelete?.email})?
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                    This action will prevent the user from logging in. Their email will be marked as deleted.
-                </Typography>
-              </>
-            )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialog(false)}>Cancel</Button>
-          <Button 
-            variant="contained" 
-            color="error" 
-            onClick={handleDeleteConfirm}
-            disabled={(userToDelete?._count?.records || 0) > 0 || (userToDelete?._count?.ownedProjects || 0) > 0}
-          >
-            Deactivate User
-          </Button>
-        </DialogActions>
-      </Dialog>
+      
     </React.Fragment>
   );
 }
