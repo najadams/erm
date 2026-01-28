@@ -603,10 +603,10 @@ export async function POST(request: NextRequest) {
               // Default to DRAFT, unless user requested something else (handled by assert)
               let targetStatus: any = 'DRAFT';
               
-              if (formStatus && ['DRAFT', 'ACTIVE'].includes(formStatus)) {
+              if (formStatus && ['DRAFT', 'REGISTERED'].includes(formStatus)) {
                   targetStatus = formStatus;
-              } else if (hasPermission(rawUserRole, 'VERIFY_RECORD')) {
-                  targetStatus = 'ACTIVE'; 
+              } else if (hasPermission(rawUserRole, 'REGISTER_RECORD')) {
+                  targetStatus = 'REGISTERED';
               }
 
               // Assert this creation is valid

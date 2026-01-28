@@ -1,107 +1,152 @@
+/**
+ * GOVERNANCE API ENDPOINT
+ *
+ * Handles all governance actions on records:
+ * - LOCK/UNLOCK (now uses isLocked boolean)
+ * - ARCHIVE/RESTORE
+ * - REGISTER/REJECT
+ * - CHANGE_CLASSIFICATION
+ * - ASSIGN_OWNER
+ * - APPLY_LEGAL_HOLD/RELEASE_LEGAL_HOLD
+ *
+ * All actions require documented reason and create audit trail.
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { validateGovernanceOverride, GovernanceOverride } from '@/lib/governance';
-import { RecordStatus } from '@/lib/lifecycle';
+import {
+  executeGovernanceAction,
+  GovernanceAction,
+  getGovernanceState
+} from '@/lib/governance';
 
-export async function PATCH(
+export const dynamic = 'force-dynamic';
+
+// Valid governance actions
+const VALID_ACTIONS: GovernanceAction[] = [
+  'REGISTER',
+  'LOCK',
+  'UNLOCK',
+  'ARCHIVE',
+  'RESTORE',
+  'CHANGE_CLASSIFICATION',
+  'CHANGE_SECURITY_LEVEL',
+  'ASSIGN_OWNER',
+  'APPLY_LEGAL_HOLD',
+  'RELEASE_LEGAL_HOLD',
+  'REJECT'
+];
+
+/**
+ * GET - Retrieve governance state for a record
+ */
+export async function GET(
   request: NextRequest,
   props: { params: Promise<{ id: string }> }
 ) {
   const params = await props.params;
   const session = await getServerSession(authOptions);
-  
+
   if (!session || !session.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { id } = params;
-  const user = session.user as any;
-  
   try {
-      const body = await request.json();
-      const { action, reason, newValue } = body;
+    const state = await getGovernanceState(params.id);
+    return NextResponse.json(state);
+  } catch (error: any) {
+    if (error.code === 'NOT_FOUND') {
+      return NextResponse.json({ error: 'Record not found' }, { status: 404 });
+    }
+    console.error('[Governance API] GET Error:', error);
+    return NextResponse.json({ error: 'Failed to fetch governance state' }, { status: 500 });
+  }
+}
 
-      // 1. Fetch Record
-      const record = await prisma.record.findUnique({ where: { id } });
-      if (!record) return NextResponse.json({ error: 'Record not found' }, { status: 404 });
+/**
+ * POST - Execute a governance action
+ *
+ * Body: {
+ *   action: GovernanceAction,
+ *   reason: string (min 10 chars),
+ *   newValue?: any (for CHANGE_CLASSIFICATION, ASSIGN_OWNER, etc.)
+ * }
+ */
+export async function POST(
+  request: NextRequest,
+  props: { params: Promise<{ id: string }> }
+) {
+  const params = await props.params;
+  const session = await getServerSession(authOptions);
 
-      // 2. Validate Governance Action (Throws if invalid)
-      // Map body action to GovernanceOverride action
-      const override: GovernanceOverride = {
-          action: action,
-          reason: reason,
-          newValue: newValue
-      };
+  if (!session || !session.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
-      try {
-           validateGovernanceOverride(user, record, override);
-      } catch (e: any) {
-           return NextResponse.json({ error: e.message }, { status: 403 });
+  const user = session.user as any;
+  const { id } = params;
+
+  try {
+    const body = await request.json();
+    const { action, reason, newValue } = body;
+
+    // Validate action type
+    if (!action || !VALID_ACTIONS.includes(action)) {
+      return NextResponse.json({
+        error: `Invalid action. Valid actions: ${VALID_ACTIONS.join(', ')}`
+      }, { status: 400 });
+    }
+
+    // Validate reason presence (module validates length)
+    if (!reason) {
+      return NextResponse.json({
+        error: 'Governance actions require a documented reason'
+      }, { status: 400 });
+    }
+
+    // Execute governance action through centralized module
+    const result = await executeGovernanceAction({
+      action: action as GovernanceAction,
+      recordId: id,
+      actorId: user.id,
+      actorRole: user.role,
+      reason,
+      newValue
+    });
+
+    if (!result.success) {
+      return NextResponse.json({
+        error: result.error
+      }, { status: 403 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      auditLogId: result.auditLogId,
+      record: {
+        id: result.record?.id,
+        status: result.record?.status,
+        isLocked: result.record?.isLocked
       }
-
-      // 3. Execute Action
-      let updateData: any = {};
-      let auditLogAction = action;
-      
-      switch (action) {
-          case 'LOCK':
-              updateData = { status: 'LOCKED' };
-              break;
-          case 'UNLOCK':
-              updateData = { status: 'REGISTERED' }; // Reverts to Registered
-              break;
-          case 'CHANGE_STATUS':
-              // Additional check for valid status? 
-              // validateGovernanceOverride is generic, but here we apply the change.
-              // Assuming newValue is a valid status.
-              updateData = { status: newValue };
-              break;
-          case 'ARCHIVE':
-              updateData = { status: 'ARCHIVED' };
-              break;
-          case 'RESTORE':
-              updateData = { status: 'REGISTERED' };
-              break;
-          case 'OVERRIDE_CLASSIFICATION':
-              if (!newValue /* ID of new classification */) return NextResponse.json({ error: 'Missing new classification ID' }, {status: 400});
-              // Fetch node to verify? 
-              // For simplicity, just update ID.
-              updateData = { classificationNodeId: newValue };
-              break;
-          case 'ASSIGN_OWNER':
-              updateData = { ownerUserId: newValue };
-              break;
-          default:
-              return NextResponse.json({ error: 'Unsupported governance action' }, { status: 400 });
-      }
-
-      // 4. Update Transaction allow with Audit
-      await prisma.$transaction(async (tx) => {
-          await tx.record.update({
-              where: { id },
-              data: updateData
-          });
-
-          await tx.auditLog.create({
-              data: {
-                  action: `GOVERNANCE_${action}`,
-                  recordId: id,
-                  userId: user.id,
-                  actorRole: user.role,
-                  source: 'GOVERNANCE_API',
-                  reason: reason,
-                  oldValue: JSON.stringify(record), // Snapshot old state
-                  newValue: JSON.stringify(updateData) // Snapshot of change
-              }
-          });
-      });
-
-      return NextResponse.json({ success: true, status: updateData.status || 'UPDATED' });
+    });
 
   } catch (error: any) {
-      console.error('Governance Error:', error);
-      return NextResponse.json({ error: 'Governance action failed', details: error.message }, { status: 500 });
+    console.error('[Governance API] POST Error:', error);
+    return NextResponse.json({
+      error: 'Governance action failed'
+    }, { status: 500 });
   }
+}
+
+/**
+ * PATCH - Legacy endpoint (redirects to POST)
+ * Kept for backwards compatibility
+ */
+export async function PATCH(
+  request: NextRequest,
+  props: { params: Promise<{ id: string }> }
+) {
+  // Forward to POST handler
+  return POST(request, props);
 }

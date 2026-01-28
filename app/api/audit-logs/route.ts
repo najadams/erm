@@ -29,8 +29,8 @@ export async function GET(request: NextRequest) {
 
     // Security & Scope Logic using Matrix
     let whereClause: any = {};
-    const canViewFull = hasPermission(role, 'AUDIT_VIEW_FULL');
-    const canViewScoped = hasPermission(role, 'AUDIT_VIEW_SCOPED'); // Dept scope placeholder
+    const canViewFull = hasPermission(role, 'AUDIT_FULL_ACCESS');
+    const canViewScoped = hasPermission(role, 'VIEW_DEPARTMENT_RECORDS'); // Dept scope placeholder
     
     // 1. If explicitly requesting "my activity" -> Strictly filter by actor
     if (scope === 'user') {

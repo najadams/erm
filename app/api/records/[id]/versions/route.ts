@@ -42,7 +42,7 @@ export async function POST(
     // Additional: "Version Upload" permission might exist.
     // For now, let's assume if you can Edit the record, you can add a version.
     const isOwner = record.ownerUserId === user.id;
-    const canManage = hasPermission(user.role, 'VERIFY_RECORD');
+    const canManage = hasPermission(user.role, 'VERIFY_SUBMISSION');
     
     // Strict Lock: If ARCHIVED or DISPOSED, cannot add version without special permission or restoring first.
     if (['ARCHIVED', 'DISPOSED'].includes(record.status) && !canManage) {

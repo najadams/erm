@@ -4,8 +4,12 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { validateEmail } from '@/lib/validation';
+import { ROLES } from '@/lib/permissions';
 
 export const dynamic = 'force-dynamic';
+
+// Valid roles from the permission system
+const VALID_ROLES = Object.values(ROLES);
 
 // Helper to check admin
 async function isAdmin() {
@@ -19,19 +23,25 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const query = searchParams.get('q');
+  const adminView = searchParams.get('admin') === 'true';
+  const userRole = (session.user as any).role;
 
   // Case 1: Search (Open to all Authenticated Users)
   if (query) {
-      // Return SAFE subset of data for autocomplete
       try {
           const users = await prisma.user.findMany({
               where: {
-                  OR: [
-                      { name: { contains: query, mode: 'insensitive' } },
-                      { email: { contains: query, mode: 'insensitive' } }
+                  AND: [
+                      { NOT: { email: { startsWith: 'deleted_' } } }, // Exclude soft-deleted
+                      {
+                          OR: [
+                              { name: { contains: query, mode: 'insensitive' } },
+                              { email: { contains: query, mode: 'insensitive' } }
+                          ]
+                      }
                   ]
               },
-              select: { id: true, name: true, email: true, department: { select: { name: true } } },
+              select: { id: true, name: true, email: true, department: { select: { id: true, name: true } } },
               take: 10
           });
           return NextResponse.json(users);
@@ -40,13 +50,44 @@ export async function GET(request: NextRequest) {
       }
   }
 
-  // Case 2: List (Autocomplete/Default)
-  // Allow all authenticated users to get a default list (e.g. recent or alphabetical)
+  // Case 2: Admin Full List (for user management)
+  if (adminView && userRole === 'ADMIN') {
+      try {
+          const users = await prisma.user.findMany({
+              where: {
+                  NOT: { email: { startsWith: 'deleted_' } } // Exclude soft-deleted
+              },
+              select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  role: true,
+                  clearanceLevel: true,
+                  departmentId: true,
+                  department: { select: { id: true, name: true } },
+                  accountExpiresAt: true,
+                  groups: { select: { id: true, name: true, type: true } },
+                  createdAt: true,
+                  _count: { select: { records: true, ownedProjects: true } }
+              },
+              orderBy: { name: 'asc' }
+          });
+          return NextResponse.json(users);
+      } catch (error) {
+          console.error('Admin user list error:', error);
+          return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
+      }
+  }
+
+  // Case 3: Default List (for autocomplete/selection)
   try {
      const users = await prisma.user.findMany({
-       select: { id: true, name: true, email: true, department: { select: { name: true } } },
+       where: {
+           NOT: { email: { startsWith: 'deleted_' } }
+       },
+       select: { id: true, name: true, email: true, department: { select: { id: true, name: true } } },
        orderBy: { name: 'asc' },
-       take: 20
+       take: 50
      });
      return NextResponse.json(users);
   } catch (error) {
@@ -59,14 +100,20 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { email, name, password, role, clearanceLevel, groupIds } = body;
+    const { email, name, password, role, clearanceLevel, groupIds, departmentId, accountExpiresAt } = body;
 
     if (!email || !password || !name) {
-      return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+      return NextResponse.json({ error: 'Name, email and password are required' }, { status: 400 });
     }
 
     if (!validateEmail(email)) {
       return NextResponse.json({ error: 'Invalid email format' }, { status: 400 });
+    }
+
+    // Validate role
+    const userRole = role || 'USER';
+    if (!VALID_ROLES.includes(userRole)) {
+      return NextResponse.json({ error: `Invalid role. Valid roles: ${VALID_ROLES.join(', ')}` }, { status: 400 });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -76,12 +123,18 @@ export async function POST(request: NextRequest) {
         email,
         name,
         password: hashedPassword,
-        role: role || 'USER',
+        role: userRole,
         clearanceLevel: clearanceLevel ? parseInt(clearanceLevel) : 1,
-        groups: groupIds ? {
+        departmentId: departmentId || null,
+        accountExpiresAt: accountExpiresAt ? new Date(accountExpiresAt) : null,
+        groups: groupIds?.length ? {
             connect: groupIds.map((id: string) => ({ id }))
         } : undefined
       },
+      include: {
+        department: { select: { id: true, name: true } },
+        groups: { select: { id: true, name: true, type: true } }
+      }
     });
 
     const { password: _, ...userWithoutPassword } = user;
@@ -100,13 +153,23 @@ export async function PATCH(request: NextRequest) {
 
     try {
         const body = await request.json();
-        const { id, role, clearanceLevel, groupIds } = body;
-        
-        if (!id) return NextResponse.json({ error: 'Missing User ID' }, {status: 400});
+        const { id, name, role, clearanceLevel, groupIds, departmentId, accountExpiresAt } = body;
+
+        if (!id) return NextResponse.json({ error: 'Missing User ID' }, { status: 400 });
+
+        // Validate role if provided
+        if (role && !VALID_ROLES.includes(role)) {
+            return NextResponse.json({ error: `Invalid role. Valid roles: ${VALID_ROLES.join(', ')}` }, { status: 400 });
+        }
 
         const updateData: any = {};
+        if (name !== undefined) updateData.name = name;
         if (role) updateData.role = role;
         if (clearanceLevel !== undefined) updateData.clearanceLevel = parseInt(clearanceLevel);
+        if (departmentId !== undefined) updateData.departmentId = departmentId || null;
+        if (accountExpiresAt !== undefined) {
+            updateData.accountExpiresAt = accountExpiresAt ? new Date(accountExpiresAt) : null;
+        }
         if (groupIds) {
             updateData.groups = {
                 set: groupIds.map((gid: string) => ({ id: gid }))
@@ -116,9 +179,12 @@ export async function PATCH(request: NextRequest) {
         const user = await prisma.user.update({
             where: { id },
             data: updateData,
-            include: { groups: true }
+            include: {
+                department: { select: { id: true, name: true } },
+                groups: { select: { id: true, name: true, type: true } }
+            }
         });
-        
+
         const { password: _, ...safeUser } = user;
         return NextResponse.json(safeUser);
     } catch (error) {
@@ -154,11 +220,10 @@ export async function DELETE(request: NextRequest) {
         }
 
         // Soft delete: Mark email as deleted to prevent reuse
-        // Note: User model doesn't have isActive field, so we rely on email prefix
         await prisma.user.update({
             where: { id },
             data: {
-                email: `deleted_${Date.now()}_${user.email}` // Prevent email reuse, marks as deleted
+                email: `deleted_${Date.now()}_${user.email}`
             }
         });
 

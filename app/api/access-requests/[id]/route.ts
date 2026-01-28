@@ -20,32 +20,32 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
     }
 
-    const accessRequest = await prisma.accessRequest.update({
+    // Note: This endpoint handles AccountRequest (user registration requests)
+    // For record/company access requests, use /api/records/[id]/access-request
+    const accountRequest = await prisma.accountRequest.update({
         where: { id },
         data: { status }
     });
 
     if (status === 'APPROVED') {
         // Create the user automatically
-        // Generate a random temp password if not provided? 
-        // For MVP, we'll set a default temp password "welcome123"
         const tempPassword = await bcrypt.hash("welcome123", 10);
-        
+
         // Check if user exists just in case
-        const existingUser = await prisma.user.findUnique({ where: { email: accessRequest.email }});
+        const existingUser = await prisma.user.findUnique({ where: { email: accountRequest.email }});
         if (!existingUser) {
             await prisma.user.create({
                 data: {
-                    email: accessRequest.email,
-                    name: accessRequest.name,
+                    email: accountRequest.email,
+                    name: accountRequest.name,
                     password: tempPassword,
-                    role: 'STAFF'
+                    role: 'CONTRIBUTOR'  // Default to CONTRIBUTOR role
                 }
             });
         }
     }
 
-    return NextResponse.json(accessRequest);
+    return NextResponse.json(accountRequest);
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: 'Failed to update request' }, { status: 500 });

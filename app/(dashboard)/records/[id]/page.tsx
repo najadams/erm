@@ -382,7 +382,7 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
 
         <Grid container spacing={3}>
             {/* 2. Left Panel (Governance & Control) */}
-            <Grid item xs={12} md={3}>
+            <Grid size={{ xs: 12, md: 3 }}>
                 <Stack spacing={3}>
                     {/* Governance Controls */}
                     <Card variant="outlined">
@@ -504,7 +504,7 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
             </Grid>
 
             {/* 3. Center Main (Viewer & Tabs) */}
-            <Grid item xs={12} md={9}>
+            <Grid size={{ xs: 12, md: 9 }}>
                  <Paper sx={{ mb: 3, p: 2, height: '500px', bgcolor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       {/* Document Viewer Placeholder */}
                       <Box sx={{ textAlign: 'center' }}>

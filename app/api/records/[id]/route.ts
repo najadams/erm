@@ -299,7 +299,7 @@ export async function DELETE(
 
         // 3. Permission Checks for Drafts/Submitted
         const isOwner = record.ownerUserId === userId;
-        const canDelete = hasPermission(userRole, 'WORKSPACE_DELETE_OWN_DRAFT');
+        const canDelete = hasPermission(userRole, 'WORKSPACE_DELETE_DRAFT');
         const isAdmin = hasPermission(userRole, 'MANAGE_USERS'); // Proxy for Admin power, or check specific DELETE perm
 
         if (record.status === 'DRAFT') {

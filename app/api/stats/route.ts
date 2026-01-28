@@ -34,9 +34,10 @@ export async function GET(request: NextRequest) {
         }
     });
 
-    // PENDING here refers to "Pending Disposition" for Admins, or "Drafts" for users.
-    const pendingDocs = isAdmin 
-        ? await prisma.record.count({ where: { status: 'READY_FOR_DISPO' } })
+    // PENDING: For Admins = records pending verification (SUBMITTED)
+    // For users = their own drafts
+    const pendingDocs = isAdmin
+        ? await prisma.record.count({ where: { status: 'SUBMITTED' } })
         : await prisma.record.count({ where: { status: 'DRAFT', ownerUserId: user.id } });
 
     const response: any = {

@@ -329,7 +329,13 @@ model Record {
   retentionPolicy   RetentionPolicy? @relation(fields: [retentionPolicyId], references: [id])
   dispositionDate   DateTime?        // Calculated: createdAt + policy.duration
   
-  isLegalHold       Boolean          @default(false) // Optimized flag
+  // Governance Locks (orthogonal to lifecycle status)
+  isLocked          Boolean          @default(false) // Prevents content/metadata edits
+  lockedAt          DateTime?        // When locked
+  lockedById        String?          // Who locked it
+  lockedReason      String?          // Why locked (governance justification)
+
+  isLegalHold       Boolean          @default(false) // Optimized flag - supersedes isLocked
   legalHolds        RecordLegalHold[]
 
   // Versioning
@@ -598,9 +604,10 @@ enum RecordStatus {
   DRAFT
   SUBMITTED
   REGISTERED
-  LOCKED
   ARCHIVED
 }
+// Note: LOCKED removed from enum - now represented by isLocked boolean on Record
+// This allows a REGISTERED record to be locked/unlocked without changing lifecycle stage
 
 model ApiKey {
   id          String   @id @default(uuid())

@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
             ]
           },
           ...(classificationNodeId ? [{ classificationNodeId }] : []), 
-          { status: 'ACTIVE' } // Only link to active records?
+          { status: 'REGISTERED' } // Only link to registered records
         ]
       },
       select: {

@@ -78,14 +78,14 @@ async function run() {
         // RECORDS
         // 1. Dept A Record
         const recDeptA = await prisma.record.create({
-            data: { title: 'Dept A Public Record', status: 'ACTIVE', departmentId: deptA.id, ownerUserId: userA.id }
+            data: { title: 'Dept A Public Record', status: 'REGISTERED', departmentId: deptA.id, ownerUserId: userA.id }
         });
 
         // 2. Project X Record (Linked to Dept A but Project X overrides?)
         const recProjX = await prisma.record.create({
             data: { 
                 title: 'Project X Record', 
-                status: 'ACTIVE', 
+                status: 'REGISTERED', 
                 departmentId: deptA.id, 
                 projectId: projectX.id, 
                 ownerUserId: userA.id 
@@ -96,7 +96,7 @@ async function run() {
         const recSecret = await prisma.record.create({
             data: {
                 title: 'Top Secret Record',
-                status: 'ACTIVE',
+                status: 'REGISTERED',
                 departmentId: deptA.id,
                 classificationNodeId: topSecretNode.id,
                 ownerUserId: userSecret.id

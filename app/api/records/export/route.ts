@@ -24,10 +24,11 @@ export async function POST(request: NextRequest) {
         }
 
         // 1. Fetch Records
+        // Note: metadata is now a JSON field on Record, not a relation
         const records = await prisma.record.findMany({
             where: { id: { in: recordIds } },
             include: {
-                metadata: { include: { metadataField: true } },
+                classificationNode: true,
                 versions: { orderBy: { versionNumber: 'desc' }, take: 1 } // Get latest
             }
         });

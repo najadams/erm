@@ -51,7 +51,7 @@ export default function VerificationPage() {
     if (status === 'authenticated') {
       const role = (session?.user as any)?.role;
       // Client-side role check (Security also on API)
-      if (hasPermission(role, 'VERIFY_RECORD')) {
+      if (hasPermission(role, 'VERIFY_SUBMISSION')) {
           fetchQueue();
       } else {
           setError("Access Denied: You do not have permission to verify records.");

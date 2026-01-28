@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { useRouter, useSearchParams } from 'next/navigation'; // Added useSearchParams
+import CircularProgress from '@mui/material/CircularProgress';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 
 import Autocomplete from '@mui/material/Autocomplete';
@@ -21,11 +22,20 @@ import AccessControl from '@/components/upload/AccessControl';
 import ComplianceControl from '@/components/upload/ComplianceControl';
 import ReviewConfirm from '@/components/upload/ReviewConfirm';
 import VersioningControl, { Record } from '@/components/upload/VersioningControl';
-
-
-
-
+// Wrapper with Suspense for useSearchParams
 export default function UploadPage() {
+  return (
+    <Suspense fallback={
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    }>
+      <UploadPageContent />
+    </Suspense>
+  );
+}
+
+function UploadPageContent() {
   const { data: session } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();

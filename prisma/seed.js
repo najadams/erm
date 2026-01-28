@@ -10,7 +10,6 @@ async function main() {
   // 0. Clean up (Order matters due to FKs)
   // Be careful with deleteMany in production!
 
-  await prisma.recordMetadata.deleteMany()
   await prisma.recordVersion.deleteMany()
   await prisma.auditLog.deleteMany()
   await prisma.recordAccess.deleteMany()
@@ -426,7 +425,7 @@ async function main() {
     const invRecord = await prisma.record.create({
       data: {
         title: 'Q4 Server Payment',
-        status: 'ACTIVE',
+        status: 'REGISTERED',
         classificationNodeId: invNode.id,
         recordTypeId: invRt ? invRt.id : undefined, // Compatibility
         templateVersion: 1,
@@ -461,7 +460,7 @@ async function main() {
     const contractRecord = await prisma.record.create({
       data: {
         title: 'Employment Agreement - John Doe',
-        status: 'ACTIVE',
+        status: 'REGISTERED',
         classificationNodeId: cntNode.id,
         recordTypeId: cntRt ? cntRt.id : undefined,
         templateVersion: 1,

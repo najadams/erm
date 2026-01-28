@@ -1,14 +1,48 @@
-import { prisma } from '@/lib/prisma';
-import { User, Record, AccessLevel, AccessType, Prisma } from '@prisma/client';
-import { ROLES, EVERYONE_GROUP_ID } from '@/lib/permissions';
-
-export type Action = 'VIEW' | 'COMMENT' | 'EDIT_METADATA' | 'EDIT_CONTENT' | 'GOVERNANCE' | 'DELETE' | 'FULL';
-
 /**
- * Access Control Service (ACS)
+ * ACCESS CONTROL SERVICE (ACS)
+ *
  * Centralized authority for all permission and visibility checks.
- * Unifies List (Search) and Single-Record security logic.
+ * Implements a tiered access model:
+ *
+ * 1. DISCOVERY - Can see record exists, view metadata (title, classification, dates)
+ * 2. CONTENT - Can view actual document content
+ * 3. EDIT - Can modify metadata or content
+ * 4. GOVERNANCE - Can perform governance actions (lock, archive, etc.)
+ *
+ * Project Membership Access Policy:
+ * - Project membership grants DISCOVERY access only by default
+ * - Content access requires: (ProjectMember) AND (Clearance >= Security) AND
+ *   (ExplicitRecordPermission OR DepartmentScope)
  */
+
+import { prisma } from '@/lib/prisma';
+import { AccessLevel, AccessType, Prisma } from '@prisma/client';
+import { ROLES, EVERYONE_GROUP_ID, hasClearance } from '@/lib/permissions';
+
+// =============================================================================
+// TYPES
+// =============================================================================
+
+export type Action =
+  | 'DISCOVERY'      // See existence + metadata only
+  | 'VIEW'           // Full content view
+  | 'COMMENT'        // Add comments
+  | 'EDIT_METADATA'  // Modify metadata
+  | 'EDIT_CONTENT'   // Modify files/content
+  | 'GOVERNANCE'     // Governance actions
+  | 'DELETE'         // Delete record
+  | 'FULL';          // All permissions
+
+export interface AccessCheckResult {
+  allowed: boolean;
+  reason?: string;
+  accessLevel?: AccessLevel;
+}
+
+// =============================================================================
+// ACCESS CONTROL SERVICE
+// =============================================================================
+
 export class ACS {
 
   /**
@@ -16,157 +50,264 @@ export class ACS {
    * This is the single source of truth for "Can I...?"
    */
   static async evaluate(userId: string, recordId: string, action: Action): Promise<boolean> {
+    const result = await this.evaluateWithReason(userId, recordId, action);
+    return result.allowed;
+  }
+
+  /**
+   * Evaluates access with detailed reasoning (for debugging/audit)
+   */
+  static async evaluateWithReason(
+    userId: string,
+    recordId: string,
+    action: Action
+  ): Promise<AccessCheckResult> {
+    // 1. FETCH USER CONTEXT
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: { groups: true }
     });
 
-    if (!user) return false;
-
-    // Inject Implicit "Everyone" Group
-    // @ts-ignore
-    user.groups.push({ id: EVERYONE_GROUP_ID, name: 'Everyone', type: 'SYSTEM' });
-
-    // Fix for "Department vs Group" disconnect (Same as getWhereClause):
-    if (user.departmentId) {
-        const dept = await prisma.department.findUnique({ 
-            where: { id: user.departmentId },
-            select: { name: true }
-        });
-        if (dept) {
-            const groups = await prisma.group.findMany({
-                where: {
-                    type: 'DEPARTMENT',
-                    OR: [
-                        { name: dept.name },
-                        { name: dept.name.replace(' Department', '') },
-                        { name: `${dept.name} Department` }
-                    ]
-                },
-                select: { id: true, name: true, type: true } // Need structure to match User.groups
-            });
-            // Append to user.groups in memory
-            groups.forEach(g => {
-                // @ts-ignore
-                if (!user.groups.some(ug => ug.id === g.id)) {
-                     // @ts-ignore
-                     user.groups.push({ ...g, createdAt: new Date(), updatedAt: new Date() });
-                }
-            });
-        }
+    if (!user) {
+      return { allowed: false, reason: 'User not found' };
     }
 
-    // 1. GLOBAL ADMIN / AUDITOR OVERRIDES
-    if (user.role === ROLES.ADMIN) return true;
-    if (user.role === ROLES.AUDITOR && ['VIEW', 'COMMENT'].includes(action)) return true;
+    // Build effective group list
+    const userGroupIds = await this.getEffectiveGroups(user);
 
-    // 2. FETCH RESOURCE CONTEXT
+    // 2. GLOBAL ROLE OVERRIDES
+    if (user.role === ROLES.ADMIN) {
+      // Admin can see everything but governance actions require break-glass
+      if (action === 'GOVERNANCE') {
+        return { allowed: true, reason: 'ADMIN with BREAK_GLASS_GOVERNANCE', accessLevel: AccessLevel.FULL };
+      }
+      return { allowed: true, reason: 'ADMIN override', accessLevel: AccessLevel.FULL };
+    }
+
+    if (user.role === ROLES.AUDITOR) {
+      // Auditor can view everything but cannot edit
+      if (['DISCOVERY', 'VIEW', 'COMMENT'].includes(action)) {
+        return { allowed: true, reason: 'AUDITOR read access', accessLevel: AccessLevel.COMMENT };
+      }
+      return { allowed: false, reason: 'AUDITOR is read-only' };
+    }
+
+    // 3. FETCH RECORD CONTEXT
     const record = await prisma.record.findUnique({
       where: { id: recordId },
       include: {
         classificationNode: true,
         access: true,
-        registeredCompany: { select: { id: true, accessPermissions: true } }
+        registeredCompany: {
+          select: { id: true, accessPermissions: true }
+        }
       }
     });
 
-    if (!record) return false;
+    if (!record) {
+      return { allowed: false, reason: 'Record not found' };
+    }
 
-    // 3. ABAC: SECURITY CLEARANCE CHECK (CRITICAL)
-    // Moved above Owner check to ensure Clearance serves as a hard intersection/filter even for owners.
+    // 4. SECURITY CLEARANCE CHECK (Hard Barrier)
     const recordSecurityLevel = record.classificationNode?.securityLevel ?? 1;
     const userClearance = user.clearanceLevel ?? 1;
-    if (userClearance < recordSecurityLevel) {
-      return false; // Hard Fail: Insufficient Clearance
+
+    if (!hasClearance(userClearance, recordSecurityLevel)) {
+      return {
+        allowed: false,
+        reason: `Insufficient clearance: requires ${recordSecurityLevel}, has ${userClearance}`
+      };
     }
 
-    // 4. OWNER ACCESS
-    if (record.ownerUserId === userId) return true;
-
-    // 5. ACL: RECORD-LEVEL OVERRIDES (Highest Priority after Admin/Clearance)
-    // Check for explicit DENY first
-    const explicitDeny = record.access.some((a: any) => 
-      a.accessType === AccessType.DENY && 
-      (a.userId === userId || user.groups.some((g: any) => g.id === a.groupId))
+    // 5. CHECK FOR EXPLICIT DENY (Highest Priority)
+    const explicitDeny = record.access.some((a: any) =>
+      a.accessType === AccessType.DENY &&
+      (a.userId === userId || userGroupIds.includes(a.groupId))
     );
-    if (explicitDeny) return false;
 
-    // Check for explicit ALLOW
-    const explicitAllow = record.access.find((a: any) => 
+    if (explicitDeny) {
+      return { allowed: false, reason: 'Explicit DENY in ACL' };
+    }
+
+    // 6. LOCK STATE CHECK (For edit actions)
+    if (['EDIT_METADATA', 'EDIT_CONTENT', 'DELETE'].includes(action)) {
+      if (record.isLocked) {
+        return { allowed: false, reason: 'Record is locked' };
+      }
+      if (record.isLegalHold) {
+        return { allowed: false, reason: 'Record is under legal hold' };
+      }
+    }
+
+    // 7. OWNER ACCESS (Full ownership grants most permissions)
+    if (record.ownerUserId === userId) {
+      // Owner can do most things except governance
+      if (action === 'GOVERNANCE') {
+        return { allowed: false, reason: 'Owner cannot perform governance on own records' };
+      }
+      return { allowed: true, reason: 'Owner access', accessLevel: AccessLevel.EDIT_CONTENT };
+    }
+
+    // 8. EXPLICIT ACL PERMISSION
+    const explicitAllow = record.access.find((a: any) =>
       a.accessType === AccessType.ALLOW &&
-      (a.userId === userId || user.groups.some((g: any) => g.id === a.groupId))
+      (a.userId === userId || userGroupIds.includes(a.groupId))
     );
 
-    if (explicitAllow) {
-      // Check Level sufficiency
-      if (this.isLevelSufficient(explicitAllow.level, action)) return true;
+    if (explicitAllow && this.isLevelSufficient(explicitAllow.level, action)) {
+      return { allowed: true, reason: 'Explicit ALLOW in ACL', accessLevel: explicitAllow.level };
     }
 
-    // 5b. ACL: COMPANY-LEVEL OVERRIDES
+    // 9. COMPANY-LEVEL ACCESS
     if (record.registeredCompany) {
-         // Check if user has access to this company
-         // Note: We fetched accessPermissions with the record, but we need to filter valid ones.
-         // Prisma relation "accessPermissions" on registeredCompany is CompanyAccess[]
-         const companyAccess = (record.registeredCompany as any).accessPermissions.find((a: any) =>
-            a.accessType === AccessType.ALLOW &&
-            (a.userId === userId || user.groups.some((g: any) => g.id === a.groupId))
-         );
-         
-         if (companyAccess) {
-             if (this.isLevelSufficient(companyAccess.level, action)) return true;
-         }
+      const companyAccess = (record.registeredCompany as any).accessPermissions?.find((a: any) =>
+        a.accessType === AccessType.ALLOW &&
+        (a.userId === userId || userGroupIds.includes(a.groupId))
+      );
+
+      if (companyAccess && this.isLevelSufficient(companyAccess.level, action)) {
+        return { allowed: true, reason: 'Company-level access', accessLevel: companyAccess.level };
+      }
     }
 
-    // 6. PROJECT / CASE MEMBERSHIP
-    // Legacy Group Check
-    if (record.projectId) {
-      const inProject = user.groups.some((g: any) => g.id === record.projectId);
-      if (inProject && ['VIEW', 'COMMENT', 'EDIT_METADATA', 'EDIT_CONTENT'].includes(action)) return true;
-    }
+    // 10. PROJECT MEMBERSHIP (Tiered Access)
+    const projectMembership = await this.checkProjectMembership(userId, recordId);
 
-    // 6b. GIPC PROJECT MEMBERSHIP
-    const projectAccess = await prisma.projectRecord.findFirst({
-        where: {
-            recordId: recordId,
-            project: {
-                members: { some: { userId: userId } }
-            }
-        },
-        include: {
-            project: { select: { status: true } }
+    if (projectMembership.isMember) {
+      // Project membership ONLY grants DISCOVERY by default
+      if (action === 'DISCOVERY') {
+        return { allowed: true, reason: 'Project member - Discovery access', accessLevel: AccessLevel.VIEW };
+      }
+
+      // For content access, need additional authorization
+      // Check if user has department scope or explicit permission
+      const hasDeptScope = record.departmentId && record.departmentId === user.departmentId;
+      const hasExplicitPerm = explicitAllow !== undefined;
+
+      if (hasDeptScope || hasExplicitPerm) {
+        // Project member with additional authorization gets full project access
+        if (projectMembership.projectStatus === 'ON_HOLD') {
+          // Frozen project: read-only
+          if (['VIEW', 'COMMENT'].includes(action)) {
+            return { allowed: true, reason: 'Project member (ON_HOLD) + dept/explicit', accessLevel: AccessLevel.COMMENT };
+          }
+        } else {
+          // Active project: full collaboration
+          if (['VIEW', 'COMMENT', 'EDIT_METADATA'].includes(action)) {
+            return { allowed: true, reason: 'Project member + dept/explicit', accessLevel: AccessLevel.EDIT_METADATA };
+          }
+          if (action === 'EDIT_CONTENT' && projectMembership.role === 'MANAGER') {
+            return { allowed: true, reason: 'Project MANAGER', accessLevel: AccessLevel.EDIT_CONTENT };
+          }
         }
+      }
+
+      // Project member without additional auth: Discovery only
+      // (If we reach here, action is not DISCOVERY since that case returned early)
+      return {
+        allowed: false,
+        reason: 'Project membership grants discovery only. Need department scope or explicit permission for content access.'
+      };
+    }
+
+    // 11. DEPARTMENT VISIBILITY (View/Comment within department)
+    if (record.departmentId && record.departmentId === user.departmentId) {
+      if (['DISCOVERY', 'VIEW', 'COMMENT'].includes(action)) {
+        return { allowed: true, reason: 'Department member', accessLevel: AccessLevel.COMMENT };
+      }
+    }
+
+    // 12. DEFAULT DENY
+    return { allowed: false, reason: 'No access path found' };
+  }
+
+  /**
+   * Check project membership for a user and record
+   */
+  private static async checkProjectMembership(
+    userId: string,
+    recordId: string
+  ): Promise<{ isMember: boolean; role?: string; projectStatus?: string; projectId?: string }> {
+    const projectRecord = await prisma.projectRecord.findFirst({
+      where: {
+        recordId,
+        project: {
+          members: { some: { userId } }
+        }
+      },
+      include: {
+        project: {
+          select: {
+            id: true,
+            status: true,
+            members: {
+              where: { userId },
+              select: { role: true }
+            }
+          }
+        }
+      }
     });
 
-    if (projectAccess) {
-        // If Project is Frozen, only allow Read
-        if (projectAccess.project.status === 'ON_HOLD') {
-             if (['VIEW', 'COMMENT'].includes(action)) return true;
-        } else {
-             // Active Project: Allow VIEW/COMMENT/EDIT
-             if (['VIEW', 'COMMENT', 'EDIT_METADATA', 'EDIT_CONTENT'].includes(action)) return true;
-             // DELETE: Restrict to Manager
-             if (action === 'DELETE') {
-                 const member = await prisma.projectMember.findUnique({
-                     where: { projectId_userId: { projectId: projectAccess.projectId, userId } }
-                 });
-                 if (member?.role === 'MANAGER') return true;
-             }
+    if (!projectRecord) {
+      return { isMember: false };
+    }
+
+    return {
+      isMember: true,
+      role: projectRecord.project.members[0]?.role,
+      projectStatus: projectRecord.project.status,
+      projectId: projectRecord.project.id
+    };
+  }
+
+  /**
+   * Get effective group IDs for a user (including implicit groups)
+   */
+  private static async getEffectiveGroups(user: any): Promise<string[]> {
+    const groupIds = user.groups.map((g: any) => g.id);
+
+    // Always include "Everyone" group
+    groupIds.push(EVERYONE_GROUP_ID);
+
+    // Include department-linked groups
+    if (user.departmentId) {
+      const dept = await prisma.department.findUnique({
+        where: { id: user.departmentId },
+        select: { name: true, linkedGroupId: true }
+      });
+
+      if (dept) {
+        // Add directly linked group
+        if (dept.linkedGroupId && !groupIds.includes(dept.linkedGroupId)) {
+          groupIds.push(dept.linkedGroupId);
         }
+
+        // Find groups by name match (fallback)
+        const deptGroups = await prisma.group.findMany({
+          where: {
+            type: 'DEPARTMENT',
+            OR: [
+              { name: dept.name },
+              { name: dept.name.replace(' Department', '') },
+              { name: `${dept.name} Department` }
+            ]
+          },
+          select: { id: true }
+        });
+
+        deptGroups.forEach(g => {
+          if (!groupIds.includes(g.id)) groupIds.push(g.id);
+        });
+      }
     }
 
-    // 7. DEPARTMENT VISIBILITY
-    // If record belongs to User's Department -> ALLOW VIEW/READ
-    // But usually NOT Edit unless Owner or Project member.
-    if (record.departmentId && record.departmentId === user.departmentId) {
-      if (['VIEW', 'COMMENT'].includes(action)) return true;
-    }
-
-    return false;
+    return groupIds;
   }
 
   /**
    * Generates a Prisma WHERE clause to filter lists efficiently.
-   * MUST match the logic in `evaluate` for 'VIEW'/'READ'.
+   * For list queries, we show records the user can at least DISCOVER.
    */
   static async getWhereClause(userId: string): Promise<Prisma.RecordWhereInput> {
     const user = await prisma.user.findUnique({
@@ -174,128 +315,88 @@ export class ACS {
       include: { groups: true }
     });
 
-    if (!user) return { id: 'nothing' }; // Fail safe
+    if (!user) return { id: 'nothing' };
 
-    // 1. ADMIN sees all
+    // Admin/Auditor see all
     if ([ROLES.ADMIN, ROLES.AUDITOR].includes(user.role as any)) {
-      return {}; 
+      return {};
     }
 
-    const userGroupsIds = user.groups.map((g: any) => g.id);
-    userGroupsIds.push(EVERYONE_GROUP_ID); // Inject Everyone Group ID
-
+    const userGroupIds = await this.getEffectiveGroups(user);
     const userClearance = user.clearanceLevel ?? 1;
-
-    // Fix for "Department vs Group" disconnect:
-    // If user is in a Department, find if there is a corresponding Group (by name) 
-    // and treat the user as a member of that group for READ access.
-    if (user.departmentId) {
-        const dept = await prisma.department.findUnique({ 
-            where: { id: user.departmentId },
-            select: { name: true }
-        });
-        if (dept) {
-            // Find groups with similar name (e.g. "IT" vs "IT Department")
-            // Strict match or strict + " Department" removal?
-            // Let's do loose matching: Group Name == Dept Name OR Group Name + " Department" == Dept Name
-            // Actually, safest is: Group Type = 'DEPARTMENT' AND Name matches.
-            // But let's just find Groups that match the Dept Name exactly or as a substring??
-            // User case: Dept="IT Department", Group="IT" (or "IT Department")?
-            // Let's try exact match first, and trimmed match.
-            const groups = await prisma.group.findMany({
-                where: {
-                    type: 'DEPARTMENT',
-                    OR: [
-                        { name: dept.name },
-                        { name: dept.name.replace(' Department', '') },
-                        { name: `${dept.name} Department` }
-                    ]
-                },
-                select: { id: true }
-            });
-            groups.forEach(g => {
-                if (!userGroupsIds.includes(g.id)) userGroupsIds.push(g.id);
-            });
-        }
-    }
 
     return {
       AND: [
-        // A. Base Visibility (Or conditions)
+        // A. Base Visibility (OR conditions - any path grants discovery)
         {
           OR: [
             // 1. Ownership
             { ownerUserId: userId },
-            
-            // 2. Department Member (View Only)
-            ...(user.departmentId ? [{ departmentId: user.departmentId }] : []),
-            
-            // 3. Project Member (Legacy)
-            { projectId: { in: userGroupsIds } },
 
-            // 4. GIPC Project Membership
+            // 2. Department Member
+            ...(user.departmentId ? [{ departmentId: user.departmentId }] : []),
+
+            // 3. Project Membership (GIPC)
             {
-               projectRecords: {
-                   some: {
-                       project: {
-                           members: { some: { userId: userId } }
-                       }
-                   }
-               }
+              projectRecords: {
+                some: {
+                  project: {
+                    members: { some: { userId } }
+                  }
+                }
+              }
             },
 
-            // 4. Explicit ACL Allow
+            // 4. Legacy Project Group
+            { projectId: { in: userGroupIds } },
+
+            // 5. Explicit ACL Allow
             {
               access: {
                 some: {
                   accessType: 'ALLOW',
                   OR: [
-                    { userId: userId },
-                    { groupId: { in: userGroupsIds } }
+                    { userId },
+                    { groupId: { in: userGroupIds } }
                   ]
                 }
               }
             },
 
-            // 5. Company Access Permissions
+            // 6. Company Access
             {
-               registeredCompany: {
-                   accessPermissions: {
-                       some: {
-                           accessType: 'ALLOW',
-                           OR: [
-                               { userId: userId },
-                               { groupId: { in: userGroupsIds } }
-                           ]
-                       }
-                   }
-               }
+              registeredCompany: {
+                accessPermissions: {
+                  some: {
+                    accessType: 'ALLOW',
+                    OR: [
+                      { userId },
+                      { groupId: { in: userGroupIds } }
+                    ]
+                  }
+                }
+              }
             }
           ]
         },
-        
-        // B. Exclusions (AND conditions)
-        
-        // 1. Security Clearance Enforcement
-        // Record Security Level must be <= User Clearance
-        // Note: We need a relation filter on classificationNode.
-        // If classificationNode is null, we assume Level 1 (Public).
+
+        // B. Security Clearance Filter
         {
-            OR: [
-                { classificationNode: { is: null } },
-                { classificationNode: { securityLevel: { lte: userClearance } } }
-            ]
+          OR: [
+            { classificationNode: { is: null } },
+            { classificationNode: { securityLevel: { lte: userClearance } } }
+          ]
         },
 
-        // 2. Explicit Deny Overrides
+        // C. No Explicit Deny
         {
           NOT: {
             access: {
               some: {
                 accessType: 'DENY',
                 OR: [
-                  { userId: userId },
-                  { groupId: { in: userGroupsIds } }
+                  { userId },
+                  { groupId: { in: userGroupIds } }
                 ]
               }
             }
@@ -305,10 +406,11 @@ export class ACS {
     };
   }
 
-  // Helper: Compare AccessLevels
-  // VIEW < COMMENT < EDIT_METADATA < EDIT_CONTENT < GOVERNANCE < FULL
+  /**
+   * Check if granted access level is sufficient for requested action
+   */
   private static isLevelSufficient(granted: AccessLevel, requested: Action): boolean {
-    const levels = {
+    const levels: Record<AccessLevel, number> = {
       [AccessLevel.VIEW]: 1,
       [AccessLevel.COMMENT]: 2,
       [AccessLevel.EDIT_METADATA]: 3,
@@ -316,9 +418,9 @@ export class ACS {
       [AccessLevel.GOVERNANCE]: 5,
       [AccessLevel.FULL]: 6
     };
-    
-    // Map Action to required level
-    const requirements = {
+
+    const requirements: Record<Action, number> = {
+      'DISCOVERY': 1,
       'VIEW': 1,
       'COMMENT': 2,
       'EDIT_METADATA': 3,
@@ -328,9 +430,37 @@ export class ACS {
       'FULL': 6
     };
 
-    const grantedVal = levels[granted] || 0;
-    const reqVal = requirements[requested] || 99;
+    return (levels[granted] || 0) >= (requirements[requested] || 99);
+  }
 
-    return grantedVal >= reqVal;
+  /**
+   * Utility: Check if user can view content (not just discover)
+   */
+  static async canViewContent(userId: string, recordId: string): Promise<boolean> {
+    return this.evaluate(userId, recordId, 'VIEW');
+  }
+
+  /**
+   * Utility: Check if user can edit record
+   */
+  static async canEdit(userId: string, recordId: string): Promise<boolean> {
+    return this.evaluate(userId, recordId, 'EDIT_METADATA');
+  }
+
+  /**
+   * Utility: Get user's effective access level on a record
+   */
+  static async getAccessLevel(userId: string, recordId: string): Promise<AccessLevel | null> {
+    // Check each level from highest to lowest
+    const levels: Action[] = ['FULL', 'GOVERNANCE', 'EDIT_CONTENT', 'EDIT_METADATA', 'COMMENT', 'VIEW', 'DISCOVERY'];
+
+    for (const action of levels) {
+      const result = await this.evaluateWithReason(userId, recordId, action);
+      if (result.allowed && result.accessLevel) {
+        return result.accessLevel;
+      }
+    }
+
+    return null;
   }
 }

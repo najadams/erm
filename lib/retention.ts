@@ -105,18 +105,21 @@ export async function removeLegalHold(recordId: string, legalHoldId: string, use
 /**
  * Scans for records that are ready for disposition and marks them.
  * Returns the count of processed records.
+ *
+ * Note: In the current model, disposition is handled by archiving.
+ * Future enhancement: Add a pendingDisposition boolean flag for
+ * records awaiting final destruction.
  */
 export async function processDispositionQueue() {
     const now = new Date();
-    
+
     // Find records that:
-    // 1. Are Active or Archived
+    // 1. Are REGISTERED (official records)
     // 2. Have passed their disposition date
     // 3. Are NOT under legal hold
-    // 4. Are NOT already flagged
     const expiredRecords = await prisma.record.findMany({
         where: {
-            status: { in: ['ACTIVE', 'ARCHIVED'] },
+            status: 'REGISTERED',
             dispositionDate: { lte: now },
             isLegalHold: false
         },
@@ -125,18 +128,18 @@ export async function processDispositionQueue() {
 
     if (expiredRecords.length === 0) return 0;
 
-    // Update them to READY_FOR_DISPO
+    // Archive them (disposition = move to archive for final review)
     const result = await prisma.record.updateMany({
         where: {
             id: { in: expiredRecords.map(r => r.id) }
         },
         data: {
-            status: 'READY_FOR_DISPO'
+            status: 'ARCHIVED'
         }
     });
 
-    // TODO: Ideally we should audit log these changes, but updateMany doesn't support it per record easily.
-    // For now, the status change is the evidence.
-    
+    // TODO: Create audit logs for bulk disposition actions
+    // TODO: Implement destruction workflow (separate from archival)
+
     return result.count;
 }
