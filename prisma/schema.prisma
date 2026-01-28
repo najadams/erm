@@ -14,6 +14,7 @@ model User {
   name             String?
   role             String    @default("USER") // ADMIN, USER, AUDITOR, RECORDS_MANAGER
   clearanceLevel   Int       @default(1)      // 1=Public, 5=Top Secret
+  isActive         Boolean   @default(true)   // For soft delete/deactivation
   createdAt        DateTime  @default(now())
   
   // Relations

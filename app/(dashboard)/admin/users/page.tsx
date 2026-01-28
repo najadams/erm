@@ -368,14 +368,16 @@ export default function AdminUsersPage() {
                       variant="outlined"
                     />
                   </TableCell>
-                  <TableCell>{user.department?.name || '-'}</TableCell>
+                  <TableCell>
+                    {user.department?.name || user.groups?.find(g => g.type === 'DEPARTMENT')?.name || '-'}
+                  </TableCell>
                   <TableCell>
                     <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                      {user.groups?.slice(0, 2).map(g => (
+                      {user.groups?.filter(g => g.type !== 'DEPARTMENT').slice(0, 2).map(g => (
                         <Chip key={g.id} label={g.name} size="small" variant="outlined" />
                       ))}
-                      {(user.groups?.length || 0) > 2 && (
-                        <Chip label={`+${(user.groups?.length || 0) - 2}`} size="small" />
+                      {(user.groups?.filter(g => g.type !== 'DEPARTMENT').length || 0) > 2 && (
+                        <Chip label={`+${(user.groups?.filter(g => g.type !== 'DEPARTMENT').length || 0) - 2}`} size="small" />
                       )}
                     </Box>
                   </TableCell>
@@ -396,7 +398,6 @@ export default function AdminUsersPage() {
                         size="small"
                         color="error"
                         onClick={() => handleDeleteClick(user)}
-                        disabled={(user._count?.records || 0) > 0 || (user._count?.ownedProjects || 0) > 0}
                       >
                         <DeleteIcon fontSize="small" />
                       </IconButton>
@@ -607,16 +608,31 @@ export default function AdminUsersPage() {
       <Dialog open={deleteDialog} onClose={() => setDeleteDialog(false)}>
         <DialogTitle>Confirm Delete</DialogTitle>
         <DialogContent>
-          <Typography>
-            Are you sure you want to deactivate user <strong>{userToDelete?.name}</strong> ({userToDelete?.email})?
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            This action will prevent the user from logging in. Their email will be marked as deleted.
-          </Typography>
+            {(userToDelete?._count?.records || 0) > 0 || (userToDelete?._count?.ownedProjects || 0) > 0 ? (
+              <Alert severity="warning" sx={{ mt: 2 }}>
+                <strong>Cannot delete user:</strong> This user owns {userToDelete?._count?.records} records and {userToDelete?._count?.ownedProjects} projects.
+                <br /><br />
+                Please reassign their records and projects to another user before deleting.
+              </Alert>
+            ) : (
+              <>
+                <Typography>
+                  Are you sure you want to deactivate user <strong>{userToDelete?.name}</strong> ({userToDelete?.email})?
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    This action will prevent the user from logging in. Their email will be marked as deleted.
+                </Typography>
+              </>
+            )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialog(false)}>Cancel</Button>
-          <Button variant="contained" color="error" onClick={handleDeleteConfirm}>
+          <Button 
+            variant="contained" 
+            color="error" 
+            onClick={handleDeleteConfirm}
+            disabled={(userToDelete?._count?.records || 0) > 0 || (userToDelete?._count?.ownedProjects || 0) > 0}
+          >
             Deactivate User
           </Button>
         </DialogActions>
