@@ -19,6 +19,7 @@ import Chip from '@mui/material/Chip';
 import FileSelection from '@/components/upload/FileSelection';
 import DocumentMetadata from '@/components/upload/DocumentMetadata';
 import AccessControl from '@/components/upload/AccessControl';
+import SecurityControl from '@/components/upload/SecurityControl';
 import ComplianceControl from '@/components/upload/ComplianceControl';
 import ReviewConfirm from '@/components/upload/ReviewConfirm';
 import VersioningControl, { Record } from '@/components/upload/VersioningControl';
@@ -50,27 +51,33 @@ function UploadPageContent() {
   const [metadata, setMetadata] = useState({
     type: '',
     title: '',
-    description: '', // Added description
+    description: '',
     department: '',
     tags: '',
-    category: '', // Legacy/Internal
+    category: '',
     effectiveDate: '',
     retentionPeriod: '',
     classificationNodeId: '',
     parentId: '',
-    registeredCompanyId: initialCompanyId || '' // New field
+    registeredCompanyId: initialCompanyId || ''
   });
 
   const [access, setAccess] = useState({
     visibility: 'PRIVATE',
     projectId: '',
+    departmentId: '',
     sharedUsers: [] as string[],
     sharedGroups: [] as string[]
   });
 
+  // Security classification (matches schema enums)
+  const [security, setSecurity] = useState({
+    classification: 'OFFICIAL' as 'OFFICIAL' | 'OFFICIAL_CONFIDENTIAL' | 'RESTRICTED' | 'SECRET',
+    sensitivity: 'LOW' as 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL'
+  });
+
   const [compliance, setCompliance] = useState({
-    isLegalHold: false,
-    requiresApproval: false
+    isLegalHold: false
   });
 
   // Mock version info
@@ -98,7 +105,8 @@ function UploadPageContent() {
         .catch(console.error);
   }, []);
 
-  const isUploadBlocked = !uploadsAllowed && userRole !== 'ADMIN';
+  const isUploadBlocked = !uploadsAllowed && !['ADMIN', 'RECORDS_OFFICER'].includes(userRole);
+  const isAdmin = userRole === 'ADMIN';
 
   useEffect(() => {
       if (isUploadBlocked) {
@@ -138,6 +146,10 @@ function UploadPageContent() {
     setCompliance(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleSecurityChange = (field: string, value: string) => {
+    setSecurity(prev => ({ ...prev, [field]: value }));
+  };
+
   const handleUpload = async () => {
     if (!file) return;
     setUploading(true);
@@ -160,17 +172,23 @@ function UploadPageContent() {
     formData.append('visibility', access.visibility);
     formData.append('sharedUsers', JSON.stringify(access.sharedUsers));
     formData.append('sharedGroups', JSON.stringify(access.sharedGroups));
-    
-    // Map Project Context -> groupId (Backend expects primary group as Project)
+
+    // Project context (new Project model)
     if (access.projectId) {
-        formData.append('groupId', access.projectId);
+        formData.append('projectId', access.projectId);
     }
-    
-    // Append Compliance
-    // Append Compliance
+
+    // Department assignment
+    if (access.departmentId) {
+        formData.append('departmentId', access.departmentId);
+    }
+
+    // Security Classification & Sensitivity
+    formData.append('classification', security.classification);
+    formData.append('sensitivity', security.sensitivity);
+
+    // Compliance
     formData.append('isLegalHold', String(compliance.isLegalHold));
-    formData.append('isLegalHold', String(compliance.isLegalHold));
-    formData.append('requiresApproval', String(compliance.requiresApproval));
     
     // Append Parent ID
     if (metadata.parentId) {
@@ -290,14 +308,20 @@ function UploadPageContent() {
                 onDynamicChange={(fieldId, val) => setDynamicValues((prev: any) => ({ ...prev, [fieldId]: val }))}
             />
             
-            <AccessControl 
-                data={access} 
-                onChange={handleAccessChange} 
+            <AccessControl
+                data={access}
+                onChange={handleAccessChange}
             />
-            
-            <ComplianceControl 
-                data={compliance} 
-                onChange={handleComplianceChange} 
+
+            <SecurityControl
+                data={security}
+                onChange={handleSecurityChange}
+            />
+
+            <ComplianceControl
+                data={compliance}
+                onChange={handleComplianceChange}
+                isAdmin={isAdmin}
             />
             
             <ReviewConfirm 

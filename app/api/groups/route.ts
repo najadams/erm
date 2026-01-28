@@ -17,14 +17,14 @@ export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session || !session.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  // Allow all authenticated users to view groups for filtering
-
-
   try {
     const groups = await prisma.group.findMany({
        include: {
          _count: {
             select: { users: true }
+         },
+         users: {
+            select: { id: true, name: true, email: true }
          }
        },
        orderBy: { name: 'asc' }
@@ -45,23 +45,65 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { name, type } = body;
+    const { name, type, userIds } = body;
 
     if (!name || !type) {
       return NextResponse.json({ error: 'Missing name or type' }, { status: 400 });
     }
 
-    const group = await prisma.group.create({
-      data: { name, type }
+    // 1. Transaction to ensure consistency
+    const result = await prisma.$transaction(async (tx) => {
+        // Create the Group
+        const group = await tx.group.create({
+            data: { 
+                name, 
+                type,
+                users: userIds && userIds.length > 0 ? {
+                    connect: userIds.map((id: string) => ({ id }))
+                } : undefined
+            },
+            include: {
+                users: true,
+                _count: { select: { users: true } }
+            }
+        });
+
+        // If type is DEPARTMENT, create corresponding Department entity
+        if (type === 'DEPARTMENT') {
+            // Find default Org
+            const org = await tx.organization.findFirst();
+            if (!org) {
+                throw new Error('No Organization found to link Department to.');
+            }
+
+            // Generate Code (e.g. Finance Team -> FINANCE_TEAM or FIN)
+            // Let's take first 3 chars or acronym if possible, but keep it unique?
+            // Simple approach: Uppercase, Underscore, Random Suffix if needed? 
+            // Better: Name to Uppercase Snake Case.
+            let code = name.toUpperCase().replace(/[^A-Z0-9]/g, '_').substring(0, 10);
+            if (code.length < 2) code = "DEPT_" + Math.floor(Math.random() * 1000);
+
+            // Create Department
+            await tx.department.create({
+                data: {
+                    name: name,
+                    code: code,
+                    organizationId: org.id,
+                    linkedGroupId: group.id
+                }
+            });
+        }
+
+        return group;
     });
 
-    return NextResponse.json(group, { status: 201 });
+    return NextResponse.json(result, { status: 201 });
   } catch (error: any) {
     console.error('[API] POST Group Error:', {
         message: error.message,
         code: error.code,
         stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
-    return NextResponse.json({ error: 'Failed to create group' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to create group: ' + error.message }, { status: 500 });
   }
 }
