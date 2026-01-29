@@ -20,26 +20,50 @@ import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
+import Tabs from '@mui/material/Tabs';
+import Tab from '@mui/material/Tab';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
+import SortIcon from '@mui/icons-material/Sort';
+
+function getSlaChip(createdAt: string): React.ReactNode {
+  const ageMs = Date.now() - new Date(createdAt).getTime();
+  const ageHours = ageMs / (1000 * 60 * 60);
+
+  if (ageHours > 48) {
+    return <Chip label="Overdue" color="error" size="small" sx={{ ml: 1, height: 20, fontSize: '0.65rem' }} />;
+  }
+  if (ageHours > 24) {
+    return <Chip label="Approaching SLA" color="warning" size="small" sx={{ ml: 1, height: 20, fontSize: '0.65rem' }} />;
+  }
+  return null;
+}
 
 export default function AccessRequestDashboard() {
   const [requests, setRequests] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
-  
+  const [statusFilter, setStatusFilter] = React.useState('PENDING');
+  const [sortOrder, setSortOrder] = React.useState<'oldest' | 'newest'>('oldest');
+
   // Action Dialog
   const [selectedRequest, setSelectedRequest] = React.useState<any>(null);
   const [openDialog, setOpenDialog] = React.useState(false);
   const [actionType, setActionType] = React.useState<'APPROVE' | 'REJECT' | null>(null);
   const [reviewNote, setReviewNote] = React.useState('');
   const [approvedLevel, setApprovedLevel] = React.useState('READ');
+  const [expiresAt, setExpiresAt] = React.useState('');
   const [processing, setProcessing] = React.useState(false);
 
   const fetchRequests = async () => {
     setLoading(true);
     try {
-        const res = await fetch('/api/admin/access-requests');
+        const params = new URLSearchParams();
+        if (statusFilter !== 'ALL') params.set('status', statusFilter);
+        params.set('sortBy', sortOrder);
+        const res = await fetch(`/api/admin/access-requests?${params.toString()}`);
         if (res.ok) {
             const data = await res.json();
             setRequests(data);
@@ -53,25 +77,27 @@ export default function AccessRequestDashboard() {
 
   React.useEffect(() => {
     fetchRequests();
-  }, []);
+  }, [statusFilter, sortOrder]);
 
   const handleActionClick = (request: any, type: 'APPROVE' | 'REJECT') => {
       setSelectedRequest(request);
       setActionType(type);
       setReviewNote('');
       setApprovedLevel(request.requestedLevel);
+      setExpiresAt('');
       setOpenDialog(true);
   };
 
   const submitAction = async () => {
       if (!selectedRequest || !actionType) return;
-      
+
       setProcessing(true);
       try {
-          const payload = {
+          const payload: any = {
               action: actionType,
               approvedLevel: actionType === 'APPROVE' ? approvedLevel : undefined,
-              rejectionReason: actionType === 'REJECT' ? reviewNote : undefined
+              rejectionReason: actionType === 'REJECT' ? reviewNote : undefined,
+              expiresAt: actionType === 'APPROVE' && expiresAt ? expiresAt : undefined
           };
 
           const res = await fetch(`/api/admin/access-requests/${selectedRequest.id}`, {
@@ -82,7 +108,7 @@ export default function AccessRequestDashboard() {
 
           if (res.ok) {
               setOpenDialog(false);
-              fetchRequests(); // Refresh list
+              fetchRequests();
           } else {
               const err = await res.json();
               alert(err.error || 'Action failed');
@@ -94,72 +120,138 @@ export default function AccessRequestDashboard() {
       }
   };
 
+  const isPending = statusFilter === 'PENDING';
+
   return (
     <Box sx={{ p: 3 }}>
-        <Typography variant="h4" fontWeight="bold" sx={{ mb: 4 }}>
-            Pending Access Requests
+        <Typography variant="h4" fontWeight="bold" sx={{ mb: 3 }}>
+            Access Requests
         </Typography>
+
+        {/* Filter Tabs + Sort */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Tabs value={statusFilter} onChange={(_, v) => setStatusFilter(v)}>
+                <Tab label="Pending" value="PENDING" />
+                <Tab label="Approved" value="APPROVED" />
+                <Tab label="Rejected" value="REJECTED" />
+                <Tab label="All" value="ALL" />
+            </Tabs>
+
+            <ToggleButtonGroup
+                value={sortOrder}
+                exclusive
+                onChange={(_, v) => { if (v) setSortOrder(v); }}
+                size="small"
+            >
+                <ToggleButton value="oldest">
+                    <SortIcon sx={{ mr: 0.5, fontSize: 16 }} /> Oldest First
+                </ToggleButton>
+                <ToggleButton value="newest">
+                    <SortIcon sx={{ mr: 0.5, fontSize: 16, transform: 'scaleY(-1)' }} /> Newest First
+                </ToggleButton>
+            </ToggleButtonGroup>
+        </Box>
 
         <Paper sx={{ width: '100%', overflow: 'hidden' }}>
             {loading ? (
                 <Box sx={{ p: 4, textAlign: 'center' }}>Loading...</Box>
             ) : requests.length === 0 ? (
-                <Box sx={{ p: 4, textAlign: 'center' }}>No pending requests.</Box>
+                <Box sx={{ p: 4, textAlign: 'center' }}>No {statusFilter !== 'ALL' ? statusFilter.toLowerCase() : ''} requests.</Box>
             ) : (
                 <Table>
                     <TableHead>
                         <TableRow>
                             <TableCell>Date</TableCell>
                             <TableCell>Requester</TableCell>
-                            <TableCell>Record</TableCell>
+                            <TableCell>Resource</TableCell>
+                            <TableCell>Type</TableCell>
                             <TableCell>Requested Level</TableCell>
                             <TableCell>Reason</TableCell>
-                            <TableCell align="right">Actions</TableCell>
+                            {!isPending && <TableCell>Status</TableCell>}
+                            {isPending && <TableCell align="right">Actions</TableCell>}
                         </TableRow>
                     </TableHead>
                     <TableBody>
                         {requests.map((req) => (
                             <TableRow key={req.id}>
-                                <TableCell>{new Date(req.createdAt).toLocaleDateString()}</TableCell>
+                                <TableCell>
+                                    {new Date(req.createdAt).toLocaleDateString()}
+                                    {isPending && getSlaChip(req.createdAt)}
+                                </TableCell>
                                 <TableCell>
                                     <Typography variant="body2" fontWeight="bold">{req.requester?.name}</Typography>
                                     <Typography variant="caption" color="text.secondary">{req.requester?.email}</Typography>
                                     {req.requester?.department && (
-                                        <Box><Chip label={req.requester.department.code} size="small" variant="outlined" sx={{ mt: 0.5, height: 20, fontSize: '0.65rem' }} /></Box>
+                                        <Box><Chip label={req.requester.department.code || req.requester.department.name} size="small" variant="outlined" sx={{ mt: 0.5, height: 20, fontSize: '0.65rem' }} /></Box>
                                     )}
                                 </TableCell>
                                 <TableCell>
-                                    <Typography variant="body2" fontWeight="bold">{req.record?.referenceNumber || 'No Ref'}</Typography>
-                                    <Typography variant="caption" color="text.secondary">{req.record?.title}</Typography>
+                                    {req.record ? (
+                                        <>
+                                            <Typography variant="body2" fontWeight="bold">{req.record.referenceNumber || 'No Ref'}</Typography>
+                                            <Typography variant="caption" color="text.secondary">{req.record.title}</Typography>
+                                        </>
+                                    ) : req.registeredCompany ? (
+                                        <>
+                                            <Typography variant="body2" fontWeight="bold">{req.registeredCompany.name}</Typography>
+                                            <Typography variant="caption" color="text.secondary">{req.registeredCompany.registrationNumber}</Typography>
+                                        </>
+                                    ) : (
+                                        <Typography variant="caption" color="text.secondary">Unknown</Typography>
+                                    )}
+                                </TableCell>
+                                <TableCell>
+                                    <Chip
+                                        label={req.resourceType}
+                                        size="small"
+                                        variant="outlined"
+                                        color={req.resourceType === 'RECORD' ? 'primary' : 'secondary'}
+                                    />
                                 </TableCell>
                                 <TableCell>
                                     <Chip label={req.requestedLevel} color="info" size="small" variant="outlined" />
                                 </TableCell>
-                                <TableCell sx={{ maxWidth: 300 }}>
+                                <TableCell sx={{ maxWidth: 250 }}>
                                     <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{req.reason}</Typography>
                                 </TableCell>
-                                <TableCell align="right">
-                                    <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-                                        <Button 
-                                            size="small" 
-                                            variant="contained" 
-                                            color="success"
-                                            startIcon={<CheckCircleIcon />}
-                                            onClick={() => handleActionClick(req, 'APPROVE')}
-                                        >
-                                            Approve
-                                        </Button>
-                                        <Button 
-                                            size="small" 
-                                            variant="outlined" 
-                                            color="error"
-                                            startIcon={<CancelIcon />}
-                                            onClick={() => handleActionClick(req, 'REJECT')}
-                                        >
-                                            Reject
-                                        </Button>
-                                    </Box>
-                                </TableCell>
+                                {!isPending && (
+                                    <TableCell>
+                                        <Chip
+                                            label={req.status}
+                                            size="small"
+                                            color={req.status === 'APPROVED' ? 'success' : req.status === 'REJECTED' ? 'error' : 'default'}
+                                        />
+                                        {req.reviewedBy && (
+                                            <Typography variant="caption" display="block" color="text.secondary">
+                                                by {req.reviewedBy.name}
+                                            </Typography>
+                                        )}
+                                    </TableCell>
+                                )}
+                                {isPending && (
+                                    <TableCell align="right">
+                                        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                                            <Button
+                                                size="small"
+                                                variant="contained"
+                                                color="success"
+                                                startIcon={<CheckCircleIcon />}
+                                                onClick={() => handleActionClick(req, 'APPROVE')}
+                                            >
+                                                Approve
+                                            </Button>
+                                            <Button
+                                                size="small"
+                                                variant="outlined"
+                                                color="error"
+                                                startIcon={<CancelIcon />}
+                                                onClick={() => handleActionClick(req, 'REJECT')}
+                                            >
+                                                Reject
+                                            </Button>
+                                        </Box>
+                                    </TableCell>
+                                )}
                             </TableRow>
                         ))}
                     </TableBody>
@@ -176,24 +268,39 @@ export default function AccessRequestDashboard() {
                 <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
                     {selectedRequest && (
                         <Typography variant="body2" color="text.secondary">
-                            {selectedRequest.requester?.name} requesting access to <strong>{selectedRequest.record?.referenceNumber}</strong>
+                            {selectedRequest.requester?.name} requesting access to{' '}
+                            <strong>{selectedRequest.record?.referenceNumber || selectedRequest.registeredCompany?.name}</strong>
                         </Typography>
                     )}
 
                     {actionType === 'APPROVE' && (
-                        <FormControl fullWidth size="small">
-                            <InputLabel>Access Level to Grant</InputLabel>
-                            <Select
-                                value={approvedLevel}
-                                label="Access Level to Grant"
-                                onChange={(e) => setApprovedLevel(e.target.value)}
-                            >
-                                <MenuItem value="VIEW">VIEW (Metadata Only)</MenuItem>
-                                <MenuItem value="READ">READ (Download)</MenuItem>
-                                <MenuItem value="EDIT">EDIT</MenuItem>
-                                <MenuItem value="FULL">FULL</MenuItem>
-                            </Select>
-                        </FormControl>
+                        <>
+                            <FormControl fullWidth size="small">
+                                <InputLabel>Access Level to Grant</InputLabel>
+                                <Select
+                                    value={approvedLevel}
+                                    label="Access Level to Grant"
+                                    onChange={(e) => setApprovedLevel(e.target.value)}
+                                >
+                                    <MenuItem value="VIEW">VIEW (Metadata Only)</MenuItem>
+                                    <MenuItem value="COMMENT">COMMENT</MenuItem>
+                                    <MenuItem value="EDIT_METADATA">EDIT METADATA</MenuItem>
+                                    <MenuItem value="EDIT_CONTENT">EDIT CONTENT</MenuItem>
+                                    <MenuItem value="FULL">FULL</MenuItem>
+                                </Select>
+                            </FormControl>
+
+                            <TextField
+                                label="Access Expiry Date (optional)"
+                                type="date"
+                                fullWidth
+                                size="small"
+                                value={expiresAt}
+                                onChange={(e) => setExpiresAt(e.target.value)}
+                                InputLabelProps={{ shrink: true }}
+                                helperText="Leave empty for no expiry"
+                            />
+                        </>
                     )}
 
                     {actionType === 'REJECT' && (
@@ -211,8 +318,8 @@ export default function AccessRequestDashboard() {
             </DialogContent>
             <DialogActions>
                 <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
-                <Button 
-                    variant="contained" 
+                <Button
+                    variant="contained"
                     color={actionType === 'APPROVE' ? 'success' : 'error'}
                     onClick={submitAction}
                     disabled={processing || (actionType === 'REJECT' && !reviewNote)}

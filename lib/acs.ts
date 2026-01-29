@@ -17,7 +17,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { AccessLevel, AccessType, Prisma } from '@prisma/client';
-import { ROLES, EVERYONE_GROUP_ID, hasClearance } from '@/lib/permissions';
+import { ROLES, EVERYONE_GROUP_ID, hasClearance, getRequiredClearance } from '@/lib/permissions';
 
 // =============================================================================
 // TYPES
@@ -119,10 +119,21 @@ export class ACS {
       };
     }
 
-    // 5. CHECK FOR EXPLICIT DENY (Highest Priority)
+    // 4b. CLASSIFICATION ENUM CLEARANCE CHECK
+    const requiredClassClearance = getRequiredClearance(record.classification);
+    if (!hasClearance(userClearance, requiredClassClearance)) {
+      return {
+        allowed: false,
+        reason: `Insufficient clearance for classification ${record.classification}: requires ${requiredClassClearance}, has ${userClearance}`
+      };
+    }
+
+    // 5. CHECK FOR EXPLICIT DENY (Highest Priority, ignore expired)
+    const now = new Date();
     const explicitDeny = record.access.some((a: any) =>
       a.accessType === AccessType.DENY &&
-      (a.userId === userId || userGroupIds.includes(a.groupId))
+      (a.userId === userId || userGroupIds.includes(a.groupId)) &&
+      (!a.expiresAt || new Date(a.expiresAt) > now)
     );
 
     if (explicitDeny) {
@@ -148,21 +159,23 @@ export class ACS {
       return { allowed: true, reason: 'Owner access', accessLevel: AccessLevel.EDIT_CONTENT };
     }
 
-    // 8. EXPLICIT ACL PERMISSION
+    // 8. EXPLICIT ACL PERMISSION (ignore expired grants)
     const explicitAllow = record.access.find((a: any) =>
       a.accessType === AccessType.ALLOW &&
-      (a.userId === userId || userGroupIds.includes(a.groupId))
+      (a.userId === userId || userGroupIds.includes(a.groupId)) &&
+      (!a.expiresAt || new Date(a.expiresAt) > now)
     );
 
     if (explicitAllow && this.isLevelSufficient(explicitAllow.level, action)) {
       return { allowed: true, reason: 'Explicit ALLOW in ACL', accessLevel: explicitAllow.level };
     }
 
-    // 9. COMPANY-LEVEL ACCESS
+    // 9. COMPANY-LEVEL ACCESS (ignore expired grants)
     if (record.registeredCompany) {
       const companyAccess = (record.registeredCompany as any).accessPermissions?.find((a: any) =>
         a.accessType === AccessType.ALLOW &&
-        (a.userId === userId || userGroupIds.includes(a.groupId))
+        (a.userId === userId || userGroupIds.includes(a.groupId)) &&
+        (!a.expiresAt || new Date(a.expiresAt) > now)
       );
 
       if (companyAccess && this.isLevelSufficient(companyAccess.level, action)) {
@@ -350,53 +363,78 @@ export class ACS {
             // 4. Legacy Project Group
             { projectId: { in: userGroupIds } },
 
-            // 5. Explicit ACL Allow
+            // 5. Explicit ACL Allow (non-expired)
             {
               access: {
                 some: {
                   accessType: 'ALLOW',
-                  OR: [
-                    { userId },
-                    { groupId: { in: userGroupIds } }
+                  AND: [
+                    { OR: [{ userId }, { groupId: { in: userGroupIds } }] },
+                    { OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] }
                   ]
                 }
               }
             },
 
-            // 6. Company Access
+            // 6. Company Access (non-expired)
             {
               registeredCompany: {
                 accessPermissions: {
                   some: {
                     accessType: 'ALLOW',
-                    OR: [
-                      { userId },
-                      { groupId: { in: userGroupIds } }
+                    AND: [
+                      { OR: [{ userId }, { groupId: { in: userGroupIds } }] },
+                      { OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] }
                     ]
                   }
                 }
+              }
+            },
+
+            // 7. OFFICIAL records: discoverable by all authenticated users
+            { classification: 'OFFICIAL' },
+
+            // 8. OFFICIAL_CONFIDENTIAL: discoverable by same department only
+            ...(user.departmentId ? [{
+              AND: [
+                { classification: 'OFFICIAL_CONFIDENTIAL' as any },
+                { departmentId: user.departmentId }
+              ]
+            }] : []),
+
+            // RESTRICTED and SECRET: no catalog visibility (require explicit grant via branches 1-6)
+          ]
+        },
+
+        // B. Security Clearance Filter (classificationNode + classification enum)
+        {
+          AND: [
+            // B1. ClassificationNode security level
+            {
+              OR: [
+                { classificationNode: { is: null } },
+                { classificationNode: { securityLevel: { lte: userClearance } } }
+              ]
+            },
+            // B2. Classification enum clearance
+            {
+              classification: {
+                in: (['OFFICIAL', 'OFFICIAL_CONFIDENTIAL', 'RESTRICTED', 'SECRET'] as const)
+                  .filter(c => userClearance >= getRequiredClearance(c))
               }
             }
           ]
         },
 
-        // B. Security Clearance Filter
-        {
-          OR: [
-            { classificationNode: { is: null } },
-            { classificationNode: { securityLevel: { lte: userClearance } } }
-          ]
-        },
-
-        // C. No Explicit Deny
+        // C. No Explicit Deny (non-expired)
         {
           NOT: {
             access: {
               some: {
                 accessType: 'DENY',
-                OR: [
-                  { userId },
-                  { groupId: { in: userGroupIds } }
+                AND: [
+                  { OR: [{ userId }, { groupId: { in: userGroupIds } }] },
+                  { OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] }
                 ]
               }
             }
@@ -462,5 +500,70 @@ export class ACS {
     }
 
     return null;
+  }
+
+  /**
+   * Batch-compute access levels for a list of records.
+   * Avoids N+1 by fetching user context once and evaluating in-memory.
+   * Records must include `access` relation for ACL checks.
+   */
+  static async computeListAccess(
+    userId: string,
+    records: any[]
+  ): Promise<Map<string, { level: string; canViewContent: boolean }>> {
+    const result = new Map<string, { level: string; canViewContent: boolean }>();
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { groups: true }
+    });
+
+    if (!user) return result;
+
+    const userGroupIds = await this.getEffectiveGroups(user);
+    const now = new Date();
+
+    // Admin/Auditor: full access to everything
+    if ([ROLES.ADMIN, ROLES.AUDITOR].includes(user.role as any)) {
+      for (const record of records) {
+        result.set(record.id, {
+          level: user.role === ROLES.ADMIN ? 'FULL' : 'VIEW',
+          canViewContent: true
+        });
+      }
+      return result;
+    }
+
+    for (const record of records) {
+      // Check ownership
+      if (record.ownerUserId === userId) {
+        result.set(record.id, { level: 'EDIT_CONTENT', canViewContent: true });
+        continue;
+      }
+
+      // Check explicit ACL (non-expired)
+      const explicitAllow = record.access?.find((a: any) =>
+        a.accessType === 'ALLOW' &&
+        (a.userId === userId || userGroupIds.includes(a.groupId)) &&
+        (!a.expiresAt || new Date(a.expiresAt) > now)
+      );
+
+      if (explicitAllow) {
+        result.set(record.id, { level: explicitAllow.level, canViewContent: true });
+        continue;
+      }
+
+      // Check department membership
+      if (record.departmentId && record.departmentId === user.departmentId) {
+        result.set(record.id, { level: 'VIEW', canViewContent: true });
+        continue;
+      }
+
+      // Catalog-only (discovered via classification visibility but no content access)
+      const canRequest = ['OFFICIAL', 'OFFICIAL_CONFIDENTIAL'].includes(record.classification);
+      result.set(record.id, { level: 'DISCOVERY', canViewContent: false, ...( canRequest ? { canRequest: true } : {}) } as any);
+    }
+
+    return result;
   }
 }

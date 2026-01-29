@@ -10,6 +10,7 @@ import { assertTransitionAllowed, LifecycleError } from '@/lib/lifecycle';
 export const dynamic = 'force-dynamic';
 
 import { getAccessibleRecordsClause } from '@/lib/access';
+import { ACS } from '@/lib/acs';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
@@ -143,6 +144,8 @@ export async function GET(request: NextRequest) {
     ]
   };
 
+  const userId = (session.user as any).id;
+
   try {
     const records = await prisma.record.findMany({
       where,
@@ -150,6 +153,7 @@ export async function GET(request: NextRequest) {
       include: {
         user: { select: { name: true, email: true } },
         recordType: { select: { name: true, code: true } },
+        access: true, // Needed for computeListAccess
         classificationNode: {
           include: {
             parent: {
@@ -163,7 +167,23 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    return NextResponse.json(records);
+    // Compute per-record access level and strip sensitive data for catalog-only records
+    const accessMap = await ACS.computeListAccess(userId, records);
+
+    const enriched = records.map(record => {
+      const accessInfo = accessMap.get(record.id);
+      // Remove raw ACL data from response
+      const { access, ...recordWithoutAcl } = record as any;
+
+      if (!accessInfo?.canViewContent) {
+        // Catalog-only: strip metadata and sensitive content
+        const { metadata, ...safe } = recordWithoutAcl;
+        return { ...safe, _accessLevel: 'DISCOVERY', _canRequest: true };
+      }
+      return { ...recordWithoutAcl, _accessLevel: accessInfo.level };
+    });
+
+    return NextResponse.json(enriched);
   } catch (error: any) {
     console.error('Search API Error:', error);
     return NextResponse.json({ error: 'Failed to fetch records', details: error.message }, { status: 500 });

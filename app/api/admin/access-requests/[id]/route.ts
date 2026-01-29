@@ -21,7 +21,7 @@ export async function PATCH(
   if (!await isAdminOrManager()) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
 
   const requestId = params.id;
-  const { action, approvedLevel, rejectionReason } = await request.json(); // action: 'APPROVE' | 'REJECT'
+  const { action, approvedLevel, rejectionReason, expiresAt } = await request.json(); // action: 'APPROVE' | 'REJECT'
 
   if (!['APPROVE', 'REJECT'].includes(action)) {
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
@@ -43,15 +43,31 @@ export async function PATCH(
     const reviewerId = (session?.user as any).id;
 
     if (action === 'REJECT') {
-        const updated = await prisma.accessRequest.update({
-            where: { id: requestId },
-            data: {
-                status: 'REJECTED',
-                rejectionReason,
-                reviewedById: reviewerId,
-                reviewedAt: new Date()
-            }
-        });
+        const [updated] = await prisma.$transaction([
+            prisma.accessRequest.update({
+                where: { id: requestId },
+                data: {
+                    status: 'REJECTED',
+                    rejectionReason,
+                    reviewedById: reviewerId,
+                    reviewedAt: new Date()
+                }
+            }),
+            prisma.auditLog.create({
+                data: {
+                    action: 'ACCESS_REJECTED',
+                    recordId: accessRequest.recordId,
+                    userId: reviewerId,
+                    actorRole: (session?.user as any)?.role,
+                    source: 'API',
+                    newValue: JSON.stringify({
+                        requesterId: accessRequest.requesterId,
+                        requestedLevel: accessRequest.requestedLevel,
+                        rejectionReason
+                    })
+                }
+            })
+        ]);
         return NextResponse.json(updated);
     }
 
@@ -74,6 +90,8 @@ export async function PATCH(
         })
     ];
 
+    const parsedExpiry = expiresAt ? new Date(expiresAt) : undefined;
+
     if (resourceType === 'RECORD' && accessRequest.recordId) {
         transactionSteps.push(
             prisma.recordAccess.create({
@@ -82,7 +100,8 @@ export async function PATCH(
                     userId: accessRequest.requesterId,
                     principalType: 'USER',
                     level: level,
-                    accessType: 'ALLOW'
+                    accessType: 'ALLOW',
+                    expiresAt: parsedExpiry
                 }
             })
         );
@@ -94,7 +113,8 @@ export async function PATCH(
                     userId: accessRequest.requesterId,
                     level: level,
                     accessType: 'ALLOW',
-                    grantedById: reviewerId
+                    grantedById: reviewerId,
+                    expiresAt: parsedExpiry
                 }
             })
         );
@@ -102,9 +122,27 @@ export async function PATCH(
         return NextResponse.json({ error: 'Invalid resource type or missing ID' }, { status: 400 });
     }
 
+    // Audit log
+    transactionSteps.push(
+        prisma.auditLog.create({
+            data: {
+                action: 'ACCESS_APPROVED',
+                recordId: accessRequest.recordId,
+                userId: reviewerId,
+                actorRole: (session?.user as any)?.role,
+                source: 'API',
+                newValue: JSON.stringify({
+                    requesterId: accessRequest.requesterId,
+                    approvedLevel: level,
+                    expiresAt: parsedExpiry
+                })
+            }
+        })
+    );
+
     const results = await prisma.$transaction(transactionSteps);
-    // [updatedRequest, newAccess]
-    
+    // [updatedRequest, newAccess, auditLog]
+
     return NextResponse.json({ request: results[0], access: results[1] });
 
   } catch (error) {

@@ -49,6 +49,7 @@ export default function UploadRecordModal({ open, onClose, onUploadSuccess }: Up
   const [access, setAccess] = useState({
     visibility: 'PRIVATE',
     projectId: '',
+    departmentId: '',
     sharedUsers: [] as string[],
     sharedGroups: [] as string[]
   });
@@ -75,7 +76,7 @@ export default function UploadRecordModal({ open, onClose, onUploadSuccess }: Up
         setMetadata({
             type: '', title: '', description: '', department: '', tags: '', category: '', effectiveDate: '', retentionPeriod: '', classificationNodeId: '', parentId: ''
         });
-        setAccess({ visibility: 'PRIVATE', projectId: '', sharedUsers: [], sharedGroups: [] });
+        setAccess({ visibility: 'PRIVATE', projectId: '', departmentId: '', sharedUsers: [], sharedGroups: [] });
         setCompliance({ isLegalHold: false, requiresApproval: false });
         setVersionInfo(undefined);
         setTemplate(null);

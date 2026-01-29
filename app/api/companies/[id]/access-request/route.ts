@@ -20,13 +20,15 @@ export async function POST(
     return NextResponse.json({ error: 'Reason is required' }, { status: 400 });
   }
 
+  const userId = (session.user as any).id;
+
   try {
     // Check if pending request exists
     const existingRequest = await prisma.accessRequest.findFirst({
       where: {
         registeredCompanyId,
         resourceType: 'COMPANY',
-        requesterId: (session.user as any).id,
+        requesterId: userId,
         status: 'PENDING'
       }
     });
@@ -35,14 +37,42 @@ export async function POST(
       return NextResponse.json({ error: 'You already have a pending request for this company' }, { status: 409 });
     }
 
+    // Cooldown: 7 days after rejection
+    const recentRejection = await prisma.accessRequest.findFirst({
+      where: {
+        registeredCompanyId,
+        resourceType: 'COMPANY',
+        requesterId: userId,
+        status: 'REJECTED',
+        reviewedAt: { gt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+      }
+    });
+    if (recentRejection) {
+      const cooldownEnd = new Date(recentRejection.reviewedAt!.getTime() + 7 * 24 * 60 * 60 * 1000);
+      return NextResponse.json({
+        error: `Request was recently rejected. You can re-request after ${cooldownEnd.toLocaleDateString()}`
+      }, { status: 429 });
+    }
+
     const newRequest = await prisma.accessRequest.create({
       data: {
         resourceType: 'COMPANY',
         registeredCompanyId,
-        requesterId: (session.user as any).id,
+        requesterId: userId,
         reason,
         requestedLevel,
         status: 'PENDING'
+      }
+    });
+
+    // Audit log
+    await prisma.auditLog.create({
+      data: {
+        action: 'ACCESS_REQUESTED',
+        userId,
+        actorRole: (session.user as any).role,
+        source: 'API',
+        newValue: JSON.stringify({ requestedLevel, reason, registeredCompanyId })
       }
     });
 

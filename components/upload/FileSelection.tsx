@@ -190,9 +190,19 @@ export default function FileSelection({
 
   const calculateChecksum = async (file: File): Promise<string> => {
     const buffer = await file.arrayBuffer();
-    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    if (crypto.subtle) {
+      const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+    // Fallback for non-secure contexts (HTTP on LAN devices)
+    // Use a simple hash since crypto.subtle requires HTTPS
+    const bytes = new Uint8Array(buffer);
+    let hash = 0n;
+    for (let i = 0; i < bytes.length; i++) {
+      hash = ((hash << 5n) - hash + BigInt(bytes[i])) & 0xFFFFFFFFFFFFFFFFn;
+    }
+    return hash.toString(16).padStart(16, '0');
   };
 
   const handleFiles = async (files: FileList | null) => {

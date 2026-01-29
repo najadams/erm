@@ -30,6 +30,8 @@ import SecurityIcon from '@mui/icons-material/Security';
 import BusinessIcon from '@mui/icons-material/Business';
 
 import ExtensionIcon from '@mui/icons-material/Extension';
+import SendIcon from '@mui/icons-material/Send';
+import LockOpenIcon from '@mui/icons-material/LockOpen';
 import Collapse from '@mui/material/Collapse';
 
 import { useRouter, usePathname } from 'next/navigation';
@@ -48,7 +50,8 @@ import { ROLES, mapLegacyRole } from '@/lib/permissions';
 const WORKSPACE_NAV: NavItem[] = [
   { label: 'Dashboard', icon: <FolderIcon />, href: '/' }, 
   { label: 'Projects', icon: <BusinessIcon />, href: '/projects' },
-  { label: 'My Uploads', icon: <CloudUploadIcon />, href: '/upload/my-uploads' }, 
+  { label: 'My Uploads', icon: <CloudUploadIcon />, href: '/upload/my-uploads' },
+  { label: 'My Requests', icon: <SendIcon />, href: '/my-requests' },
   { label: 'Pending Verification', icon: <FactCheckIcon />, href: '/upload/verification', requiresRole: [ROLES.ADMIN, ROLES.RECORDS_OFFICER, ROLES.APPROVER] },
 ];
 
@@ -64,6 +67,7 @@ const GOVERNANCE_NAV: NavItem[] = [
 ];
 
 const ADMIN_NAV: NavItem[] = [
+  { label: 'Access Requests', icon: <LockOpenIcon />, href: '/admin/access-requests', requiresRole: [ROLES.ADMIN, ROLES.RECORDS_OFFICER] },
   { label: 'System Health', icon: <AssessmentIcon />, href: '/admin/system-health', requiresRole: [ROLES.ADMIN, ROLES.AUDITOR] },
   { label: 'Registered Companies', icon: <BusinessIcon />, href: '/admin/companies', requiresRole: [ROLES.ADMIN, ROLES.RECORDS_OFFICER] },
   { label: 'System Audit Logs', icon: <SecurityIcon />, href: '/admin/audit', requiresRole: [ROLES.ADMIN, ROLES.AUDITOR] }, 

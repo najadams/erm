@@ -18,6 +18,7 @@ import {
   Permission,
   hasClearance
 } from '@/lib/permissions';
+import { revalidateAccessOnClassificationChange } from '@/lib/accessRevalidation';
 
 // =============================================================================
 // TYPES
@@ -419,6 +420,22 @@ export async function executeGovernanceAction(
 
       return { record: updatedRecord, auditLogId: auditLog.id };
     });
+
+    // Post-transaction: trigger access revalidation on classification changes
+    if (action === 'CHANGE_CLASSIFICATION' && result.record) {
+      // The record's classification enum (OFFICIAL/RESTRICTED/etc.) is the primary
+      // clearance gate. If it changed, revalidate access grants.
+      const oldClassification = record?.classification || 'OFFICIAL';
+      const newClassification = result.record.classification || 'OFFICIAL';
+      if (oldClassification !== newClassification) {
+        const flagged = await revalidateAccessOnClassificationChange(
+          recordId, oldClassification, newClassification, actorId
+        );
+        if (flagged > 0) {
+          console.log(`[Governance] Classification change flagged ${flagged} access grants for review`);
+        }
+      }
+    }
 
     return {
       success: true,

@@ -288,17 +288,41 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
                   </Paper>
                )}
 
+               {/* Request status info */}
+               {existingRequest?.status === 'PENDING' && (
+                   <Paper sx={{ p: 2, width: '100%', maxWidth: 600, bgcolor: 'warning.50', border: '1px solid', borderColor: 'warning.200' }}>
+                       <Typography variant="body2" color="warning.dark">
+                           Your access request is pending review (submitted {new Date(existingRequest.createdAt).toLocaleDateString()}).
+                       </Typography>
+                   </Paper>
+               )}
+               {existingRequest?.status === 'REJECTED' && (
+                   <Paper sx={{ p: 2, width: '100%', maxWidth: 600, bgcolor: 'error.50', border: '1px solid', borderColor: 'error.200' }}>
+                       <Typography variant="body2" color="error.dark">
+                           Request rejected: {existingRequest.rejectionReason || 'No reason provided'}
+                       </Typography>
+                   </Paper>
+               )}
+
                <Box sx={{ display: 'flex', gap: 2 }}>
                    <Button variant="outlined" onClick={() => router.back()}>Go Back</Button>
-                   <Button 
-                        variant={existingRequest ? "outlined" : "contained"} 
-                        color={existingRequest ? "warning" : "primary"}
-                        startIcon={<LockPersonIcon />}
-                        onClick={() => setOpenRequestDialog(true)}
-                        disabled={!!existingRequest}
-                   >
-                       {existingRequest ? `Request ${existingRequest.status}` : "Request Access"}
-                   </Button>
+                   {/* Only show Request Access for OFFICIAL/OFFICIAL_CONFIDENTIAL records.
+                       RESTRICTED/SECRET records require proactive grant by Records Officer. */}
+                   {(!limitedInfo?.classification || ['OFFICIAL', 'OFFICIAL_CONFIDENTIAL'].includes(limitedInfo.classification)) ? (
+                       <Button
+                            variant={existingRequest ? "outlined" : "contained"}
+                            color={existingRequest ? "warning" : "primary"}
+                            startIcon={<LockPersonIcon />}
+                            onClick={() => setOpenRequestDialog(true)}
+                            disabled={!!existingRequest}
+                       >
+                           {existingRequest ? `Request ${existingRequest.status}` : "Request Access"}
+                       </Button>
+                   ) : (
+                       <Typography variant="body2" color="text.secondary" sx={{ alignSelf: 'center' }}>
+                           Contact a Records Officer for access to this document.
+                       </Typography>
+                   )}
                </Box>
 
                <Dialog open={openRequestDialog} onClose={() => setOpenRequestDialog(false)} maxWidth="sm" fullWidth>

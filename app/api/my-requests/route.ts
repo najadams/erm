@@ -5,31 +5,22 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export const dynamic = 'force-dynamic';
 
-async function isAdminOrManager() {
-  const session = await getServerSession(authOptions);
-  const role = (session?.user as any)?.role;
-  return role === 'ADMIN' || role === 'RECORDS_OFFICER' || role === 'RECORDS_MANAGER' || role === 'MANAGER';
-}
-
 export async function GET(request: NextRequest) {
-    if (!await isAdminOrManager()) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    const session = await getServerSession(authOptions);
+    if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+    const userId = (session.user as any).id;
     const searchParams = request.nextUrl.searchParams;
-    const status = searchParams.get('status'); // PENDING, APPROVED, REJECTED, or null for all
-    const sortBy = searchParams.get('sortBy') || 'oldest'; // oldest (urgency) or newest
-    const resourceType = searchParams.get('resourceType'); // RECORD or COMPANY
+    const status = searchParams.get('status');
 
-    const where: any = {};
+    const where: any = { requesterId: userId };
     if (status) where.status = status;
-    if (resourceType) where.resourceType = resourceType;
 
     try {
         const requests = await prisma.accessRequest.findMany({
             where,
+            orderBy: { createdAt: 'desc' },
             include: {
-                requester: {
-                    select: { id: true, name: true, email: true, department: true }
-                },
                 record: {
                     select: { id: true, title: true, referenceNumber: true, classification: true }
                 },
@@ -39,12 +30,12 @@ export async function GET(request: NextRequest) {
                 reviewedBy: {
                     select: { name: true }
                 }
-            },
-            orderBy: { createdAt: sortBy === 'newest' ? 'desc' : 'asc' }
+            }
         });
+
         return NextResponse.json(requests);
     } catch (error) {
-        console.error('List Access Requests Error:', error);
+        console.error('My Access Requests Error:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
