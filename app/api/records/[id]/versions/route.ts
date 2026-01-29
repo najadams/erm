@@ -80,18 +80,21 @@ export async function POST(
 
     const fileName = `${Date.now()}-${file.name.replace(/\s+/g, '_')}`;
 
+    // 5. Determine New Version Number (moved before S3 upload for path construction)
+    const lastVersion = record.versions[0]?.versionNumber || 0;
+    const newVersionNumber = lastVersion + 1;
+
+    // Immutable Path: records/{id}/v{version}/{filename} (matches initial upload structure)
+    const s3Key = `records/${id}/v${newVersionNumber}/${fileName}`;
+
     await s3Client.send(new PutObjectCommand({
         Bucket: BUCKET_NAME,
-        Key: fileName,
+        Key: s3Key,
         Body: buffer,
         ContentType: file.type,
     }));
 
-    const fileUrl = getPublicUrl(fileName);
-
-    // 5. Determine New Version Number
-    const lastVersion = record.versions[0]?.versionNumber || 0;
-    const newVersionNumber = lastVersion + 1;
+    const fileUrl = getPublicUrl(s3Key);
 
     // 6. Transaction: Create Version + Update Record + Audit
     const newVersion = await prisma.$transaction(async (tx: any) => {

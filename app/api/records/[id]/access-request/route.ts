@@ -14,7 +14,7 @@ export async function POST(
   if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const recordId = params.id;
-  const { reason, requestedLevel = 'READ' } = await request.json();
+  const { reason, requestedLevel = 'VIEW' } = await request.json();
 
   if (!reason) {
     return NextResponse.json({ error: 'Reason is required' }, { status: 400 });

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useSession } from 'next-auth/react';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -26,6 +27,7 @@ interface UploadRecordModalProps {
 }
 
 export default function UploadRecordModal({ open, onClose, onUploadSuccess }: UploadRecordModalProps) {
+  const { data: session } = useSession();
   const [activeStep, setActiveStep] = useState(0);
   const [uploading, setUploading] = useState(false);
 
@@ -76,7 +78,8 @@ export default function UploadRecordModal({ open, onClose, onUploadSuccess }: Up
         setMetadata({
             type: '', title: '', description: '', department: '', tags: '', category: '', effectiveDate: '', retentionPeriod: '', classificationNodeId: '', parentId: ''
         });
-        setAccess({ visibility: 'PRIVATE', projectId: '', departmentId: '', sharedUsers: [], sharedGroups: [] });
+        const userDeptId = (session?.user as any)?.departmentId || '';
+        setAccess({ visibility: 'PRIVATE', projectId: '', departmentId: userDeptId, sharedUsers: [], sharedGroups: [] });
         setCompliance({ isLegalHold: false, requiresApproval: false });
         setVersionInfo(undefined);
         setTemplate(null);
@@ -106,6 +109,7 @@ export default function UploadRecordModal({ open, onClose, onUploadSuccess }: Up
     formData.append('sharedUsers', JSON.stringify(access.sharedUsers));
     formData.append('sharedGroups', JSON.stringify(access.sharedGroups));
     if (access.projectId) formData.append('groupId', access.projectId);
+    if (access.departmentId) formData.append('departmentId', access.departmentId);
 
     // Compliance
     formData.append('isLegalHold', String(compliance.isLegalHold));

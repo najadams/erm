@@ -631,7 +631,7 @@ export async function POST(request: NextRequest) {
               
               if (formStatus && ['DRAFT', 'REGISTERED'].includes(formStatus)) {
                   targetStatus = formStatus;
-              } else if (hasPermission(rawUserRole, 'REGISTER_RECORD')) {
+              } else if (hasPermission(rawUserRole, 'REGISTER_RECORD') || rawUserRole === ROLES.ADMIN) {
                   targetStatus = 'REGISTERED';
               }
 

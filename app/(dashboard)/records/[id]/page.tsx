@@ -145,7 +145,20 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
 
   const handleRequestVerification = async (recordId: string) => {
       if(confirm('Submit this record for verification?')) {
-          handleGovernanceAction('CHANGE_STATUS', 'User submission', 'SUBMITTED');
+          // Use standard PATCH for status transition
+          try {
+              const res = await fetch(`/api/records/${id}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ status: 'SUBMITTED' })
+              });
+              if (res.ok) {
+                  window.location.reload();
+              } else {
+                  const data = await res.json();
+                  alert(data.error || 'Submission failed');
+              }
+          } catch(e) { alert('System error'); }
       }
   };
 
@@ -199,14 +212,12 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
          // Or just use the generic request logic if it exists.
          // For now, I'll alert as placeholder or use a generic endpoint if I know it.
          
-         const res = await fetch('/api/access-requests', {
+         const res = await fetch(`/api/records/${id}/access-request`, {
              method: 'POST',
              headers: { 'Content-Type': 'application/json' },
              body: JSON.stringify({
-                 recordId: requestScope === 'RECORD' ? id : undefined,
-                 companyId: requestScope === 'COMPANY' && limitedInfo?.registeredCompany?.id ? limitedInfo.registeredCompany.id : undefined,
-                 level: requestLevel,
-                 reason: requestReason
+                 reason: requestReason,
+                 requestedLevel: requestLevel
              })
          });
          
@@ -362,7 +373,9 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
   };
 
   const currentVersion = record.versions?.[0];
-  const downloadUrl = currentVersion?.filePath || '#';
+  const downloadUrl = currentVersion
+    ? `/api/records/${id}/download${currentVersion.id ? `?versionId=${currentVersion.id}` : ''}`
+    : '#';
   const permissions = record.permissions || { explicit: [], inherited: [] }; // Assume API returns this structure
   
   // Simple check for role/permission
@@ -459,9 +472,9 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
                                     <Button
                                         variant="contained"
                                         color="success"
-                                        onClick={() => {
-                                             handleGovernanceAction('CHANGE_STATUS', 'Registration Approval', 'REGISTERED');
-                                        }}
+                                         onClick={() => {
+                                              handleGovernanceAction('REGISTER', 'Registration Approval');
+                                         }}
                                     >
                                         Register Record
                                     </Button>
@@ -536,7 +549,13 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
                           {(record.canDownload && downloadUrl) ? (
                             <>
                                 <Typography variant="caption" display="block">Viewer Integration Pending</Typography>
-                                <Button startIcon={<DownloadIcon />} href={downloadUrl} target="_blank" sx={{ mt: 2 }}>
+                                <Button
+                                  startIcon={<DownloadIcon />}
+                                  component="a"
+                                  href={downloadUrl}
+                                  download
+                                  sx={{ mt: 2 }}
+                                >
                                     Download {currentVersion?.fileType || 'File'}
                                 </Button>
                             </>
@@ -676,10 +695,11 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
                             label="Access Level"
                             onChange={(e) => setAccessForm({...accessForm, level: e.target.value})}
                         >
-                            <MenuItem value="VIEW">VIEW (Metadata Only)</MenuItem>
-                            <MenuItem value="READ">READ (Download)</MenuItem>
-                            <MenuItem value="EDIT">EDIT (Metadata)</MenuItem>
-                            <MenuItem value="FULL">FULL (Manage)</MenuItem>
+                            <MenuItem value="VIEW">View (Read Only)</MenuItem>
+                            <MenuItem value="COMMENT">Comment</MenuItem>
+                            <MenuItem value="EDIT_METADATA">Edit Metadata</MenuItem>
+                            <MenuItem value="EDIT_CONTENT">Edit Content</MenuItem>
+                            <MenuItem value="FULL">Full Access</MenuItem>
                         </Select>
                     </FormControl>
 

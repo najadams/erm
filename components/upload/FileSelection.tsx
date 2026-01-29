@@ -196,13 +196,18 @@ export default function FileSelection({
       return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     }
     // Fallback for non-secure contexts (HTTP on LAN devices)
-    // Use a simple hash since crypto.subtle requires HTTPS
+    // Simple FNV-1a-like hash since crypto.subtle requires HTTPS
     const bytes = new Uint8Array(buffer);
-    let hash = 0n;
+    let h1 = 0x811c9dc5 >>> 0;
+    let h2 = 0x811c9dc5 >>> 0;
     for (let i = 0; i < bytes.length; i++) {
-      hash = ((hash << 5n) - hash + BigInt(bytes[i])) & 0xFFFFFFFFFFFFFFFFn;
+      if (i % 2 === 0) {
+        h1 = Math.imul(h1 ^ bytes[i], 0x01000193) >>> 0;
+      } else {
+        h2 = Math.imul(h2 ^ bytes[i], 0x01000193) >>> 0;
+      }
     }
-    return hash.toString(16).padStart(16, '0');
+    return h1.toString(16).padStart(8, '0') + h2.toString(16).padStart(8, '0');
   };
 
   const handleFiles = async (files: FileList | null) => {

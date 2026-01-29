@@ -35,7 +35,7 @@
  *    └──────────┘
  */
 
-import { hasPermission } from './permissions';
+import { hasPermission, ROLES } from './permissions';
 
 // Import the enum type from Prisma
 import { RecordStatus } from '@prisma/client';
@@ -94,8 +94,8 @@ export function assertTransitionAllowed(
     if (targetStatus === 'DRAFT') return; // Anyone can create drafts
 
     if (targetStatus === 'REGISTERED') {
-      // BYPASS: Creating directly as Registered requires verification capability
-      if (!hasPermission(userRole, 'REGISTER_RECORD')) {
+      // BYPASS: Creating directly as Registered requires verification capability or ADMIN role
+      if (!hasPermission(userRole, 'REGISTER_RECORD') && userRole !== ROLES.ADMIN) {
         throw new LifecycleError(
           `Role '${userRole}' cannot create records directly in '${targetStatus}' state. Must start as DRAFT.`,
           'INVALID_INITIAL_STATE'
