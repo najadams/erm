@@ -70,10 +70,14 @@ export async function POST(request: NextRequest) {
 
         // If type is DEPARTMENT, create corresponding Department entity
         if (type === 'DEPARTMENT') {
-            // Find default Org
-            const org = await tx.organization.findFirst();
+            // Find or create default Org
+            let org = await tx.organization.findFirst();
             if (!org) {
-                throw new Error('No Organization found to link Department to.');
+                org = await tx.organization.create({
+                    data: {
+                        name: 'Ghana Investment Promotion Centre',
+                    }
+                });
             }
 
             // Generate Code (e.g. Finance Team -> FINANCE_TEAM or FIN)
