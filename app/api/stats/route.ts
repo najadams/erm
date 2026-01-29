@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   }
 
   const user = session.user as any;
-  const isAdmin = user.role === ROLES.ADMIN || user.role === ROLES.RECORDS_OFFICER;
+  const isAdmin = user.role === ROLES.ADMIN || user.role === ROLES.RECORDS_OFFICER || user.role === ROLES.APPROVER;
 
   try {
     const now = new Date();
@@ -34,11 +34,17 @@ export async function GET(request: NextRequest) {
         }
     });
 
-    // PENDING: For Admins = records pending verification (SUBMITTED)
+    // PENDING: For Admins/Officers = all records pending verification (SUBMITTED)
+    // For Approvers = SUBMITTED records in their department
     // For users = their own drafts
-    const pendingDocs = isAdmin
-        ? await prisma.record.count({ where: { status: 'SUBMITTED' } })
-        : await prisma.record.count({ where: { status: 'DRAFT', ownerUserId: user.id } });
+    let pendingDocs: number;
+    if (user.role === ROLES.ADMIN || user.role === ROLES.RECORDS_OFFICER) {
+        pendingDocs = await prisma.record.count({ where: { status: 'SUBMITTED' } });
+    } else if (user.role === ROLES.APPROVER && user.departmentId) {
+        pendingDocs = await prisma.record.count({ where: { status: 'SUBMITTED', departmentId: user.departmentId } });
+    } else {
+        pendingDocs = await prisma.record.count({ where: { status: 'DRAFT', ownerUserId: user.id } });
+    }
 
     const response: any = {
         documents: {

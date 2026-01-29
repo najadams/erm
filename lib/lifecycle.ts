@@ -133,7 +133,7 @@ export function assertTransitionAllowed(
 
   // DRAFT -> REGISTERED (Bypass submission - direct registration)
   if (currentStatus === 'DRAFT' && targetStatus === 'REGISTERED') {
-    if (!hasPermission(userRole, 'REGISTER_RECORD')) {
+    if (!hasPermission(userRole, 'REGISTER_RECORD') && userRole !== ROLES.ADMIN) {
       throw new LifecycleError(
         `Role '${userRole}' cannot bypass verification (DRAFT -> REGISTERED).`,
         'PERMISSION_DENIED'
@@ -153,7 +153,7 @@ export function assertTransitionAllowed(
 
   // SUBMITTED -> REGISTERED (Verification/Approval)
   if (currentStatus === 'SUBMITTED' && targetStatus === 'REGISTERED') {
-    if (!hasPermission(userRole, 'REGISTER_RECORD')) {
+    if (!hasPermission(userRole, 'REGISTER_RECORD') && !hasPermission(userRole, 'VERIFY_SUBMISSION')) {
       throw new LifecycleError(
         `Role '${userRole}' cannot verify and register submissions.`,
         'PERMISSION_DENIED'

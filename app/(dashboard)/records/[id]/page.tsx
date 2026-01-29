@@ -382,6 +382,7 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
   const userRole = (session?.user as any)?.role || 'USER';
   const isAdmin = userRole === 'ADMIN';
   const isRecordsOfficer = userRole === 'RECORDS_OFFICER';
+  const isApprover = userRole === 'APPROVER';
   // Check if user has explicit 'FULL' or 'GOVERNANCE' access or is admin
   // This logic is ideally from API 'capabilities' response, but we approximate here:
   const canManageAccess = isAdmin || permissions.explicit?.some((p: any) => p.userId === (session?.user as any).id && p.level === 'FULL');
@@ -458,17 +459,26 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
                                     </Button>
                                 )}
                                 
-                                {record.status === 'DRAFT' && (
-                                     <Button 
-                                        variant="contained" 
-                                        color="primary" 
+                                {record.status === 'DRAFT' && isAdmin && (
+                                     <Button
+                                        variant="contained"
+                                        color="success"
+                                        onClick={() => handleGovernanceAction('REGISTER', 'Admin direct registration')}
+                                     >
+                                         Register Record
+                                     </Button>
+                                )}
+                                {record.status === 'DRAFT' && !isAdmin && (
+                                     <Button
+                                        variant="contained"
+                                        color="primary"
                                         onClick={() => handleRequestVerification(record.id)}
                                      >
                                          Submit for Registration
                                      </Button>
                                 )}
 
-                                {record.status === 'SUBMITTED' && (isAdmin || isRecordsOfficer) && (
+                                {record.status === 'SUBMITTED' && (isAdmin || isRecordsOfficer || isApprover) && (
                                     <Button
                                         variant="contained"
                                         color="success"

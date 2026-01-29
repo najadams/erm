@@ -25,6 +25,9 @@ async function main() {
   await prisma.classificationNode.deleteMany()
   await prisma.department.deleteMany()
   await prisma.organization.deleteMany()
+  await prisma.projectRecord.deleteMany()
+  await prisma.projectMember.deleteMany()
+  await prisma.project.deleteMany()
   await prisma.user.deleteMany()
   await prisma.group.deleteMany()
 
@@ -90,6 +93,7 @@ async function main() {
   })
   users.push(admin)
 
+/*
   const alice = await prisma.user.upsert({
     where: { email: 'alice@example.com' },
     update: {},
@@ -113,6 +117,7 @@ async function main() {
       groups: { connect: { id: groups['HR'].id } }
     },
   })
+*/
 
   // 4. Define Metadata Fields
   const fields = {}
@@ -411,6 +416,7 @@ async function main() {
   // We use the new logic: creating via Classification Node
   // The API (or manual insertion here) must ensure recordTypeId is also set
   
+/*
   // Ex 1: Invoice (Alice) -> FIN-AP-INV
   const invNode = leafNodesStore['INV']
   if (invNode) {
@@ -480,6 +486,7 @@ async function main() {
       }
     })
   }
+*/
 
 
   console.log('Seeding finished.')

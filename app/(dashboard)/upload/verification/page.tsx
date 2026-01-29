@@ -64,7 +64,7 @@ export default function VerificationPage() {
       if (!confirmDialog.recordId) return;
       
       const { type, recordId, reason } = confirmDialog;
-      const newStatus = type === 'APPROVE' ? 'ACTIVE' : 'DRAFT'; // Reject -> Draft
+      const newStatus = type === 'APPROVE' ? 'REGISTERED' : 'DRAFT'; // Reject -> Draft
 
       setActionLoading(recordId);
       setConfirmDialog({ ...confirmDialog, open: false });
