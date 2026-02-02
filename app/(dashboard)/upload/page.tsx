@@ -65,17 +65,16 @@ function UploadPageContent() {
   });
 
   const [access, setAccess] = useState({
-    visibility: 'PRIVATE',
     projectId: '',
     departmentId: '',
     sharedUsers: [] as string[],
-    sharedGroups: [] as string[]
+    sharedGroups: [] as string[],
+    shareWithAll: false
   });
 
-  // Security classification (matches schema enums)
+  // Security classification (matches schema enum)
   const [security, setSecurity] = useState({
-    classification: 'OFFICIAL' as 'OFFICIAL' | 'OFFICIAL_CONFIDENTIAL' | 'RESTRICTED' | 'SECRET',
-    sensitivity: 'LOW' as 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL'
+    classification: 'OFFICIAL' as 'OFFICIAL' | 'OFFICIAL_CONFIDENTIAL' | 'RESTRICTED' | 'SECRET'
   });
 
   const [compliance, setCompliance] = useState({
@@ -165,9 +164,9 @@ function UploadPageContent() {
     });
     
     // Append Access
-    formData.append('visibility', access.visibility);
     formData.append('sharedUsers', JSON.stringify(access.sharedUsers));
     formData.append('sharedGroups', JSON.stringify(access.sharedGroups));
+    formData.append('shareWithAll', String(access.shareWithAll));
 
     // Project context (new Project model)
     if (access.projectId) {
@@ -179,9 +178,8 @@ function UploadPageContent() {
         formData.append('departmentId', access.departmentId);
     }
 
-    // Security Classification & Sensitivity
+    // Security Classification
     formData.append('classification', security.classification);
-    formData.append('sensitivity', security.sensitivity);
 
     // Compliance
     formData.append('isLegalHold', String(compliance.isLegalHold));

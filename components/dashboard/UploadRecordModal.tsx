@@ -49,11 +49,11 @@ export default function UploadRecordModal({ open, onClose, onUploadSuccess }: Up
   });
 
   const [access, setAccess] = useState({
-    visibility: 'PRIVATE',
     projectId: '',
     departmentId: '',
     sharedUsers: [] as string[],
-    sharedGroups: [] as string[]
+    sharedGroups: [] as string[],
+    shareWithAll: false
   });
 
   const [compliance, setCompliance] = useState({
@@ -79,7 +79,7 @@ export default function UploadRecordModal({ open, onClose, onUploadSuccess }: Up
             type: '', title: '', description: '', department: '', tags: '', category: '', effectiveDate: '', retentionPeriod: '', classificationNodeId: '', parentId: ''
         });
         const userDeptId = (session?.user as any)?.departmentId || '';
-        setAccess({ visibility: 'PRIVATE', projectId: '', departmentId: userDeptId, sharedUsers: [], sharedGroups: [] });
+        setAccess({ projectId: '', departmentId: userDeptId, sharedUsers: [], sharedGroups: [], shareWithAll: false });
         setCompliance({ isLegalHold: false, requiresApproval: false });
         setVersionInfo(undefined);
         setTemplate(null);
@@ -105,9 +105,9 @@ export default function UploadRecordModal({ open, onClose, onUploadSuccess }: Up
     Object.entries(metadata).forEach(([key, value]) => formData.append(key, value));
     
     // Access
-    formData.append('visibility', access.visibility);
     formData.append('sharedUsers', JSON.stringify(access.sharedUsers));
     formData.append('sharedGroups', JSON.stringify(access.sharedGroups));
+    formData.append('shareWithAll', String(access.shareWithAll));
     if (access.projectId) formData.append('groupId', access.projectId);
     if (access.departmentId) formData.append('departmentId', access.departmentId);
 

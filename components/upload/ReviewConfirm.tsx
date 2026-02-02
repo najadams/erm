@@ -67,14 +67,21 @@ export default function ReviewConfirm({ data, onCancel, onUpload, uploading }: R
         <Grid size={{ xs: 12, md: 6 }}>
             <List dense>
                 <ListItem>
-                    <ListItemText primary="Visibility" secondary={access.visibility} />
+                    <ListItemText primary="Access" secondary={
+                        access.shareWithAll ? 'All GIPC Staff' :
+                        (access.sharedUsers.length > 0 || access.sharedGroups.length > 0)
+                            ? `${access.sharedUsers.length} Users, ${access.sharedGroups.length} Groups`
+                            : 'Private (Owner + Admins)'
+                    } />
                 </ListItem>
                 <ListItem>
-                    <ListItemText 
-                        primary="Sharing" 
-                        secondary={access.visibility === 'SHARED' 
-                            ? `${access.sharedUsers.length} Users, ${access.sharedGroups.length} Groups` 
-                            : 'N/A'} 
+                    <ListItemText
+                        primary="Sharing"
+                        secondary={
+                            (access.sharedUsers.length > 0 || access.sharedGroups.length > 0)
+                                ? `${access.sharedUsers.length} Users, ${access.sharedGroups.length} Groups`
+                                : 'None'
+                        }
                     />
                 </ListItem>
                 <ListItem>

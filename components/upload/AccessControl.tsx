@@ -4,15 +4,12 @@ import React, { useState, useEffect } from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Paper from '@mui/material/Paper';
-import Radio from '@mui/material/Radio';
-import RadioGroup from '@mui/material/RadioGroup';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import FormControl from '@mui/material/FormControl';
-import FormLabel from '@mui/material/FormLabel';
 import Autocomplete from '@mui/material/Autocomplete';
 import TextField from '@mui/material/TextField';
 import Chip from '@mui/material/Chip';
 import Divider from '@mui/material/Divider';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Checkbox from '@mui/material/Checkbox';
 
 interface Project {
   id: string;
@@ -40,11 +37,11 @@ interface User {
 
 interface AccessControlProps {
   data: {
-    visibility: string;
     projectId: string;
     departmentId: string;
     sharedUsers: string[];
     sharedGroups: string[];
+    shareWithAll: boolean;
   };
   onChange: (field: string, value: any) => void;
 }
@@ -60,7 +57,6 @@ export default function AccessControl({ data, onChange }: AccessControlProps) {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Fetch all data in parallel
         const [groupsRes, usersRes, projectsRes, deptsRes] = await Promise.all([
           fetch('/api/groups'),
           fetch('/api/users'),
@@ -71,7 +67,6 @@ export default function AccessControl({ data, onChange }: AccessControlProps) {
         if (groupsRes.ok) {
           const groupsData = await groupsRes.json();
           if (Array.isArray(groupsData)) {
-            // Filter out PROJECT type groups (now using dedicated Project model)
             setAvailableGroups(groupsData.filter((g: Group) => g.type !== 'PROJECT'));
           }
         }
@@ -84,7 +79,6 @@ export default function AccessControl({ data, onChange }: AccessControlProps) {
         if (projectsRes.ok) {
           const projectsData = await projectsRes.json();
           if (Array.isArray(projectsData)) {
-            // Only show active projects
             setProjects(projectsData.filter((p: Project) => p.status !== 'CLOSED'));
           }
         }
@@ -105,13 +99,13 @@ export default function AccessControl({ data, onChange }: AccessControlProps) {
 
   return (
     <Paper variant="outlined" sx={{ p: 3, mb: 3 }}>
-      <Typography variant="h6" fontWeight="600" gutterBottom>Access & Visibility</Typography>
+      <Typography variant="h6" fontWeight="600" gutterBottom>Access & Sharing</Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+        Records are private by default (only you and admins can view). Assign a department, project, or share with specific people to grant access. Access is always gated by the recipient's clearance level.
+      </Typography>
 
       {/* Department Assignment */}
       <Box sx={{ mb: 3 }}>
-        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-          Department Assignment
-        </Typography>
         <Autocomplete
           options={departments}
           getOptionLabel={(option) => option.name}
@@ -135,9 +129,6 @@ export default function AccessControl({ data, onChange }: AccessControlProps) {
 
       {/* Project Context */}
       <Box sx={{ mb: 3 }}>
-        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-          Project / Case Context
-        </Typography>
         <Autocomplete
           options={projects}
           getOptionLabel={(option) => `${option.name}${option.referenceNumber ? ` (${option.referenceNumber})` : ''}`}
@@ -159,113 +150,79 @@ export default function AccessControl({ data, onChange }: AccessControlProps) {
 
       <Divider sx={{ my: 2 }} />
 
-      {/* Visibility Scope */}
-      <FormControl component="fieldset" sx={{ mb: 3 }}>
-        <FormLabel component="legend">Visibility Scope</FormLabel>
-        <RadioGroup
-          value={data.visibility}
-          onChange={(e) => onChange('visibility', e.target.value)}
-        >
-          <FormControlLabel
-            value="PRIVATE"
-            control={<Radio />}
-            label={
-              <Box>
-                <Typography variant="body2" fontWeight="500">Private</Typography>
-                <Typography variant="caption" color="text.secondary">Only me + Admins can view</Typography>
-              </Box>
-            }
-          />
-          <FormControlLabel
-            value="DEPARTMENT"
-            control={<Radio />}
-            label={
-              <Box>
-                <Typography variant="body2" fontWeight="500">Department</Typography>
-                <Typography variant="caption" color="text.secondary">All members of the assigned department</Typography>
-              </Box>
-            }
-          />
-          <FormControlLabel
-            value="SHARED"
-            control={<Radio />}
-            label={
-              <Box>
-                <Typography variant="body2" fontWeight="500">Shared</Typography>
-                <Typography variant="caption" color="text.secondary">Specific users and groups I select</Typography>
-              </Box>
-            }
-          />
-          <FormControlLabel
-            value="PUBLIC"
-            control={<Radio />}
-            label={
-              <Box>
-                <Typography variant="body2" fontWeight="500">Organization-wide</Typography>
-                <Typography variant="caption" color="text.secondary">All GIPC staff can view (subject to clearance)</Typography>
-              </Box>
-            }
-          />
-        </RadioGroup>
-      </FormControl>
+      {/* Share with Groups */}
+      <Box sx={{ mb: 2 }}>
+        <Autocomplete
+          multiple
+          options={availableGroups}
+          getOptionLabel={(option) => option.name}
+          value={availableGroups.filter(g => data.sharedGroups.includes(g.id))}
+          onChange={(_, newValue) => {
+            onChange('sharedGroups', newValue.map(v => v.id));
+          }}
+          loading={loading}
+          renderInput={(params) => (
+            <TextField {...params} label="Share with Groups (Optional)" placeholder="Select groups" />
+          )}
+          renderTags={(value, getTagProps) =>
+            value.map((option, index) => {
+              const { key, ...tagProps } = getTagProps({ index });
+              return (
+                <Chip
+                  variant="outlined"
+                  label={option.name}
+                  key={key}
+                  {...tagProps}
+                  color={option.type === 'DEPARTMENT' ? 'primary' : 'default'}
+                />
+              );
+            })
+          }
+        />
+      </Box>
 
-      {/* Shared Users/Groups (only shown when SHARED is selected) */}
-      {data.visibility === 'SHARED' && (
-        <Box sx={{ mt: 2 }}>
-          <Box sx={{ mb: 2 }}>
-            <Autocomplete
-              multiple
-              options={availableGroups}
-              getOptionLabel={(option) => option.name}
-              value={availableGroups.filter(g => data.sharedGroups.includes(g.id))}
-              onChange={(_, newValue) => {
-                onChange('sharedGroups', newValue.map(v => v.id));
-              }}
-              loading={loading}
-              renderInput={(params) => (
-                <TextField {...params} label="Share with Groups" placeholder="Select groups" />
-              )}
-              renderTags={(value, getTagProps) =>
-                value.map((option, index) => {
-                  const { key, ...tagProps } = getTagProps({ index });
-                  return (
-                    <Chip
-                      variant="outlined"
-                      label={option.name}
-                      key={key}
-                      {...tagProps}
-                      color={option.type === 'DEPARTMENT' ? 'primary' : 'default'}
-                    />
-                  );
-                })
-              }
-            />
+      {/* Share with Users */}
+      <Box sx={{ mb: 2 }}>
+        <Autocomplete
+          multiple
+          options={availableUsers}
+          getOptionLabel={(option) => `${option.name} (${option.email})`}
+          value={availableUsers.filter(u => data.sharedUsers.includes(u.id))}
+          onChange={(_, newValue) => {
+            onChange('sharedUsers', newValue.map(v => v.id));
+          }}
+          loading={loading}
+          renderInput={(params) => (
+            <TextField {...params} label="Share with Users (Optional)" placeholder="Select users" />
+          )}
+          renderTags={(value, getTagProps) =>
+            value.map((option, index) => {
+              const { key, ...tagProps } = getTagProps({ index });
+              return (
+                <Chip variant="outlined" label={option.name} key={key} {...tagProps} />
+              );
+            })
+          }
+        />
+      </Box>
+
+      <Divider sx={{ my: 2 }} />
+
+      {/* Share with all GIPC staff */}
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={data.shareWithAll}
+            onChange={(e) => onChange('shareWithAll', e.target.checked)}
+          />
+        }
+        label={
+          <Box>
+            <Typography variant="body2" fontWeight="500">Share with all GIPC staff</Typography>
+            <Typography variant="caption" color="text.secondary">All staff can view this record, subject to their clearance level.</Typography>
           </Box>
-          <Box sx={{ mb: 2 }}>
-            <Autocomplete
-              multiple
-              options={availableUsers}
-              getOptionLabel={(option) => `${option.name} (${option.email})`}
-              value={availableUsers.filter(u => data.sharedUsers.includes(u.id))}
-              onChange={(_, newValue) => {
-                onChange('sharedUsers', newValue.map(v => v.id));
-              }}
-              loading={loading}
-              renderInput={(params) => (
-                <TextField {...params} label="Share with Users" placeholder="Select users" />
-              )}
-              renderTags={(value, getTagProps) =>
-                value.map((option, index) => {
-                  const { key, ...tagProps } = getTagProps({ index });
-                  return (
-                    <Chip variant="outlined" label={option.name} key={key} {...tagProps} />
-                  );
-                })
-              }
-            />
-          </Box>
-        </Box>
-      )}
+        }
+      />
     </Paper>
   );
 }

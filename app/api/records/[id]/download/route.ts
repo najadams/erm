@@ -19,6 +19,7 @@ export async function GET(
 
   const { id } = params;
   const userId = (session.user as any).id;
+  const userRole = (session.user as any).role;
 
   try {
     // Permission check
@@ -48,7 +49,6 @@ export async function GET(
     }
 
     // Extract S3 key from the stored filePath
-    // filePath may be a full URL like http://localhost:9000/uploads/records/... or just the key
     let s3Key = version.filePath;
     const bucketPrefix = `/${BUCKET_NAME}/`;
     const bucketIdx = s3Key.indexOf(bucketPrefix);
@@ -71,8 +71,25 @@ export async function GET(
     // Determine filename for Content-Disposition
     const parts = s3Key.split('/');
     const fileName = parts[parts.length - 1] || 'download';
-    // Strip the timestamp prefix (e.g., "1706000000000-filename.pdf" -> "filename.pdf")
     const cleanName = fileName.replace(/^\d+-/, '');
+
+    // Audit log: FILE_DOWNLOADED (fire-and-forget to not block the download)
+    prisma.auditLog.create({
+      data: {
+        action: 'FILE_DOWNLOADED',
+        recordId: id,
+        userId,
+        actorRole: userRole,
+        source: 'API',
+        newValue: JSON.stringify({
+          versionId: version.id,
+          versionNumber: version.versionNumber,
+          fileName: cleanName,
+          fileType: version.fileType,
+          fileSize: s3Response.ContentLength || null
+        })
+      }
+    }).catch(err => console.error('Failed to log download audit:', err));
 
     // Stream the file back
     const stream = s3Response.Body as ReadableStream;

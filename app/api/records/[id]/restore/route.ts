@@ -83,8 +83,15 @@ export async function POST(
                   userId: user.id,
                   actorRole: user.role,
                   source: 'API',
+                  oldValue: latestVersion ? JSON.stringify({
+                      version: latestVersion.versionNumber,
+                      checksum: latestVersion.checksum,
+                      fileType: latestVersion.fileType
+                  }) : null,
                   newValue: JSON.stringify({
                       restoredFromVersion: targetVersion.versionNumber,
+                      restoredChecksum: targetVersion.checksum,
+                      restoredFileType: targetVersion.fileType,
                       newVersion: newVersionNum
                   })
               }

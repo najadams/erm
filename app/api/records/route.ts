@@ -270,7 +270,6 @@ export async function POST(request: NextRequest) {
 
     // Governance Fields
     const classification = formData.get('classification') as string || 'OFFICIAL';
-    const sensitivity = formData.get('sensitivity') as string || 'LOW';
     const isLegalHold = formData.get('isLegalHold') === 'true';
 
     // Final metadata to be stored - will be mapped from UUID keys to field names
@@ -720,7 +719,6 @@ export async function POST(request: NextRequest) {
 
                   // Governance Fields
                   classification: classification as any,
-                  sensitivity: sensitivity as any,
                   isLegalHold,
 
                   // Metadata (JSONB)
@@ -764,11 +762,11 @@ export async function POST(request: NextRequest) {
               // 4. Access Control (Shared Users & Groups)
               const rawSharedUsers = formData.get('sharedUsers');
               const rawSharedGroups = formData.get('sharedGroups');
-              const visibility = formData.get('visibility') as string;
+              const shareWithAll = formData.get('shareWithAll') === 'true';
 
               let sharedUsers: string[] = [];
               let sharedGroups: string[] = [];
-              
+
               try {
                   if (rawSharedUsers) {
                      sharedUsers = JSON.parse(rawSharedUsers as string);
@@ -777,8 +775,8 @@ export async function POST(request: NextRequest) {
                      sharedGroups = JSON.parse(rawSharedGroups as string);
                   }
 
-                  // Handle Visibility Shortcuts (Organization-Wide)
-                  if (visibility === 'PUBLIC') {
+                  // Share with all GIPC staff (adds Everyone group)
+                  if (shareWithAll) {
                       if (!sharedGroups.includes(EVERYONE_GROUP_ID)) {
                           sharedGroups.push(EVERYONE_GROUP_ID);
                       }

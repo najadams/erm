@@ -96,6 +96,9 @@ export async function POST(
 
     const fileUrl = getPublicUrl(s3Key);
 
+    // Previous version info for audit trail
+    const previousVersion = record.versions[0];
+
     // 6. Transaction: Create Version + Update Record + Audit
     const newVersion = await prisma.$transaction(async (tx: any) => {
         const v = await tx.recordVersion.create({
@@ -110,13 +113,14 @@ export async function POST(
             }
         });
 
-        // Update Record updated_at automatically, but maybe set status back to DRAFT if it was ACTIVE?
-        // Logic: Validating a new version usually requires review.
-        // If it's a "minor" edit, maybe not.
-        // For safety/compliance: If Record is ACTIVE, adding a new version might reset it to SUBMITTED or require Verification?
-        // Let's keep it simple for now: Status remains, but we might want to flag it.
-        // User request didn't specify, so just adding version.
-        
+        // Update parent Record to reflect new version
+        await tx.record.update({
+            where: { id },
+            data: {
+                versionNumber: newVersionNumber,
+            }
+        });
+
         await tx.auditLog.create({
             data: {
                 action: 'UPLOAD_VERSION',
@@ -124,7 +128,19 @@ export async function POST(
                 userId: user.id,
                 actorRole: user.role,
                 source: 'API',
-                newValue: JSON.stringify({ version: newVersionNumber, file: fileName })
+                oldValue: previousVersion ? JSON.stringify({
+                    version: previousVersion.versionNumber,
+                    checksum: previousVersion.checksum,
+                    fileType: previousVersion.fileType
+                }) : null,
+                newValue: JSON.stringify({
+                    version: newVersionNumber,
+                    file: fileName,
+                    checksum: calculatedChecksum,
+                    fileType: file.type,
+                    fileSize: buffer.length,
+                    changeNote: changeNote || null
+                })
             }
         });
 

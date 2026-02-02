@@ -19,24 +19,15 @@ const CLASSIFICATIONS = [
   { value: 'SECRET', label: 'Secret', color: 'error' as const, description: 'Highly sensitive, authorized personnel only' },
 ];
 
-const SENSITIVITIES = [
-  { value: 'LOW', label: 'Low', color: 'success' as const, description: 'Minimal impact if disclosed' },
-  { value: 'MODERATE', label: 'Moderate', color: 'info' as const, description: 'Some impact if disclosed' },
-  { value: 'HIGH', label: 'High', color: 'warning' as const, description: 'Significant impact if disclosed' },
-  { value: 'CRITICAL', label: 'Critical', color: 'error' as const, description: 'Severe impact if disclosed' },
-];
-
 interface SecurityControlProps {
   data: {
     classification: string;
-    sensitivity: string;
   };
   onChange: (field: string, value: string) => void;
 }
 
 export default function SecurityControl({ data, onChange }: SecurityControlProps) {
   const selectedClassification = CLASSIFICATIONS.find(c => c.value === data.classification);
-  const selectedSensitivity = SENSITIVITIES.find(s => s.value === data.sensitivity);
 
   return (
     <Paper variant="outlined" sx={{ p: 3, mb: 3 }}>
@@ -45,52 +36,26 @@ export default function SecurityControl({ data, onChange }: SecurityControlProps
         Assign the appropriate security level based on the document content and Ghana government classification guidelines.
       </Typography>
 
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-        {/* Classification */}
-        <Box sx={{ flex: '1 1 280px' }}>
-          <FormControl fullWidth>
-            <InputLabel>Classification Level</InputLabel>
-            <Select
-              value={data.classification}
-              label="Classification Level"
-              onChange={(e) => onChange('classification', e.target.value)}
-            >
-              {CLASSIFICATIONS.map((cls) => (
-                <MenuItem key={cls.value} value={cls.value}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip label={cls.label} size="small" color={cls.color} sx={{ minWidth: 140 }} />
-                  </Box>
-                </MenuItem>
-              ))}
-            </Select>
-            <FormHelperText>
-              {selectedClassification?.description}
-            </FormHelperText>
-          </FormControl>
-        </Box>
-
-        {/* Sensitivity */}
-        <Box sx={{ flex: '1 1 280px' }}>
-          <FormControl fullWidth>
-            <InputLabel>Sensitivity Level</InputLabel>
-            <Select
-              value={data.sensitivity}
-              label="Sensitivity Level"
-              onChange={(e) => onChange('sensitivity', e.target.value)}
-            >
-              {SENSITIVITIES.map((sens) => (
-                <MenuItem key={sens.value} value={sens.value}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip label={sens.label} size="small" color={sens.color} sx={{ minWidth: 100 }} />
-                  </Box>
-                </MenuItem>
-              ))}
-            </Select>
-            <FormHelperText>
-              {selectedSensitivity?.description}
-            </FormHelperText>
-          </FormControl>
-        </Box>
+      <Box sx={{ maxWidth: 400 }}>
+        <FormControl fullWidth>
+          <InputLabel>Classification Level</InputLabel>
+          <Select
+            value={data.classification}
+            label="Classification Level"
+            onChange={(e) => onChange('classification', e.target.value)}
+          >
+            {CLASSIFICATIONS.map((cls) => (
+              <MenuItem key={cls.value} value={cls.value}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Chip label={cls.label} size="small" color={cls.color} sx={{ minWidth: 140 }} />
+                </Box>
+              </MenuItem>
+            ))}
+          </Select>
+          <FormHelperText>
+            {selectedClassification?.description}
+          </FormHelperText>
+        </FormControl>
       </Box>
     </Paper>
   );

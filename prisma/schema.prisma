@@ -288,7 +288,6 @@ model Record {
   status        RecordStatus   @default(DRAFT)
   
   classification Classification @default(OFFICIAL)
-  sensitivity    Sensitivity    @default(LOW)
   
   // Context & Snapshots (Record-Centric Architecture)
   contextType          String?  // COMPANY, PROJECT, NONE
@@ -759,13 +758,6 @@ model ProjectRecord {
   addedAt         DateTime @default(now())
   
   @@unique([projectId, recordId])
-}
-
-enum Sensitivity {
-  LOW
-  MODERATE
-  HIGH
-  CRITICAL
 }
 
 enum Classification {
