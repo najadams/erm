@@ -126,6 +126,13 @@ export async function PATCH(request: NextRequest) {
         accountExpiresAt: accountExpiresAt ? new Date(accountExpiresAt) : null,
     };
 
+    // 1.5 Handle Password Update (if provided)
+    const { password } = body;
+    if (password && typeof password === 'string' && password.trim().length > 0) {
+        const hashedPassword = await bcrypt.hash(password, 10);
+        updateData.password = hashedPassword;
+    }
+
     // 2. Handle Groups (if provided)
     if (groupIds && Array.isArray(groupIds)) {
         // Always ensure Everyone group is included if we are resetting groups?
