@@ -57,23 +57,12 @@ export default function BoardView({ refreshTrigger }: BoardViewProps) {
     if (!over) return;
 
     const projectId = active.id as string;
-    const newStatusGroup = over.id as string;
+    const newStatus = over.id as string; // The column ID is now the Status ID (e.g. 'DRAFT', 'ACTIVE')
     
     // Find current project
     const project = projects.find(p => p.id === projectId);
     if (!project) return;
-
-    // Check if status actually needs changing
-    // Map Droppable IDs to actual Statuses (simplified for "Main" status of that group)
-    // Draft -> DRAFT
-    // In Review -> SUBMITTED (or IN_REVIEW?) -> Let's default to IN_REVIEW for drag drop
-    // Active -> ACTIVE
-
-    let newStatus = '';
-    if (newStatusGroup === 'draft') newStatus = 'DRAFT';
-    else if (newStatusGroup === 'review') newStatus = 'IN_REVIEW';
-    else if (newStatusGroup === 'active') newStatus = 'ACTIVE';
-    else return;
+    if (project.status === newStatus) return; // No change
 
     // Optimistic Update
     setProjects(prev => prev.map(p => {
@@ -97,19 +86,36 @@ export default function BoardView({ refreshTrigger }: BoardViewProps) {
     }
   };
   
-  // Filter projects into columns
-  const draftProjects = projects.filter(p => p.status === 'DRAFT');
-  const reviewProjects = projects.filter(p => ['SUBMITTED', 'IN_REVIEW'].includes(p.status));
-  const activeProjects = projects.filter(p => ['APPROVED', 'ACTIVE'].includes(p.status));
+  };
+
+  const columns = [
+     { id: 'DRAFT', title: 'Draft', statuses: ['DRAFT'] },
+     { id: 'SUBMITTED', title: 'Submitted', statuses: ['SUBMITTED'] },
+     { id: 'IN_REVIEW', title: 'In Review', statuses: ['IN_REVIEW'] },
+     { id: 'APPROVED', title: 'Approved', statuses: ['APPROVED'] },
+     { id: 'ACTIVE', title: 'Active', statuses: ['ACTIVE'] },
+     { id: 'ON_HOLD', title: 'On Hold', statuses: ['ON_HOLD'] },
+     { id: 'COMPLETED', title: 'Completed', statuses: ['COMPLETED'] },
+     { id: 'ARCHIVED', title: 'Archived', statuses: ['ARCHIVED'] }
+  ];
 
   if (loading && projects.length === 0) return <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>;
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <Box sx={{ display: 'flex', gap: 3, overflowX: 'auto', pb: 2, height: 'calc(100vh - 200px)' }}>
-            <KanbanColumn id="draft" key="draft" title="Draft" count={draftProjects.length} projects={draftProjects} />
-            <KanbanColumn id="review" key="review" title="In Review" count={reviewProjects.length} projects={reviewProjects} />
-            <KanbanColumn id="active" key="active" title="Active" count={activeProjects.length} projects={activeProjects} />
+            {columns.map(col => {
+                const colProjects = projects.filter(p => col.statuses.includes(p.status));
+                return (
+                    <KanbanColumn 
+                        key={col.id} 
+                        id={col.id} 
+                        title={col.title} 
+                        count={colProjects.length} 
+                        projects={colProjects} 
+                    />
+                );
+            })}
         </Box>
         <DragOverlay>
             {activeProject ? <KanbanCard project={activeProject} /> : null}

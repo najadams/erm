@@ -130,7 +130,7 @@ export async function PATCH(
         const allowedTransitions: Record<string, string[]> = {
             'DRAFT': ['SUBMITTED', 'ARCHIVED'],
             'SUBMITTED': ['IN_REVIEW', 'DRAFT', 'ARCHIVED'], // Draft = Reject back to draft
-            'IN_REVIEW': ['APPROVED', 'on_HOLD', 'DRAFT', 'ARCHIVED'],
+            'IN_REVIEW': ['APPROVED', 'ON_HOLD', 'DRAFT', 'ARCHIVED'],
             'APPROVED': ['ACTIVE', 'ARCHIVED', 'COMPLETED'],
             'ACTIVE': ['COMPLETED', 'ON_HOLD', 'ARCHIVED'],
             'ON_HOLD': ['ACTIVE', 'ARCHIVED'],
@@ -140,7 +140,10 @@ export async function PATCH(
 
         const allowed = allowedTransitions[proj.status] || [];
         if (!allowed.includes(status)) {
-            return NextResponse.json({ error: `Invalid status transition from ${proj.status} to ${status}` }, { status: 400 });
+            return NextResponse.json({
+                error: `Invalid status transition from ${proj.status} to ${status}`,
+                allowedTransitions: allowed
+            }, { status: 400 });
         }
 
         // Permission Checks for Status
