@@ -9,6 +9,7 @@ import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import DescriptionIcon from '@mui/icons-material/Description';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import { useRouter } from 'next/navigation';
+import useSWR from 'swr';
 import type { Record } from '@/types';
 
 // Mock data removed
@@ -49,19 +50,15 @@ const StatusChip = ({ status }: { status: Record['status'] }) => {
 
 export default function RecentRecords() {
   const router = useRouter();
-  const [records, setRecords] = React.useState<Record[]>([]);
 
-  React.useEffect(() => {
-    fetch('/api/records')
-      .then(res => res.json())
-      .then(data => {
-        // Take top 5 for recent
-        if (Array.isArray(data)) {
-            setRecords(data.slice(0, 5));
-        }
-      })
-      .catch(err => console.error('Failed to fetch records', err));
-  }, []);
+  // SWR Fetcher
+  const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+  const { data: recordsData } = useSWR('/api/records', fetcher, {
+    refreshInterval: 5000
+  });
+
+  const records = Array.isArray(recordsData) ? recordsData.slice(0, 5) : [];
   
   return (
     <Box>

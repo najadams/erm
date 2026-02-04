@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, Suspense } from 'react';
+import useSWR from 'swr';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Paper from '@mui/material/Paper';
@@ -9,12 +10,18 @@ import IconButton from '@mui/material/IconButton';
 import SearchIcon from '@mui/icons-material/Search';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
+import Checkbox from '@mui/material/Checkbox';
+import Button from '@mui/material/Button';
+import Slide from '@mui/material/Slide';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import DescriptionIcon from '@mui/icons-material/Description';
+import LockPersonIcon from '@mui/icons-material/LockPerson';
+import ClearIcon from '@mui/icons-material/Clear';
 import type { Record } from '@/types';
 import AdvancedSearch from '@/components/AdvancedSearch';
+import BatchAccessRequestDialog from '@/components/BatchAccessRequestDialog';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,9 +45,55 @@ function RecordsContent() {
       registeredCompanyId: '',
       sector: ''
   });
-  const [records, setRecords] = useState<Record[]>([]);
   const [recordTypes, setRecordTypes] = useState<any[]>([]); // Flat list or grouped
-  const [loading, setLoading] = useState(false);
+
+  // Multi-select state
+  const [selectedRecords, setSelectedRecords] = useState<Map<string, { id: string; title: string; referenceNumber?: string }>>(new Map());
+  const [batchDialogOpen, setBatchDialogOpen] = useState(false);
+
+  const handleToggleSelect = (record: any, event: React.MouseEvent) => {
+    event.stopPropagation();
+    setSelectedRecords(prev => {
+      const next = new Map(prev);
+      if (next.has(record.id)) {
+        next.delete(record.id);
+      } else {
+        next.set(record.id, {
+          id: record.id,
+          title: record.title,
+          referenceNumber: record.referenceNumber
+        });
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedRecords.size === records.length) {
+      setSelectedRecords(new Map());
+    } else {
+      const all = new Map<string, { id: string; title: string; referenceNumber?: string }>();
+      records.forEach(r => all.set(r.id, { id: r.id, title: r.title, referenceNumber: (r as any).referenceNumber }));
+      setSelectedRecords(all);
+    }
+  };
+
+  const handleClearSelection = () => {
+    setSelectedRecords(new Map());
+  };
+
+  const handleRemoveFromSelection = (recordId: string) => {
+    setSelectedRecords(prev => {
+      const next = new Map(prev);
+      next.delete(recordId);
+      return next;
+    });
+  };
+
+  const handleBatchRequestSuccess = () => {
+    setSelectedRecords(new Map());
+    setBatchDialogOpen(false);
+  };
 
   // Fetch Record Types for Filter
   React.useEffect(() => {
@@ -58,8 +111,14 @@ function RecordsContent() {
   }, []);
 
   // Fetch records when filters change
-  React.useEffect(() => {
-    setLoading(true);
+  // SWR Fetcher
+  const fetcher = (url: string) => fetch(url).then((res) => {
+      if (!res.ok) throw new Error(`API Error: ${res.statusText}`);
+      return res.json();
+  });
+
+  // Construct Query String for SWR Key
+  const queryString = useMemo(() => {
     const params = new URLSearchParams();
     if (filters.q) params.set('q', filters.q);
     if (filters.status) params.set('status', filters.status);
@@ -70,26 +129,16 @@ function RecordsContent() {
     if (filters.recordTypeId) params.set('recordTypeId', filters.recordTypeId);
     if (filters.registeredCompanyId) params.set('registeredCompanyId', filters.registeredCompanyId);
     if (filters.sector) params.set('sector', filters.sector);
-
-    fetch(`/api/records?${params.toString()}`)
-      .then(res => {
-          if (!res.ok) throw new Error(`API Error: ${res.statusText}`);
-          return res.json();
-      })
-      .then(data => {
-        if (Array.isArray(data)) {
-            setRecords(data);
-        } else {
-            console.error('Invalid response format', data);
-            setRecords([]);
-        }
-      })
-      .catch(err => {
-          console.error('Failed to fetch records', err);
-          setRecords([]);
-      })
-      .finally(() => setLoading(false));
+    return params.toString();
   }, [filters]);
+
+  const { data: recordsData, error, isLoading } = useSWR(`/api/records?${queryString}`, fetcher, {
+      refreshInterval: 5000,
+      keepPreviousData: true // UX: Keep old list while fetching new filter results
+  });
+
+  const records = Array.isArray(recordsData) ? recordsData : [];
+  // const loading = isLoading; // Use SWR's isLoading or isValidating
 
   return (
     <Box component="main" sx={{ flexGrow: 1, p: 4, overflow: 'auto' }}>
@@ -117,7 +166,15 @@ function RecordsContent() {
       <Paper sx={{ width: '100%', mb: 2, overflow: 'hidden', borderRadius: 3 }}>
         {/* Header Row */}
         <Box sx={{ p: 2, bgcolor: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center' }}>
-          <Box sx={{ width: '40%', fontWeight: 600, color: 'text.secondary', cursor: 'pointer', '&:hover': { color: 'text.primary' } }}>
+          <Box sx={{ width: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Checkbox
+              checked={records.length > 0 && selectedRecords.size === records.length}
+              indeterminate={selectedRecords.size > 0 && selectedRecords.size < records.length}
+              onChange={handleSelectAll}
+              size="small"
+            />
+          </Box>
+          <Box sx={{ width: 'calc(40% - 48px)', fontWeight: 600, color: 'text.secondary', cursor: 'pointer', '&:hover': { color: 'text.primary' } }}>
              Document Name
           </Box>
           <Box sx={{ width: '25%', fontWeight: 600, color: 'text.secondary', cursor: 'pointer', '&:hover': { color: 'text.primary' } }}>
@@ -131,7 +188,7 @@ function RecordsContent() {
           </Box>
         </Box>
         
-        {loading ? (
+        {isLoading ? (
            <Box sx={{ p: 4, textAlign: 'center', color: 'text.secondary' }}>Loading...</Box>
         ) : records.length === 0 ? (
           <Box sx={{ p: 4, textAlign: 'center', color: 'text.secondary' }}>
@@ -139,19 +196,27 @@ function RecordsContent() {
           </Box>
         ) : (
           records.map((record: any) => (
-            <Box 
-              key={record.id} 
-              sx={{ 
-                p: 2, 
-                borderBottom: '1px solid #f1f5f9', 
-                display: 'flex', 
+            <Box
+              key={record.id}
+              sx={{
+                p: 2,
+                borderBottom: '1px solid #f1f5f9',
+                display: 'flex',
                 alignItems: 'center',
-                '&:hover': { bgcolor: '#f8fafc', cursor: 'pointer' }, 
-                transition: 'background-color 0.2s' 
+                bgcolor: selectedRecords.has(record.id) ? 'primary.50' : 'inherit',
+                '&:hover': { bgcolor: selectedRecords.has(record.id) ? 'primary.100' : '#f8fafc', cursor: 'pointer' },
+                transition: 'background-color 0.2s'
               }}
               onClick={() => router.push(`/records/${record.id}`)}
             >
-              <Box sx={{ width: '40%', display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ width: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Checkbox
+                  checked={selectedRecords.has(record.id)}
+                  onClick={(e) => handleToggleSelect(record, e)}
+                  size="small"
+                />
+              </Box>
+              <Box sx={{ width: 'calc(40% - 48px)', display: 'flex', alignItems: 'center', gap: 2 }}>
                 <Box
                   sx={{
                     width: 40,
@@ -177,22 +242,22 @@ function RecordsContent() {
                 </Box>
               </Box>
               <Box sx={{ width: '25%' }}>
-                 <Chip 
-                    label={record.recordType?.name || 'General'} 
-                    size="small" 
-                    sx={{ bgcolor: 'secondary.light', color: 'white', fontWeight: 600 }} 
+                 <Chip
+                    label={record.recordType?.name || 'General'}
+                    size="small"
+                    sx={{ bgcolor: 'secondary.light', color: 'white', fontWeight: 600 }}
                  />
               </Box>
               <Box sx={{ width: '20%', color: 'text.secondary' }}>
                 {new Date(record.createdAt).toLocaleDateString()}
               </Box>
               <Box sx={{ width: '15%' }}>
-                  <Chip 
-                   label={record.status.replace('_', ' ')} 
-                   size="small" 
+                  <Chip
+                   label={record.status.replace('_', ' ')}
+                   size="small"
                    variant={record.status === 'ACTIVE' ? 'filled' : 'outlined'}
                    color={
-                       record.status === 'verified' || record.status === 'ACTIVE' ? 'success' : 
+                       record.status === 'verified' || record.status === 'ACTIVE' ? 'success' :
                        record.status === 'ARCHIVED' ? 'default' :
                        record.status === 'd' ? 'warning' : 'primary'
                    }
@@ -203,6 +268,54 @@ function RecordsContent() {
           ))
         )}
       </Paper>
+
+      {/* Floating Selection Action Bar */}
+      <Slide direction="up" in={selectedRecords.size > 0} mountOnEnter unmountOnExit>
+        <Paper
+          elevation={8}
+          sx={{
+            position: 'fixed',
+            bottom: 24,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            px: 3,
+            py: 1.5,
+            borderRadius: 3,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+            bgcolor: 'primary.main',
+            color: 'white',
+            zIndex: 1000
+          }}
+        >
+          <Typography variant="body2" fontWeight="bold">
+            {selectedRecords.size} record{selectedRecords.size !== 1 ? 's' : ''} selected
+          </Typography>
+          <Button
+            variant="contained"
+            color="inherit"
+            size="small"
+            startIcon={<LockPersonIcon />}
+            onClick={() => setBatchDialogOpen(true)}
+            sx={{ bgcolor: 'white', color: 'primary.main', '&:hover': { bgcolor: 'grey.100' } }}
+          >
+            Request Access
+          </Button>
+          <IconButton size="small" onClick={handleClearSelection} sx={{ color: 'white' }}>
+            <ClearIcon fontSize="small" />
+          </IconButton>
+        </Paper>
+      </Slide>
+
+      {/* Batch Access Request Dialog */}
+      <BatchAccessRequestDialog
+        open={batchDialogOpen}
+        onClose={() => setBatchDialogOpen(false)}
+        selectedRecords={Array.from(selectedRecords.values())}
+        onRemoveRecord={handleRemoveFromSelection}
+        onSuccess={handleBatchRequestSuccess}
+      />
     </Box>
   );
 }

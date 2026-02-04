@@ -53,6 +53,8 @@ async function main() {
   console.log('Created System Groups.');
 
   // 2. Create Departments & Groups
+  /*
+  // 2. Create Departments & Groups
   const deptsData = [
     { name: 'Human Resources', code: 'HR' },
     { name: 'Information Technology', code: 'IT' },
@@ -77,6 +79,7 @@ async function main() {
     })
     groups[d.code] = group
   }
+  */
 
   // 3. Create Users
   const users = []
@@ -89,6 +92,7 @@ async function main() {
       name: 'Admin User',
       password,
       role: 'ADMIN',
+      groups: { connect: { id: EVERYONE_GROUP_ID } }
     },
   })
   users.push(admin)

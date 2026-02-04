@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import useSWR from 'swr';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Paper from '@mui/material/Paper';
@@ -46,6 +47,7 @@ import DownloadIcon from '@mui/icons-material/Download';
 import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import GavelIcon from '@mui/icons-material/Gavel';
+import RestoreIcon from '@mui/icons-material/Restore';
 
 // Dialogs
 import Dialog from '@mui/material/Dialog';
@@ -95,35 +97,44 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
     setTabIndex(newValue);
   };
 
+  /* Removed manual Fetch effect in favor of SWR */
+
+  // SWR Fetcher
+  const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+  // SWR Hook for auto-refresh (Smart Polling every 5s if focused)
+  const { data: recordData, error, mutate } = useSWR(`/api/records/${id}`, fetcher, {
+      refreshInterval: 5000,
+      revalidateOnFocus: true
+  });
+
   useEffect(() => {
-    if (session?.user) {
-      fetchRecord();
+    if (recordData) {
+        if (recordData.error) {
+           // Handle API errors like 403 or 404 embedded in response if structure differs
+           // But normally fetcher throws or returns data.
+           // Our API usually returns { record: ..., existingRequest: ... } or { error: ... }
+           if(recordData.status === 403 || recordData.error === 'Access Restricted') {
+               setAccessDenied(true);
+               setLimitedInfo(recordData.record); // Assuming API sends limited info in this case
+               setExistingRequest(recordData.existingRequest);
+           } else {
+               setRecord(recordData);
+               setAccessDenied(false);
+               setExistingRequest(recordData.existingRequest);
+           }
+           setLoading(false);
+        } else {
+            setRecord(recordData);
+            setAccessDenied(false);
+            setExistingRequest(recordData.existingRequest);
+            setLoading(false);
+        }
+    } else if (error) {
+        // Handle fetch errors (network etc)
+        setLoading(false);
     }
-  }, [id, session]);
-
-  const fetchRecord = async () => {
-    try {
-      setLoading(true);
-      const res = await fetch(`/api/records/${id}`);
-      const data = await res.json();
-
-      if (res.status === 403) {
-          setAccessDenied(true);
-          if (data.record) setLimitedInfo(data.record);
-          if (data.existingRequest) setExistingRequest(data.existingRequest);
-      } else if (res.ok) {
-          setRecord(data);
-          setAccessDenied(false);
-          if(data.existingRequest) setExistingRequest(data.existingRequest);
-      } else {
-          // Handle 404
-      }
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [recordData, error]);
 
   const handleGovernanceAction = async (action: string, reason: string, newValue?: any) => {
       try {
@@ -134,7 +145,7 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
           });
           const data = await res.json();
           if (res.ok) {
-              window.location.reload();
+              mutate(); // Instant Refresh
           } else {
               alert(data.error || 'Action failed');
           }
@@ -153,7 +164,7 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
                   body: JSON.stringify({ status: 'SUBMITTED' })
               });
               if (res.ok) {
-                  window.location.reload();
+                  mutate(); // Instant Refresh
               } else {
                   const data = await res.json();
                   alert(data.error || 'Submission failed');
@@ -191,7 +202,7 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
             setOpenUpload(false);
             setUploadFile(null);
             setChangeNote('');
-            fetchRecord();
+            mutate(); // Instant Refresh
         } else {
             alert('Upload failed');
         }
@@ -224,7 +235,7 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
          if(res.ok) {
              alert('Request submitted');
              setOpenRequestDialog(false);
-             fetchRecord(); // Refresh to show pending status
+             mutate(); // Refresh to show pending status
          } else {
              alert('Failed to submit request');
          }
@@ -246,7 +257,7 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
           });
           if(res.ok) {
               setOpenAccessDialog(false);
-              fetchRecord();
+              mutate();
           } else {
               alert('Failed to grant access');
           }
@@ -259,11 +270,11 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
       // Or DELETE /api/access/:id
       // I'll assume a route exists.
       try {
-           const res = await fetch(`/api/records/${id}/access?accessId=${accessId}`, {
-               method: 'DELETE'
-           });
-           if(res.ok) fetchRecord();
-           else alert('Failed to revoke');
+            const res = await fetch(`/api/records/${id}/access?accessId=${accessId}`, {
+                method: 'DELETE'
+            });
+            if(res.ok) mutate();
+            else alert('Failed to revoke');
       } catch(e) { alert('Error'); }
   };
 
@@ -376,7 +387,19 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
   const downloadUrl = currentVersion
     ? `/api/records/${id}/download${currentVersion.id ? `?versionId=${currentVersion.id}` : ''}`
     : '#';
+  const previewUrl = currentVersion
+    ? `/api/records/${id}/preview${currentVersion.id ? `?versionId=${currentVersion.id}` : ''}`
+    : null;
   const permissions = record.permissions || { explicit: [], inherited: [] }; // Assume API returns this structure
+
+  // Check if file type is previewable
+  const previewableTypes = [
+    'application/pdf',
+    'image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ];
+  const isPreviewable = currentVersion?.fileType && previewableTypes.includes(currentVersion.fileType);
+  const isImage = currentVersion?.fileType?.startsWith('image/');
   
   // Simple check for role/permission
   const userRole = (session?.user as any)?.role || 'USER';
@@ -517,6 +540,7 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
                                                  label={`${p.principalType === 'USER' ? p.user?.name : p.group?.name} (${p.level})`} 
                                                  size="small" 
                                                  variant="outlined"
+                                                 onDelete={canManageAccess ? () => handleRevokeAccess(p.id) : undefined}
                                              />
                                          ))}
                                      </Stack>
@@ -552,36 +576,103 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
 
             {/* 3. Center Main (Viewer & Tabs) */}
             <Grid size={{ xs: 12, md: 9 }}>
-                 <Paper sx={{ mb: 3, p: 2, height: '500px', bgcolor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {/* Document Viewer Placeholder */}
-                      <Box sx={{ textAlign: 'center' }}>
-                          <Typography variant="h6" color="text.secondary">Document Preview</Typography>
-                          {(record.canDownload && downloadUrl) ? (
-                            <>
-                                <Typography variant="caption" display="block">Viewer Integration Pending</Typography>
-                                <Button
+                 <Paper sx={{ mb: 3, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                      {/* Document Preview Header */}
+                      <Box sx={{ p: 1.5, bgcolor: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <VisibilityIcon fontSize="small" color="action" />
+                              <Typography variant="subtitle2" fontWeight="bold">Document Preview</Typography>
+                              {currentVersion && (
+                                  <Chip
+                                      label={`v${currentVersion.versionNumber}`}
+                                      size="small"
+                                      variant="outlined"
+                                      sx={{ ml: 1 }}
+                                  />
+                              )}
+                          </Box>
+                          {record.canDownload && downloadUrl && (
+                              <Button
+                                  size="small"
                                   startIcon={<DownloadIcon />}
                                   component="a"
                                   href={downloadUrl}
                                   download
-                                  sx={{ mt: 2 }}
-                                >
-                                    Download {currentVersion?.fileType || 'File'}
-                                </Button>
-                            </>
-                          ) : (
-                            <Typography variant="body2" color="text.secondary" sx={{ mt: 2, fontStyle: 'italic' }}>
-                                {record.canDownload ? 'No file available' : 'You do not have permission to download this file.'}
-                            </Typography>
+                              >
+                                  Download
+                              </Button>
                           )}
                       </Box>
+
+                      {/* Preview Content */}
+                      <Box sx={{ height: '500px', bgcolor: '#f1f5f9' }}>
+                          {!record.canDownload ? (
+                              <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 2 }}>
+                                  <LockIcon sx={{ fontSize: 48, color: 'text.disabled' }} />
+                                  <Typography color="text.secondary">
+                                      You do not have permission to preview this file.
+                                  </Typography>
+                              </Box>
+                          ) : !currentVersion?.filePath ? (
+                              <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <Typography color="text.secondary">No file available</Typography>
+                              </Box>
+                          ) : !isPreviewable ? (
+                              <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 2 }}>
+                                  <Typography color="text.secondary">
+                                      Preview not available for this file type ({currentVersion?.fileType || 'unknown'})
+                                  </Typography>
+                                  <Button
+                                      variant="outlined"
+                                      startIcon={<DownloadIcon />}
+                                      component="a"
+                                      href={downloadUrl}
+                                      download
+                                  >
+                                      Download to View
+                                  </Button>
+                              </Box>
+                          ) : isImage ? (
+                              <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2 }}>
+                                  <img
+                                      src={previewUrl || ''}
+                                      alt={record.title}
+                                      style={{
+                                          maxWidth: '100%',
+                                          maxHeight: '100%',
+                                          objectFit: 'contain',
+                                          borderRadius: '4px'
+                                      }}
+                                  />
+                              </Box>
+                          ) : (
+                              <iframe
+                                  src={previewUrl || ''}
+                                  style={{
+                                      width: '100%',
+                                      height: '100%',
+                                      border: 'none',
+                                  }}
+                                  title={`Preview of ${record.title}`}
+                              />
+                          )}
+                      </Box>
+
+                      {/* Version info footer */}
+                      {currentVersion && record.versions?.length > 1 && (
+                          <Box sx={{ p: 1, bgcolor: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
+                              <Typography variant="caption" color="text.secondary">
+                                  Showing version {currentVersion.versionNumber} of {record.versions.length} — See Versions tab for history
+                              </Typography>
+                          </Box>
+                      )}
                  </Paper>
 
                  <Paper sx={{ width: '100%' }}>
                     <Tabs value={tabIndex} onChange={handleTabChange} sx={{ borderBottom: 1, borderColor: 'divider' }}>
                         <Tab label="Metadata" />
                         <Tab label="Activity & Audit" />
-                        <Tab label="Review History" />
+                        <Tab label={`Versions (${record.versions?.length || 0})`} />
                     </Tabs>
                     
                     {/* Metadata Tab */}
@@ -618,10 +709,169 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
                         </Box>
                     )}
 
-                    {/* Audit Tab */}
+
+                    {/* Activity & Audit Tab */}
                     {tabIndex === 1 && (
                         <Box sx={{ p: 3 }}>
-                            <Typography color="text.secondary">Audit Logs will appear here.</Typography>
+                            {record.auditLogs?.length > 0 ? (
+                                <Stack spacing={2}>
+                                    {record.auditLogs.map((log: any) => (
+                                        <Paper key={log.id} variant="outlined" sx={{ p: 2 }}>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    <Chip 
+                                                        label={log.action} 
+                                                        size="small" 
+                                                        color="primary" 
+                                                        variant="outlined"
+                                                        sx={{ fontWeight: 'bold' }}
+                                                    />
+                                                    <Typography variant="body2" fontWeight="bold">
+                                                        {log.user?.name || log.user?.email || 'System'}
+                                                    </Typography>
+                                                </Box>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    {new Date(log.timestamp).toLocaleString()}
+                                                </Typography>
+                                            </Box>
+                                            
+                                            {log.details && (
+                                                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                                    {log.details}
+                                                </Typography>
+                                            )}
+                                            
+                                            {/* Show diff if available */}
+                                            {(log.oldValue || log.newValue) && (
+                                                <Box sx={{ mt: 1, bgcolor: 'action.hover', p: 1, borderRadius: 1 }}>
+                                                    {log.oldValue && (
+                                                        <Typography variant="caption" display="block" color="error.main">
+                                                            Old: {log.oldValue}
+                                                        </Typography>
+                                                    )}
+                                                    {log.newValue && (
+                                                        <Typography variant="caption" display="block" color="success.main">
+                                                            New: {log.newValue}
+                                                        </Typography>
+                                                    )}
+                                                </Box>
+                                            )}
+                                        </Paper>
+                                    ))}
+                                </Stack>
+                            ) : (
+                                <Typography color="text.secondary" textAlign="center" sx={{ py: 4 }}>
+                                    No activity recorded yet.
+                                </Typography>
+                            )}
+                        </Box>
+                    )}
+
+                    {/* Version History Tab */}
+                    {tabIndex === 2 && (
+                        <Box sx={{ p: 3 }}>
+                            {record.versions?.length > 0 ? (
+                                <Table size="small">
+                                    <TableHead>
+                                        <TableRow>
+                                            <TableCell sx={{ fontWeight: 'bold' }}>Version</TableCell>
+                                            <TableCell sx={{ fontWeight: 'bold' }}>Uploaded By</TableCell>
+                                            <TableCell sx={{ fontWeight: 'bold' }}>Date</TableCell>
+                                            <TableCell sx={{ fontWeight: 'bold' }}>Change Note</TableCell>
+                                            <TableCell sx={{ fontWeight: 'bold' }}>Type</TableCell>
+                                            <TableCell sx={{ fontWeight: 'bold' }} align="right">Actions</TableCell>
+                                        </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                        {record.versions.map((v: any, idx: number) => (
+                                            <TableRow
+                                                key={v.id}
+                                                hover
+                                                sx={{
+                                                    bgcolor: idx === 0 ? 'action.selected' : 'inherit',
+                                                    '& .MuiTableCell-root': { py: 1, verticalAlign: 'middle' }
+                                                }}
+                                            >
+                                                <TableCell>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                        <Chip
+                                                            label={`v${v.versionNumber}`}
+                                                            size="small"
+                                                            color={idx === 0 ? 'primary' : 'default'}
+                                                            variant={idx === 0 ? 'filled' : 'outlined'}
+                                                            sx={{ minWidth: 40 }}
+                                                        />
+                                                        {idx === 0 && (
+                                                            <Chip label="Current" size="small" color="success" variant="outlined" />
+                                                        )}
+                                                    </Box>
+                                                </TableCell>
+                                                <TableCell>{v.uploadedBy?.name || 'Unknown'}</TableCell>
+                                                <TableCell>
+                                                    <Tooltip title={new Date(v.createdAt).toLocaleString()}>
+                                                        <span>{new Date(v.createdAt).toLocaleDateString()}</span>
+                                                    </Tooltip>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Typography variant="body2" color={v.changeNote ? 'text.primary' : 'text.disabled'} sx={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        {v.changeNote || 'No note'}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Chip label={v.fileType || 'unknown'} size="small" variant="outlined" />
+                                                </TableCell>
+                                                <TableCell align="right">
+                                                    <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
+                                                        {record.canDownload && v.filePath && (
+                                                            <Tooltip title="Download">
+                                                                <IconButton
+                                                                    size="small"
+                                                                    component="a"
+                                                                    href={`/api/records/${id}/download?versionId=${v.id}`}
+                                                                    download
+                                                                    color="primary"
+                                                                >
+                                                                    <DownloadIcon fontSize="small" />
+                                                                </IconButton>
+                                                            </Tooltip>
+                                                        )}
+                                                        {idx !== 0 && record.canDownload && (
+                                                            <Tooltip title="Restore this version">
+                                                                <IconButton
+                                                                    size="small"
+                                                                    color="warning"
+                                                                    onClick={async () => {
+                                                                        if (!confirm(`Restore version ${v.versionNumber}? This will create a new version from the old file.`)) return;
+                                                                        try {
+                                                                            const res = await fetch(`/api/records/${id}/restore`, {
+                                                                                method: 'POST',
+                                                                                headers: { 'Content-Type': 'application/json' },
+                                                                                body: JSON.stringify({ versionId: v.id })
+                                                                            });
+                                                                            if (res.ok) {
+                                                                                window.location.reload();
+                                                                            } else {
+                                                                                const data = await res.json();
+                                                                                alert(data.error || 'Restore failed');
+                                                                            }
+                                                                        } catch {
+                                                                            alert('Restore failed');
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    <RestoreIcon fontSize="small" />
+                                                                </IconButton>
+                                                            </Tooltip>
+                                                        )}
+                                                    </Box>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            ) : (
+                                <Typography color="text.secondary">No versions found.</Typography>
+                            )}
                         </Box>
                     )}
                  </Paper>
@@ -705,25 +955,24 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
                             label="Access Level"
                             onChange={(e) => setAccessForm({...accessForm, level: e.target.value})}
                         >
-                            <MenuItem value="VIEW">View (Read Only)</MenuItem>
-                            <MenuItem value="COMMENT">Comment</MenuItem>
-                            <MenuItem value="EDIT_METADATA">Edit Metadata</MenuItem>
-                            <MenuItem value="EDIT_CONTENT">Edit Content</MenuItem>
-                            <MenuItem value="FULL">Full Access</MenuItem>
+                            <MenuItem value="VIEW">View — Can read and download</MenuItem>
+                            <MenuItem value="FULL">Full — Can read, edit, and upload versions</MenuItem>
                         </Select>
                     </FormControl>
 
-                    <FormControl component="fieldset">
-                        <FormLabel component="legend">Access Type</FormLabel>
-                        <RadioGroup
-                            row
-                            value={accessForm.accessType}
-                            onChange={(e) => setAccessForm({...accessForm, accessType: e.target.value})}
-                        >
-                            <FormControlLabel value="ALLOW" control={<Radio color="success" />} label="Allow" />
-                            <FormControlLabel value="DENY" control={<Radio color="error" />} label="Deny" />
-                        </RadioGroup>
-                    </FormControl>
+                    {isAdmin && (
+                        <FormControl component="fieldset">
+                            <FormLabel component="legend">Access Type</FormLabel>
+                            <RadioGroup
+                                row
+                                value={accessForm.accessType}
+                                onChange={(e) => setAccessForm({...accessForm, accessType: e.target.value})}
+                            >
+                                <FormControlLabel value="ALLOW" control={<Radio color="success" />} label="Allow" />
+                                <FormControlLabel value="DENY" control={<Radio color="error" />} label="Deny (Block access)" />
+                            </RadioGroup>
+                        </FormControl>
+                    )}
                 </Box>
             </DialogContent>
             <DialogActions>

@@ -314,7 +314,7 @@ export default function AdminGroupsPage() {
                 </TableCell>
                 <TableCell align="center">
                   <Chip
-                    label={group._count.users}
+                    label={group._count?.users || 0}
                     size="small"
                     variant="outlined"
                     onClick={() => handleViewMembers(group)}
@@ -521,9 +521,9 @@ export default function AdminGroupsPage() {
           <Typography>
             Are you sure you want to delete the group <strong>{groupToDelete?.name}</strong>?
           </Typography>
-          {(groupToDelete?._count.users || 0) > 0 && (
+          {(groupToDelete?._count?.users || 0) > 0 && (
             <Alert severity="warning" sx={{ mt: 2 }}>
-              This group has {groupToDelete?._count.users} member(s). They will be removed from this group.
+              This group has {groupToDelete?._count?.users} member(s). They will be removed from this group.
             </Alert>
           )}
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>

@@ -28,6 +28,10 @@ import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import SortIcon from '@mui/icons-material/Sort';
+import ViewListIcon from '@mui/icons-material/ViewList';
+import ViewModuleIcon from '@mui/icons-material/ViewModule';
+
+import BatchRequestCard from '@/components/admin/BatchRequestCard';
 
 function getSlaChip(createdAt: string): React.ReactNode {
   const ageMs = Date.now() - new Date(createdAt).getTime();
@@ -44,9 +48,12 @@ function getSlaChip(createdAt: string): React.ReactNode {
 
 export default function AccessRequestDashboard() {
   const [requests, setRequests] = React.useState<any[]>([]);
+  const [batches, setBatches] = React.useState<any[]>([]);
+  const [individualRequests, setIndividualRequests] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [statusFilter, setStatusFilter] = React.useState('PENDING');
   const [sortOrder, setSortOrder] = React.useState<'oldest' | 'newest'>('oldest');
+  const [viewMode, setViewMode] = React.useState<'individual' | 'grouped'>('grouped');
 
   // Action Dialog
   const [selectedRequest, setSelectedRequest] = React.useState<any>(null);
@@ -63,10 +70,24 @@ export default function AccessRequestDashboard() {
         const params = new URLSearchParams();
         if (statusFilter !== 'ALL') params.set('status', statusFilter);
         params.set('sortBy', sortOrder);
-        const res = await fetch(`/api/admin/access-requests?${params.toString()}`);
-        if (res.ok) {
-            const data = await res.json();
-            setRequests(data);
+
+        if (viewMode === 'grouped') {
+            params.set('groupBy', 'batch');
+            const res = await fetch(`/api/admin/access-requests?${params.toString()}`);
+            if (res.ok) {
+                const data = await res.json();
+                setBatches(data.batches || []);
+                setIndividualRequests(data.individual || []);
+                setRequests([]);
+            }
+        } else {
+            const res = await fetch(`/api/admin/access-requests?${params.toString()}`);
+            if (res.ok) {
+                const data = await res.json();
+                setRequests(Array.isArray(data) ? data : []);
+                setBatches([]);
+                setIndividualRequests([]);
+            }
         }
     } catch (e) {
         console.error(e);
@@ -77,7 +98,7 @@ export default function AccessRequestDashboard() {
 
   React.useEffect(() => {
     fetchRequests();
-  }, [statusFilter, sortOrder]);
+  }, [statusFilter, sortOrder, viewMode]);
 
   const handleActionClick = (request: any, type: 'APPROVE' | 'REJECT') => {
       setSelectedRequest(request);
@@ -137,21 +158,141 @@ export default function AccessRequestDashboard() {
                 <Tab label="All" value="ALL" />
             </Tabs>
 
-            <ToggleButtonGroup
-                value={sortOrder}
-                exclusive
-                onChange={(_, v) => { if (v) setSortOrder(v); }}
-                size="small"
-            >
-                <ToggleButton value="oldest">
-                    <SortIcon sx={{ mr: 0.5, fontSize: 16 }} /> Oldest First
-                </ToggleButton>
-                <ToggleButton value="newest">
-                    <SortIcon sx={{ mr: 0.5, fontSize: 16, transform: 'scaleY(-1)' }} /> Newest First
-                </ToggleButton>
-            </ToggleButtonGroup>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+                <ToggleButtonGroup
+                    value={viewMode}
+                    exclusive
+                    onChange={(_, v) => { if (v) setViewMode(v); }}
+                    size="small"
+                >
+                    <ToggleButton value="grouped">
+                        <ViewModuleIcon sx={{ mr: 0.5, fontSize: 16 }} /> Grouped
+                    </ToggleButton>
+                    <ToggleButton value="individual">
+                        <ViewListIcon sx={{ mr: 0.5, fontSize: 16 }} /> Individual
+                    </ToggleButton>
+                </ToggleButtonGroup>
+
+                <ToggleButtonGroup
+                    value={sortOrder}
+                    exclusive
+                    onChange={(_, v) => { if (v) setSortOrder(v); }}
+                    size="small"
+                >
+                    <ToggleButton value="oldest">
+                        <SortIcon sx={{ mr: 0.5, fontSize: 16 }} /> Oldest First
+                    </ToggleButton>
+                    <ToggleButton value="newest">
+                        <SortIcon sx={{ mr: 0.5, fontSize: 16, transform: 'scaleY(-1)' }} /> Newest First
+                    </ToggleButton>
+                </ToggleButtonGroup>
+            </Box>
         </Box>
 
+        {/* Grouped View */}
+        {viewMode === 'grouped' && (
+            <Box>
+                {loading ? (
+                    <Box sx={{ p: 4, textAlign: 'center' }}>Loading...</Box>
+                ) : batches.length === 0 && individualRequests.length === 0 ? (
+                    <Box sx={{ p: 4, textAlign: 'center' }}>No {statusFilter !== 'ALL' ? statusFilter.toLowerCase() : ''} requests.</Box>
+                ) : (
+                    <>
+                        {/* Batch Requests */}
+                        {batches.length > 0 && (
+                            <Box sx={{ mb: 3 }}>
+                                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                                    Batch Requests ({batches.length})
+                                </Typography>
+                                {batches.map((batch: any) => (
+                                    <BatchRequestCard
+                                        key={batch.batchId}
+                                        batchId={batch.batchId}
+                                        requests={batch.requests}
+                                        requester={batch.requester}
+                                        reason={batch.reason}
+                                        requestedLevel={batch.requestedLevel}
+                                        createdAt={batch.createdAt}
+                                        stats={batch.stats}
+                                        onRefresh={fetchRequests}
+                                    />
+                                ))}
+                            </Box>
+                        )}
+
+                        {/* Individual Requests (no batch) */}
+                        {individualRequests.length > 0 && (
+                            <Box>
+                                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                                    Individual Requests ({individualRequests.length})
+                                </Typography>
+                                <Paper sx={{ overflow: 'hidden' }}>
+                                    <Table>
+                                        <TableHead>
+                                            <TableRow>
+                                                <TableCell>Date</TableCell>
+                                                <TableCell>Requester</TableCell>
+                                                <TableCell>Resource</TableCell>
+                                                <TableCell>Requested Level</TableCell>
+                                                <TableCell>Reason</TableCell>
+                                                {isPending && <TableCell align="right">Actions</TableCell>}
+                                                {!isPending && <TableCell>Status</TableCell>}
+                                            </TableRow>
+                                        </TableHead>
+                                        <TableBody>
+                                            {individualRequests.map((req) => (
+                                                <TableRow key={req.id}>
+                                                    <TableCell>
+                                                        {new Date(req.createdAt).toLocaleDateString()}
+                                                        {isPending && getSlaChip(req.createdAt)}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Typography variant="body2" fontWeight="bold">{req.requester?.name}</Typography>
+                                                        <Typography variant="caption" color="text.secondary">{req.requester?.email}</Typography>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {req.record ? (
+                                                            <>
+                                                                <Typography variant="body2" fontWeight="bold">{req.record.referenceNumber || 'No Ref'}</Typography>
+                                                                <Typography variant="caption" color="text.secondary">{req.record.title}</Typography>
+                                                            </>
+                                                        ) : (
+                                                            <Typography variant="caption" color="text.secondary">Unknown</Typography>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Chip label={req.requestedLevel} color="info" size="small" variant="outlined" />
+                                                    </TableCell>
+                                                    <TableCell sx={{ maxWidth: 250 }}>
+                                                        <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{req.reason}</Typography>
+                                                    </TableCell>
+                                                    {isPending && (
+                                                        <TableCell align="right">
+                                                            <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                                                                <Button size="small" variant="contained" color="success" startIcon={<CheckCircleIcon />} onClick={() => handleActionClick(req, 'APPROVE')}>Approve</Button>
+                                                                <Button size="small" variant="outlined" color="error" startIcon={<CancelIcon />} onClick={() => handleActionClick(req, 'REJECT')}>Reject</Button>
+                                                            </Box>
+                                                        </TableCell>
+                                                    )}
+                                                    {!isPending && (
+                                                        <TableCell>
+                                                            <Chip label={req.status} size="small" color={req.status === 'APPROVED' ? 'success' : req.status === 'REJECTED' ? 'error' : 'default'} />
+                                                        </TableCell>
+                                                    )}
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </Paper>
+                            </Box>
+                        )}
+                    </>
+                )}
+            </Box>
+        )}
+
+        {/* Individual View (Original Table) */}
+        {viewMode === 'individual' && (
         <Paper sx={{ width: '100%', overflow: 'hidden' }}>
             {loading ? (
                 <Box sx={{ p: 4, textAlign: 'center' }}>Loading...</Box>
@@ -258,6 +399,7 @@ export default function AccessRequestDashboard() {
                 </Table>
             )}
         </Paper>
+        )}
 
         {/* Action Dialog */}
         <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="xs" fullWidth>

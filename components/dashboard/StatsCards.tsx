@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import useSWR from 'swr';
 import Grid from '@mui/material/GridLegacy';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -50,14 +51,12 @@ function StatCard({ title, value, icon, color }: { title: string, value: string 
 }
 
 export default function StatsCards() {
-  const [stats, setStats] = useState<StatsData | null>(null);
 
-  useEffect(() => {
-    fetch('/api/stats')
-      .then(res => res.json())
-      .then(data => setStats(data))
-      .catch(err => console.error(err));
-  }, []);
+  const fetcher = (url: string) => fetch(url).then(res => res.json());
+
+  const { data: stats } = useSWR<StatsData>('/api/stats', fetcher, {
+    refreshInterval: 5000
+  });
 
   if (!stats) return null; // or loading skeleton
 

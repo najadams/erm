@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import useSWR from 'swr';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Paper from '@mui/material/Paper';
@@ -90,23 +91,15 @@ const formatActionMessage = (log: AuditLog) => {
 };
 
 export default function ActivityFeed() {
-  const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetch('/api/audit-logs?scope=user&limit=10')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          setLogs(data);
-        }
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error('Failed to fetch audit logs', err);
-        setLoading(false);
-      });
-  }, []);
+  const fetcher = (url: string) => fetch(url).then(res => res.json());
+
+  const { data: logsData, error } = useSWR<AuditLog[]>('/api/audit-logs?scope=user&limit=10', fetcher, {
+    refreshInterval: 5000
+  });
+
+  const logs = Array.isArray(logsData) ? logsData : [];
+  const loading = !logsData && !error;
 
   return (
     <Box>

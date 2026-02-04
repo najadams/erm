@@ -1,223 +1,102 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
-import { validateEmail } from '@/lib/validation';
-import { ROLES } from '@/lib/permissions';
 
-export const dynamic = 'force-dynamic';
-
-// Valid roles from the permission system
-const VALID_ROLES = Object.values(ROLES);
-
-// Helper to check admin
-async function isAdmin() {
-  const session = await getServerSession(authOptions);
-  return session?.user && (session.user as any).role === 'ADMIN';
-}
-
-export async function GET(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session || !session.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const { searchParams } = new URL(request.url);
-  const query = searchParams.get('q');
-  const adminView = searchParams.get('admin') === 'true';
-  const userRole = (session.user as any).role;
-
-  // Case 1: Search (Open to all Authenticated Users)
-  if (query) {
-      try {
-          const users = await prisma.user.findMany({
-              where: {
-                  AND: [
-                      { NOT: { email: { startsWith: 'deleted_' } } }, // Exclude soft-deleted
-                      {
-                          OR: [
-                              { name: { contains: query, mode: 'insensitive' } },
-                              { email: { contains: query, mode: 'insensitive' } }
-                          ]
-                      }
-                  ]
-              },
-              select: { id: true, name: true, email: true, department: { select: { id: true, name: true } }, isActive: true },
-              take: 10
-          });
-          return NextResponse.json(users);
-      } catch (error) {
-          return NextResponse.json({ error: 'Search failed' }, { status: 500 });
-      }
-  }
-
-  // Case 2: Admin Full List (for user management)
-  if (adminView && userRole === 'ADMIN') {
-      try {
-          const users = await prisma.user.findMany({
-              where: {
-                  NOT: { email: { startsWith: 'deleted_' } } // Exclude soft-deleted
-              },
-              select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                  isActive: true,
-                  role: true,
-                  clearanceLevel: true,
-                  departmentId: true,
-                  department: { select: { id: true, name: true } },
-                  accountExpiresAt: true,
-                  groups: { select: { id: true, name: true, type: true } },
-                  createdAt: true,
-                  _count: { select: { records: true, ownedProjects: true } }
-              },
-              orderBy: { name: 'asc' }
-          });
-          return NextResponse.json(users);
-      } catch (error) {
-          console.error('Admin user list error:', error);
-          return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
-      }
-  }
-
-  // Case 3: Default List (for autocomplete/selection)
-  try {
-     const users = await prisma.user.findMany({
-       where: {
-           NOT: { email: { startsWith: 'deleted_' } }
-       },
-       select: { id: true, name: true, email: true, department: { select: { id: true, name: true } }, isActive: true },
-       orderBy: { name: 'asc' },
-       take: 50
-     });
-     return NextResponse.json(users);
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
-  }
-}
+const EVERYONE_GROUP_ID = '00000000-0000-0000-0000-000000000000';
 
 export async function POST(request: NextRequest) {
-  if (!await isAdmin()) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  const session = await getServerSession(authOptions);
+  
+  // Only Admin can create users directly
+  if (!session || !session.user || (session.user as any).role !== 'ADMIN') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  }
 
   try {
     const body = await request.json();
-    const { email, name, password, role, clearanceLevel, groupIds, departmentId, accountExpiresAt } = body;
+    const { name, email, password, role, clearanceLevel, departmentId, groupIds } = body;
 
     if (!email || !password || !name) {
-      return NextResponse.json({ error: 'Name, email and password are required' }, { status: 400 });
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    if (!validateEmail(email)) {
-      return NextResponse.json({ error: 'Invalid email format' }, { status: 400 });
-    }
-
-    // Validate role
-    const userRole = role || 'USER';
-    if (!VALID_ROLES.includes(userRole)) {
-      return NextResponse.json({ error: `Invalid role. Valid roles: ${VALID_ROLES.join(', ')}` }, { status: 400 });
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      return NextResponse.json({ error: 'User already exists' }, { status: 409 });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Prepare groups to connect
+    // 1. Always 'Everyone'
+    // 2. Any explicit groupIds
+    const groupsToConnect = [{ id: EVERYONE_GROUP_ID }];
+    if (groupIds && Array.isArray(groupIds)) {
+        groupIds.forEach((gid: string) => {
+            if (gid !== EVERYONE_GROUP_ID) groupsToConnect.push({ id: gid });
+        });
+    }
+
     const user = await prisma.user.create({
       data: {
-        email,
         name,
+        email,
         password: hashedPassword,
-        role: userRole,
-        clearanceLevel: clearanceLevel ? parseInt(clearanceLevel) : 1,
+        role: role || 'USER',
+        clearanceLevel: clearanceLevel || 1,
         departmentId: departmentId || null,
-        accountExpiresAt: accountExpiresAt ? new Date(accountExpiresAt) : null,
-        groups: groupIds?.length ? {
-            connect: groupIds.map((id: string) => ({ id }))
-        } : undefined
-      },
-      include: {
-        department: { select: { id: true, name: true } },
-        groups: { select: { id: true, name: true, type: true } }
+        groups: {
+           connect: groupsToConnect
+        }
       }
     });
 
     const { password: _, ...userWithoutPassword } = user;
     return NextResponse.json(userWithoutPassword, { status: 201 });
-  } catch (error: any) {
-    console.error('User creation error:', error);
-    if (error.code === 'P2002') {
-        return NextResponse.json({ error: 'User with this email already exists' }, { status: 409 });
-    }
+
+  } catch (error) {
+    console.error('Create User Error:', error);
     return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
   }
 }
 
-export async function PATCH(request: NextRequest) {
-    if (!await isAdmin()) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+export async function GET(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  
+  if (!session || !session.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
-    try {
-        const body = await request.json();
-        const { id, name, role, clearanceLevel, groupIds, departmentId, accountExpiresAt } = body;
+  const { searchParams } = new URL(request.url);
+  const q = searchParams.get('q');
 
-        if (!id) return NextResponse.json({ error: 'Missing User ID' }, { status: 400 });
+  try {
+    const users = await prisma.user.findMany({
+      where: q ? {
+        OR: [
+          { name: { contains: q, mode: 'insensitive' } },
+          { email: { contains: q, mode: 'insensitive' } }
+        ]
+      } : {},
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+        clearanceLevel: true,
+        department: { select: { id: true, name: true } },
+        groups: { select: { id: true, name: true, type: true } }
+      },
+      take: 20
+    });
 
-        // Validate role if provided
-        if (role && !VALID_ROLES.includes(role)) {
-            return NextResponse.json({ error: `Invalid role. Valid roles: ${VALID_ROLES.join(', ')}` }, { status: 400 });
-        }
-
-        const updateData: any = {};
-        if (name !== undefined) updateData.name = name;
-        if (role) updateData.role = role;
-        if (clearanceLevel !== undefined) updateData.clearanceLevel = parseInt(clearanceLevel);
-        if (departmentId !== undefined) updateData.departmentId = departmentId || null;
-        if (accountExpiresAt !== undefined) {
-            updateData.accountExpiresAt = accountExpiresAt ? new Date(accountExpiresAt) : null;
-        }
-        if (groupIds) {
-            updateData.groups = {
-                set: groupIds.map((gid: string) => ({ id: gid }))
-            };
-        }
-
-        const user = await prisma.user.update({
-            where: { id },
-            data: updateData,
-            include: {
-                department: { select: { id: true, name: true } },
-                groups: { select: { id: true, name: true, type: true } }
-            }
-        });
-
-        const { password: _, ...safeUser } = user;
-        return NextResponse.json(safeUser);
-    } catch (error) {
-        console.error('Update User Error:', error);
-        return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
-    }
-}
-
-export async function DELETE(request: NextRequest) {
-    if (!await isAdmin()) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-
-    try {
-        const { searchParams } = new URL(request.url);
-        const id = searchParams.get('id');
-        const reactivate = searchParams.get('reactivate') === 'true';
-
-        if (!id) return NextResponse.json({ error: 'Missing User ID' }, { status: 400 });
-
-        const user = await prisma.user.findUnique({ where: { id } });
-        if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
-
-        // Toggle Active State
-        await prisma.user.update({
-            where: { id },
-            data: {
-                isActive: reactivate
-            }
-        });
-
-        return NextResponse.json({ success: true, isActive: reactivate });
-    } catch (error) {
-        console.error('Toggle User Status Error:', error);
-        return NextResponse.json({ error: 'Failed to update user status' }, { status: 500 });
-    }
+    return NextResponse.json(users);
+  } catch (error) {
+    console.error('Search Users Error:', error);
+    return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
+  }
 }

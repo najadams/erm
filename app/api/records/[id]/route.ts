@@ -72,6 +72,10 @@ export async function GET(
             select: { id: true, title: true, referenceNumber: true }
         },
         department: { select: { id: true, name: true } },
+        auditLogs: {
+            orderBy: { timestamp: 'desc' },
+            include: { user: { select: { name: true, email: true } } }
+        },
         // Access list removed for security. Use /api/records/:id/access
       }
     });
@@ -80,7 +84,7 @@ export async function GET(
       return NextResponse.json({ error: 'Record not found' }, { status: 404 });
     }
 
-    const canDownload = await ACS.evaluate((session.user as any).id, id, 'COMMENT');
+    const canDownload = await ACS.evaluate((session.user as any).id, id, 'VIEW');
 
     let project = null;
     if ((record as any).projectId) {

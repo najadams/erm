@@ -589,8 +589,13 @@ model AccessRequest { // Unified Access Request (Record + Company)
   
   expiresAt   DateTime?
 
+  // Batch grouping for multi-record requests
+  batchId     String?
+
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+
+  @@index([batchId])
 }
 
 // DEPRECATED: RecordAccessRequest replaced by unified AccessRequest
