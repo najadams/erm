@@ -21,6 +21,8 @@ import CompanyTab from '@/components/projects/tabs/CompanyTab';
 import MembersTab from '@/components/projects/tabs/MembersTab';
 import RecordsTab from '@/components/projects/tabs/RecordsTab';
 import ProjectWorkflow from '@/components/projects/ProjectWorkflow';
+import ProjectTimeline from '@/components/projects/ProjectTimeline';
+import ActivityTab from '@/components/projects/tabs/ActivityTab';
 
 interface ProjectDetails {
   id: string;
@@ -116,7 +118,9 @@ export default function ProjectDetailsPage() {
              <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)}>
                 <Tab label="Overview" />
                 <Tab label="Company" />
+                <Tab label="Timeline" />
                 <Tab label="Records" />
+                <Tab label="Activity" />
                 <Tab label="Members" />
              </Tabs>
         </Paper>
@@ -128,12 +132,20 @@ export default function ProjectDetailsPage() {
         <TabPanel value={tabValue} index={1}>
             <CompanyTab company={project.registeredCompany} />
         </TabPanel>
-        
+
         <TabPanel value={tabValue} index={2}>
-            <RecordsTab />
+            <ProjectTimeline project={project} />
         </TabPanel>
         
         <TabPanel value={tabValue} index={3}>
+            <RecordsTab />
+        </TabPanel>
+        
+        <TabPanel value={tabValue} index={4}>
+            <ActivityTab />
+        </TabPanel>
+
+        <TabPanel value={tabValue} index={5}>
             <MembersTab 
                 members={project.members} 
                 projectId={project.id}

@@ -24,9 +24,10 @@ interface UploadRecordModalProps {
   open: boolean;
   onClose: () => void;
   onUploadSuccess: () => void;
+  projectId?: string; // Optional: Uploading directly to a project
 }
 
-export default function UploadRecordModal({ open, onClose, onUploadSuccess }: UploadRecordModalProps) {
+export default function UploadRecordModal({ open, onClose, onUploadSuccess, projectId }: UploadRecordModalProps) {
   const { data: session } = useSession();
   const [activeStep, setActiveStep] = useState(0);
   const [uploading, setUploading] = useState(false);
@@ -49,7 +50,7 @@ export default function UploadRecordModal({ open, onClose, onUploadSuccess }: Up
   });
 
   const [access, setAccess] = useState({
-    projectId: '',
+    projectId: projectId || '',
     departmentId: '',
     sharedUsers: [] as string[],
     sharedGroups: [] as string[],
@@ -79,7 +80,13 @@ export default function UploadRecordModal({ open, onClose, onUploadSuccess }: Up
             type: '', title: '', description: '', department: '', tags: '', category: '', effectiveDate: '', retentionPeriod: '', classificationNodeId: '', parentId: ''
         });
         const userDeptId = (session?.user as any)?.departmentId || '';
-        setAccess({ projectId: '', departmentId: userDeptId, sharedUsers: [], sharedGroups: [], shareWithAll: false });
+        setAccess({ 
+            projectId: projectId || '', 
+            departmentId: userDeptId, 
+            sharedUsers: [], 
+            sharedGroups: [], 
+            shareWithAll: false 
+        });
         setCompliance({ isLegalHold: false, requiresApproval: false });
         setVersionInfo(undefined);
         setTemplate(null);
@@ -88,7 +95,7 @@ export default function UploadRecordModal({ open, onClose, onUploadSuccess }: Up
         setLinkedRecord(null);
         setUploading(false);
     }
-  }, [open]);
+  }, [open, projectId]);
 
   // --- Handlers ---
   const handleMetadataChange = (field: string, value: string) => {
@@ -108,7 +115,11 @@ export default function UploadRecordModal({ open, onClose, onUploadSuccess }: Up
     formData.append('sharedUsers', JSON.stringify(access.sharedUsers));
     formData.append('sharedGroups', JSON.stringify(access.sharedGroups));
     formData.append('shareWithAll', String(access.shareWithAll));
-    if (access.projectId) formData.append('groupId', access.projectId);
+    formData.append('shareWithAll', String(access.shareWithAll));
+    if (access.projectId) {
+        formData.append('projectId', access.projectId);
+        formData.append('groupId', access.projectId); // For legacy compatibility
+    }
     if (access.departmentId) formData.append('departmentId', access.departmentId);
 
     // Compliance

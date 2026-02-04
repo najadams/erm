@@ -1,17 +1,30 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Box, Typography, Button, Container } from '@mui/material';
+import { Box, Typography, Button, Container, ToggleButtonGroup, ToggleButton } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import ViewListIcon from '@mui/icons-material/ViewList';
+import ViewKanbanIcon from '@mui/icons-material/ViewKanban';
 import ProjectList from '@/components/projects/ProjectList';
+import BoardView from '@/components/projects/BoardView';
 import CreateProjectModal from '@/components/projects/CreateProjectModal';
 
 export default function ProjectsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [viewMode, setViewMode] = useState<'list' | 'board'>('list');
 
   const handleRefresh = () => {
     setRefreshTrigger((prev) => prev + 1);
+  };
+
+  const handleViewChange = (
+    event: React.MouseEvent<HTMLElement>,
+    newView: 'list' | 'board' | null,
+  ) => {
+    if (newView !== null) {
+      setViewMode(newView);
+    }
   };
 
   return (
@@ -25,16 +38,37 @@ export default function ProjectsPage() {
             Manage investment projects and case files suitable for GIPC compliance.
             </Typography>
         </div>
-        <Button 
-            variant="contained" 
-            startIcon={<AddIcon />}
-            onClick={() => setModalOpen(true)}
-        >
-            New Project
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+            <ToggleButtonGroup
+                value={viewMode}
+                exclusive
+                onChange={handleViewChange}
+                aria-label="view mode"
+                size="small"
+            >
+                <ToggleButton value="list" aria-label="list view">
+                    <ViewListIcon />
+                </ToggleButton>
+                <ToggleButton value="board" aria-label="board view">
+                    <ViewKanbanIcon />
+                </ToggleButton>
+            </ToggleButtonGroup>
+
+            <Button 
+                variant="contained" 
+                startIcon={<AddIcon />}
+                onClick={() => setModalOpen(true)}
+            >
+                New Project
+            </Button>
+        </Box>
       </Box>
 
-      <ProjectList refreshTrigger={refreshTrigger} />
+      {viewMode === 'list' ? (
+         <ProjectList refreshTrigger={refreshTrigger} />
+      ) : (
+         <BoardView refreshTrigger={refreshTrigger} />
+      )}
 
       <CreateProjectModal 
         open={modalOpen} 

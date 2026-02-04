@@ -21,6 +21,7 @@ import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import DescriptionIcon from '@mui/icons-material/Description';
 import { useParams, useRouter } from 'next/navigation';
 import RecordAutocomplete from '@/components/upload/RecordAutocomplete';
+import UploadRecordModal from '@/components/dashboard/UploadRecordModal';
 
 interface ProjectRecord {
     id: string; // This is the ProjectRecord ID (link ID)
@@ -53,6 +54,7 @@ export default function RecordsTab() {
     const [openAdd, setOpenAdd] = useState(false);
     const [selectedRecord, setSelectedRecord] = useState<any>(null); // From Autocomplete
     const [linking, setLinking] = useState(false);
+    const [openUpload, setOpenUpload] = useState(false);
 
     useEffect(() => {
         if (id) {
@@ -124,20 +126,32 @@ export default function RecordsTab() {
         <Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h6">Project Records</Typography>
-                <Button 
-                    variant="outlined" 
-                    startIcon={<AddIcon />} 
-                    onClick={() => setOpenAdd(true)}
-                >
-                    Link Record
-                </Button>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                    <Button 
+                        variant="outlined" 
+                        startIcon={<AddIcon />} 
+                        onClick={() => setOpenAdd(true)}
+                    >
+                        Link Existing
+                    </Button>
+                    <Button 
+                        variant="contained" 
+                        startIcon={<AddIcon />} 
+                        onClick={() => setOpenUpload(true)}
+                    >
+                        Upload New
+                    </Button>
+                </Box>
             </Box>
 
             {records.length === 0 ? (
                 <Paper sx={{ p: 4, textAlign: 'center', color: 'text.secondary', bgcolor: '#f8fafc' }}>
                     <DescriptionIcon sx={{ fontSize: 48, mb: 1, opacity: 0.5 }} />
                     <Typography>No records linked to this project yet.</Typography>
-                    <Button sx={{ mt: 2 }} onClick={() => setOpenAdd(true)}>Link a File</Button>
+                    <Box sx={{ mt: 2, display: 'flex', gap: 2, justifyContent: 'center' }}>
+                        <Button onClick={() => setOpenAdd(true)}>Link Existing Record</Button>
+                        <Button variant="contained" onClick={() => setOpenUpload(true)}>Upload New</Button>
+                    </Box>
                 </Paper>
             ) : (
                 <Paper sx={{ width: '100%', mb: 2, overflow: 'hidden', borderRadius: 3, border: '1px solid #e2e8f0', boxShadow: 'none' }}>
@@ -242,6 +256,17 @@ export default function RecordsTab() {
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            {/* Upload New Record Modal */}
+            <UploadRecordModal 
+                open={openUpload} 
+                onClose={() => setOpenUpload(false)} 
+                onUploadSuccess={() => {
+                    fetchRecords(); // Refresh list to show new file
+                }}
+                projectId={id}
+            />
+
         </Box>
     );
 }

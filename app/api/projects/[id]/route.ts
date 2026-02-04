@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { sendEmail } from "@/lib/email";
 
 export const dynamic = 'force-dynamic';
 
@@ -92,7 +93,10 @@ export async function PATCH(
     // Fetch existing validation
     const project = await prisma.project.findUnique({
         where: { id },
-        include: { members: true }
+        include: { 
+            members: true,
+            owner: { select: { email: true, name: true } }
+        }
     });
 
     if (!project) {
@@ -179,6 +183,26 @@ export async function PATCH(
                 newValue: status
             }
         });
+
+        // Smart Notification: Email Owner
+        if (project.owner?.email) {
+            const subject = `Project Status Update: ${project.name}`;
+            const html = `
+                <h2>Project Status Changed</h2>
+                <p>The status of project <strong>${project.name}</strong> has been updated.</p>
+                <ul>
+                    <li><strong>Old Status:</strong> ${proj.status}</li>
+                    <li><strong>New Status:</strong> ${status}</li>
+                    <li><strong>Updated By:</strong> ${(session.user as any).name || (session.user as any).email}</li>
+                </ul>
+                <p><a href="${process.env.NEXTAUTH_URL}/projects/${id}">View Project</a></p>
+            `;
+            await sendEmail({
+                to: project.owner.email,
+                subject,
+                html
+            });
+        }
     }
 
     return NextResponse.json(updated);

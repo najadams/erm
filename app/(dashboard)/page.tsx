@@ -19,6 +19,8 @@ import RecentRecords from '@/components/dashboard/RecentRecords';
 import ActivityFeed from '@/components/dashboard/ActivityFeed';
 import UploadRecordModal from '@/components/dashboard/UploadRecordModal';
 import StatsCards from '@/components/dashboard/StatsCards';
+import ProjectsAtRisk from '@/components/dashboard/ProjectsAtRisk';
+import UpcomingDeadlines from '@/components/dashboard/UpcomingDeadlines';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 
@@ -103,6 +105,16 @@ export default function Dashboard() {
 
       {/* Stats Cards */}
       <StatsCards />
+
+      {/* Project Widgets */}
+      <Grid container spacing={3} sx={{ mt: 2 }}>
+          <Grid item xs={12} md={6}>
+              <ProjectsAtRisk />
+          </Grid>
+          <Grid item xs={12} md={6}>
+              <UpcomingDeadlines />
+          </Grid>
+      </Grid>
 
       {/* Recent Records Table */}
       <RecentRecords />
