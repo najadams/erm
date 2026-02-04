@@ -48,6 +48,7 @@ import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import GavelIcon from '@mui/icons-material/Gavel';
 import RestoreIcon from '@mui/icons-material/Restore';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 
 // Dialogs
 import Dialog from '@mui/material/Dialog';
@@ -591,6 +592,19 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
                                   />
                               )}
                           </Box>
+                          {record.canDownload && previewUrl && (
+                              <Button
+                                  size="small"
+                                  startIcon={<OpenInNewIcon />}
+                                  component="a"
+                                  href={previewUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  sx={{ mr: 1 }}
+                              >
+                                  Open in New Tab
+                              </Button>
+                          )}
                           {record.canDownload && downloadUrl && (
                               <Button
                                   size="small"

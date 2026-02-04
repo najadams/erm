@@ -231,7 +231,6 @@ export default function AdminUsersPage() {
           clearanceLevel: formData.clearanceLevel,
           departmentId: formData.departmentId || null,
           accountExpiresAt: formData.accountExpiresAt || null,
-          accountExpiresAt: formData.accountExpiresAt || null,
           groupIds: formData.groupIds,
           password: formData.password ? formData.password : undefined
         }
