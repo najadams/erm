@@ -39,7 +39,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
                     email: accountRequest.email,
                     name: accountRequest.name,
                     password: tempPassword,
-                    role: 'CONTRIBUTOR'  // Default to CONTRIBUTOR role
+                    role: 'CONTRIBUTOR',  // Default to CONTRIBUTOR role
+                    groups: {
+                        connect: { id: '00000000-0000-0000-0000-000000000000' } // Add to Everyone System Group
+                    }
                 }
             });
         }

@@ -75,13 +75,15 @@ interface FormData {
   name: string;
   type: string;
   userIds: string[];
+  code?: string;
 }
 
 const initialFormData: FormData = {
   id: '',
   name: '',
   type: 'DEPARTMENT',
-  userIds: []
+  userIds: [],
+  code: ''
 };
 
 export default function AdminGroupsPage() {
@@ -97,6 +99,7 @@ export default function AdminGroupsPage() {
   const [editMode, setEditMode] = useState(false);
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [formError, setFormError] = useState('');
+  const [isCodeManuallyEdited, setIsCodeManuallyEdited] = useState(false);
 
   // View Members Dialog
   const [viewMembersDialog, setViewMembersDialog] = useState(false);
@@ -156,6 +159,7 @@ export default function AdminGroupsPage() {
   const handleOpenCreate = () => {
     setEditMode(false);
     setFormData(initialFormData);
+    setIsCodeManuallyEdited(false);
     setFormError('');
     setOpenDialog(true);
   };
@@ -176,6 +180,10 @@ export default function AdminGroupsPage() {
           userIds: fullGroup.users?.map((u: User) => u.id) || []
         });
         setOpenDialog(true);
+        // Code is not editable in edit mode currently or not returned by default API yet, 
+        // avoiding complexity for edit mode unless requested. 
+        // For now, let's reset manual edit flag just in case
+        setIsCodeManuallyEdited(true); 
       }
     } catch (err) {
       setError('Failed to load group details');
@@ -212,7 +220,8 @@ export default function AdminGroupsPage() {
         body: JSON.stringify({
           name: formData.name,
           type: formData.type,
-          userIds: formData.userIds
+          userIds: formData.userIds,
+          code: formData.type === 'DEPARTMENT' ? formData.code : undefined
         })
       });
 
@@ -387,9 +396,36 @@ export default function AdminGroupsPage() {
               fullWidth
               required
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="e.g., Finance Team, Project Alpha"
+              onChange={(e) => {
+                  const newName = e.target.value;
+                  const updates: any = { name: newName };
+                  
+                  // Auto-generate code if not manually edited and type is DEPARTMENT
+                  if (formData.type === 'DEPARTMENT' && !isCodeManuallyEdited) {
+                      const code = newName.replace(/[^a-zA-Z]/g, '').substring(0, 3).toUpperCase();
+                      if (code.length > 0) {
+                          updates.code = code;
+                      }
+                  }
+                  
+                  setFormData({ ...formData, ...updates });
+              }}
             />
+
+            {formData.type === 'DEPARTMENT' && (
+                <TextField
+                  label="Department Code"
+                  fullWidth
+                  value={formData.code || ''}
+                  onChange={(e) => {
+                      setFormData({ ...formData, code: e.target.value.toUpperCase() });
+                      setIsCodeManuallyEdited(true);
+                  }}
+                  helperText="Unique code for this department (e.g. HR, FIN). Auto-generated from name if left blank."
+                  disabled={editMode} // Disable for edit mode to avoid sync issues/complexity for now
+                />
+            )}
 
             <FormControl fullWidth>
               <InputLabel>Type</InputLabel>

@@ -619,7 +619,9 @@ export default function AdminUsersPage() {
                   </Box>
                 )}
               >
-                {groups.map((group) => (
+                {groups
+                  .filter(group => group.type !== 'DEPARTMENT')
+                  .map((group) => (
                   <MenuItem key={group.id} value={group.id}>
                     <Checkbox checked={formData.groupIds.indexOf(group.id) > -1} />
                     <ListItemText primary={group.name} secondary={group.type} />
