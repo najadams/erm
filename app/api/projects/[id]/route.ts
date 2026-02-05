@@ -25,7 +25,12 @@ export async function GET(
       where: { id },
       include: {
         owner: { select: { name: true, email: true } },
-        registeredCompany: true,
+        // registeredCompany: true, // REMOVED relation
+        projectCompanies: {
+            include: {
+                company: true
+            }
+        },
         members: {
             include: {
                 user: { select: { id: true, name: true, email: true } }

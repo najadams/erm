@@ -69,11 +69,35 @@ export default function KanbanCard({ project }: KanbanCardProps) {
           {project.name}
         </Typography>
 
-        {project.registeredCompany && (
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, fontSize: '0.85rem' }}>
-            {project.registeredCompany.name}
-          </Typography>
-        )}
+        {/* Company Display (M:N Support) */}
+        {(() => {
+            const comps = project.projectCompanies || [];
+            if (comps.length > 0) {
+                const primary = comps.find((c: any) => c.role === 'PRIMARY_INVESTOR') || comps[0];
+                const count = comps.length;
+                return (
+                    <Box sx={{ mb: 1.5 }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.85rem' }}>
+                            {primary.company?.name}
+                        </Typography>
+                        {count > 1 && (
+                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                +{count - 1} partners
+                            </Typography>
+                        )}
+                    </Box>
+                );
+            }
+            // Legacy
+            if (project.registeredCompany) {
+                return (
+                     <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, fontSize: '0.85rem' }}>
+                        {project.registeredCompany.name}
+                    </Typography>
+                );
+            }
+            return null;
+        })()}
 
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
           <Tooltip title={`Owner: ${project.owner?.name || 'Unknown'}`}>

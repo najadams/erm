@@ -3,7 +3,7 @@
 import React from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { Box, Paper, Typography, Chip } from '@mui/material';
-import { PauseCircle } from 'lucide-react';
+import PauseCircleIcon from '@mui/icons-material/PauseCircle';
 import KanbanCard from './KanbanCard';
 
 interface OnHoldSwimlaneProps {
@@ -44,7 +44,7 @@ export default function OnHoldSwimlane({ projects, isValidDropTarget }: OnHoldSw
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-          <PauseCircle size={20} color="#ff8f00" />
+          <PauseCircleIcon sx={{ fontSize: 20, color: '#ff8f00' }} />
           <Typography variant="h6" fontWeight="bold" color="#ff8f00">
             On Hold
           </Typography>

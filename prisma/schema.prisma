@@ -669,7 +669,8 @@ model RegisteredCompany {
 
   // Relations
   records           Record[] // All records related to this company
-  projects          Project[]
+  // projects          Project[] // DEPRECATED: 1:1 relation
+  projectCompanies  ProjectCompany[] // New M:N relation
   
   // Governance
   accessPermissions CompanyAccess[]
@@ -727,8 +728,10 @@ model Project {
   owner       User     @relation("ProjectOwner", fields: [ownerUserId], references: [id])
   
   // Relations
-  registeredCompanyId String?
-  registeredCompany   RegisteredCompany? @relation(fields: [registeredCompanyId], references: [id])
+  registeredCompanyId String? // DEPRECATED: Kept for migration
+  // registeredCompany   RegisteredCompany? @relation(fields: [registeredCompanyId], references: [id]) // Commented out to prevent ambiguity
+  
+  projectCompanies ProjectCompany[] // New M:N relation
   
   members     ProjectMember[]
   projectRecords ProjectRecord[]
@@ -736,6 +739,20 @@ model Project {
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model ProjectCompany {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  companyId String
+  company   RegisteredCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  role      String   @default("PRIMARY_INVESTOR") // PRIMARY_INVESTOR, PARTNER, SUBSIDIARY
+  
+  addedAt   DateTime @default(now())
+  
+  @@unique([projectId, companyId])
 }
 
 model ProjectMember {

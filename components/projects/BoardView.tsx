@@ -1,10 +1,28 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
-import { Box, CircularProgress, Backdrop } from '@mui/material';
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  DragOverEvent,
+  useSensor,
+  useSensors,
+  PointerSensor,
+} from '@dnd-kit/core';
+import { Box, CircularProgress, Snackbar, Alert } from '@mui/material';
 import KanbanColumn from './kanban/KanbanColumn';
 import KanbanCard from './kanban/KanbanCard';
+import OnHoldSwimlane from './kanban/OnHoldSwimlane';
+import ArchivedSection from './kanban/ArchivedSection';
+import {
+  MAIN_WORKFLOW_STATUSES,
+  STATUS_CONFIG,
+  canTransition,
+  getAllowedTargets,
+  ProjectStatus,
+} from '@/lib/projectStatusTransitions';
 
 interface BoardViewProps {
   refreshTrigger: number;
@@ -15,6 +33,9 @@ export default function BoardView({ refreshTrigger }: BoardViewProps) {
   const [loading, setLoading] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeProject, setActiveProject] = useState<any>(null);
+  const [validDropTargets, setValidDropTargets] = useState<Record<string, boolean>>({});
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [archivedExpanded, setArchivedExpanded] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -43,83 +64,203 @@ export default function BoardView({ refreshTrigger }: BoardViewProps) {
     }
   };
 
+  // Memoize project grouping by status
+  const projectsByStatus = useMemo(() => {
+    const grouped: Record<ProjectStatus, any[]> = {
+      DRAFT: [],
+      SUBMITTED: [],
+      IN_REVIEW: [],
+      APPROVED: [],
+      ACTIVE: [],
+      ON_HOLD: [],
+      COMPLETED: [],
+      ARCHIVED: [],
+    };
+
+    projects.forEach((project) => {
+      const status = project.status as ProjectStatus;
+      if (grouped[status]) {
+        grouped[status].push(project);
+      }
+    });
+
+    return grouped;
+  }, [projects]);
+
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
     setActiveId(active.id as string);
-    setActiveProject(active.data.current?.project);
+    const project = active.data.current?.project;
+    setActiveProject(project);
+
+    // Calculate valid drop targets based on current project status
+    if (project) {
+      const allowedTargets = getAllowedTargets(project.status);
+      const targets: Record<string, boolean> = {};
+
+      // Check all possible drop zones
+      [...MAIN_WORKFLOW_STATUSES, 'ON_HOLD', 'ARCHIVED'].forEach((status) => {
+        targets[status] = allowedTargets.includes(status as ProjectStatus);
+      });
+
+      setValidDropTargets(targets);
+    }
+  };
+
+  const handleDragOver = (_event: DragOverEvent) => {
+    // Visual feedback is already handled by validDropTargets state
+    // This handler can be used for additional effects if needed
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
+
+    // Reset drag state
     setActiveId(null);
     setActiveProject(null);
+    setValidDropTargets({});
 
     if (!over) return;
 
     const projectId = active.id as string;
-    const newStatus = over.id as string; // The column ID is now the Status ID (e.g. 'DRAFT', 'ACTIVE')
-    
+    const newStatus = over.id as string;
+
     // Find current project
-    const project = projects.find(p => p.id === projectId);
+    const project = projects.find((p) => p.id === projectId);
     if (!project) return;
-    if (project.status === newStatus) return; // No change
+
+    // Check if we're dropping on the same status column
+    if (project.status === newStatus) return;
+
+    // Validate transition client-side
+    if (!canTransition(project.status, newStatus)) {
+      const allowedTargets = getAllowedTargets(project.status);
+      setErrorMessage(
+        `Cannot move from "${STATUS_CONFIG[project.status as ProjectStatus]?.label || project.status}" to "${STATUS_CONFIG[newStatus as ProjectStatus]?.label || newStatus}". ` +
+          `Allowed: ${allowedTargets.map((s) => STATUS_CONFIG[s]?.label || s).join(', ')}`
+      );
+      return;
+    }
 
     // Optimistic Update
-    setProjects(prev => prev.map(p => {
+    setProjects((prev) =>
+      prev.map((p) => {
         if (p.id === projectId) {
-            return { ...p, status: newStatus };
+          return { ...p, status: newStatus };
         }
         return p;
-    }));
+      })
+    );
 
     // API Call
     try {
-        await fetch(`/api/projects/${projectId}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: newStatus })
-        });
-    } catch (error) {
-        console.error('Failed to update status', error);
-        // Revert on fail? For now, let's just refresh.
+      const res = await fetch(`/api/projects/${projectId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        setErrorMessage(data.error || 'Failed to update status');
+        // Revert on fail
         fetchProjects();
+      }
+    } catch (error) {
+      console.error('Failed to update status', error);
+      setErrorMessage('Failed to update project status');
+      fetchProjects();
     }
   };
-  
+
+  const handleCloseError = () => {
+    setErrorMessage(null);
   };
 
-  const columns = [
-     { id: 'DRAFT', title: 'Draft', statuses: ['DRAFT'] },
-     { id: 'SUBMITTED', title: 'Submitted', statuses: ['SUBMITTED'] },
-     { id: 'IN_REVIEW', title: 'In Review', statuses: ['IN_REVIEW'] },
-     { id: 'APPROVED', title: 'Approved', statuses: ['APPROVED'] },
-     { id: 'ACTIVE', title: 'Active', statuses: ['ACTIVE'] },
-     { id: 'ON_HOLD', title: 'On Hold', statuses: ['ON_HOLD'] },
-     { id: 'COMPLETED', title: 'Completed', statuses: ['COMPLETED'] },
-     { id: 'ARCHIVED', title: 'Archived', statuses: ['ARCHIVED'] }
-  ];
+  // Determine drop target validity for a given status
+  const getDropTargetValidity = (status: string): boolean | null => {
+    if (!activeProject) return null; // Not dragging
+    return validDropTargets[status] ?? false;
+  };
 
-  if (loading && projects.length === 0) return <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>;
+  if (loading && projects.length === 0) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <Box sx={{ display: 'flex', gap: 3, overflowX: 'auto', pb: 2, height: 'calc(100vh - 200px)' }}>
-            {columns.map(col => {
-                const colProjects = projects.filter(p => col.statuses.includes(p.status));
-                return (
-                    <KanbanColumn 
-                        key={col.id} 
-                        id={col.id} 
-                        title={col.title} 
-                        count={colProjects.length} 
-                        projects={colProjects} 
-                    />
-                );
-            })}
+    <>
+      <DndContext
+        sensors={sensors}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+      >
+        {/* Main Workflow Columns */}
+        <Box
+          sx={{
+            display: 'flex',
+            gap: 2,
+            overflowX: 'auto',
+            pb: 2,
+            height: 'calc(100vh - 380px)',
+            minHeight: 400,
+            '&::-webkit-scrollbar': {
+              height: 8,
+            },
+            '&::-webkit-scrollbar-thumb': {
+              bgcolor: '#bdbdbd',
+              borderRadius: 4,
+            },
+          }}
+        >
+          {MAIN_WORKFLOW_STATUSES.map((status) => (
+            <KanbanColumn
+              key={status}
+              id={status}
+              title={STATUS_CONFIG[status].label}
+              count={projectsByStatus[status].length}
+              projects={projectsByStatus[status]}
+              statusConfig={STATUS_CONFIG[status]}
+              isValidDropTarget={getDropTargetValidity(status)}
+            />
+          ))}
         </Box>
+
+        {/* ON_HOLD Swimlane */}
+        <OnHoldSwimlane
+          projects={projectsByStatus.ON_HOLD}
+          isValidDropTarget={getDropTargetValidity('ON_HOLD')}
+        />
+
+        {/* ARCHIVED Section */}
+        <ArchivedSection
+          projects={projectsByStatus.ARCHIVED}
+          isExpanded={archivedExpanded}
+          onToggle={() => setArchivedExpanded(!archivedExpanded)}
+          isValidDropTarget={getDropTargetValidity('ARCHIVED')}
+        />
+
+        {/* Drag Overlay */}
         <DragOverlay>
-            {activeProject ? <KanbanCard project={activeProject} /> : null}
+          {activeProject ? <KanbanCard project={activeProject} /> : null}
         </DragOverlay>
-    </DndContext>
+      </DndContext>
+
+      {/* Error Snackbar */}
+      <Snackbar
+        open={!!errorMessage}
+        autoHideDuration={6000}
+        onClose={handleCloseError}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={handleCloseError} severity="error" sx={{ width: '100%' }}>
+          {errorMessage}
+        </Alert>
+      </Snackbar>
+    </>
   );
 }

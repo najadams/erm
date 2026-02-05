@@ -66,8 +66,25 @@ export default function ProjectList({ refreshTrigger }: { refreshTrigger: number
     { 
         field: 'registeredCompany', 
         headerName: 'Company', 
-        width: 200,
-        valueGetter: (params: any) => params?.name || '---'
+        width: 250,
+        renderCell: (params: GridRenderCellParams) => {
+            const comps = params.row.projectCompanies || [];
+            // If new M:N data exists
+            if (comps.length > 0) {
+                const primary = comps.find((c: any) => c.role === 'PRIMARY_INVESTOR') || comps[0];
+                const count = comps.length;
+                return (
+                    <div>
+                        <div>{primary.company?.name || 'Unknown'}</div>
+                        {count > 1 && (
+                            <div className="text-xs text-gray-500">+{count - 1} others</div>
+                        )}
+                    </div>
+                );
+            }
+            // Legacy Fallback
+            return params.row.registeredCompany?.name || '---';
+        }
     },
     { field: 'type', headerName: 'Type', width: 130 },
     { 

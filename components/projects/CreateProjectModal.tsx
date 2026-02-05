@@ -72,15 +72,24 @@ export default function CreateProjectModal({ open, onClose, onSuccess }: CreateP
     }
   };
 
+  const [selectedCompanies, setSelectedCompanies] = useState<Company[]>([]);
+  const [companyRoles, setCompanyRoles] = useState<Record<string, string>>({});
+
+  // ... (existing state)
+
+  // Debounced search for companies (Keep existing useEffect and fetchCompanies)
+
   const handleCreate = async () => {
     if (!formData.name) {
         setError('Project Name is required.');
         return;
     }
-    if (!formData.registeredCompanyId) {
-        setError('A Registered Company must be linked.');
-        return;
-    }
+    
+    // Prepare companies payload
+    const companiesPayload = selectedCompanies.map(c => ({
+        companyId: c.id,
+        role: companyRoles[c.id] || 'PARTNER'
+    }));
 
     setError('');
     setSubmitting(true);
@@ -91,7 +100,7 @@ export default function CreateProjectModal({ open, onClose, onSuccess }: CreateP
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             ...formData,
-            // Format dates simply for now
+            companies: companiesPayload,
             startDate: formData.startDate,
             endDate: formData.endDate
         }),
@@ -116,6 +125,8 @@ export default function CreateProjectModal({ open, onClose, onSuccess }: CreateP
         startDate: null,
         endDate: null,
       });
+      setSelectedCompanies([]);
+      setCompanyRoles({});
 
     } catch (err: any) {
       setError(err.message);
@@ -149,20 +160,31 @@ export default function CreateProjectModal({ open, onClose, onSuccess }: CreateP
                 
                 <Grid item xs={12} md={6}>
                     <Autocomplete
+                        multiple
                         options={companies}
                         getOptionLabel={(option) => `${option.name} (${option.registrationNumber})`}
                         loading={loadingCompanies}
+                        value={selectedCompanies}
                         onInputChange={(event, newInputValue) => {
                             fetchCompanies(newInputValue);
                         }}
                         onChange={(event, newValue) => {
-                            setFormData({ ...formData, registeredCompanyId: newValue ? newValue.id : null });
+                            setSelectedCompanies(newValue);
+                            // Auto-assign roles
+                            const newRoles = { ...companyRoles };
+                            newValue.forEach((c, index) => {
+                                if (!newRoles[c.id]) {
+                                    newRoles[c.id] = index === 0 && Object.keys(companyRoles).length === 0 
+                                        ? 'PRIMARY_INVESTOR' 
+                                        : 'PARTNER';
+                                }
+                            });
+                            setCompanyRoles(newRoles);
                         }}
                         renderInput={(params) => (
                             <TextField 
                                 {...params} 
-                                label="Link Company" 
-                                required
+                                label="Link Companies (Optional)" 
                                 InputProps={{
                                     ...params.InputProps,
                                     endAdornment: (
@@ -177,6 +199,38 @@ export default function CreateProjectModal({ open, onClose, onSuccess }: CreateP
                     />
                 </Grid>
 
+                {/* Role Assignment for Selected Companies */}
+                {selectedCompanies.length > 0 && (
+                    <Grid item xs={12}>
+                        <div className="bg-gray-50 p-3 rounded-md border border-gray-200">
+                            <div className="text-sm font-semibold text-gray-700 mb-2">Company Roles</div>
+                            {selectedCompanies.map((company) => (
+                                <Grid container key={company.id} spacing={2} alignItems="center" sx={{ mb: 1 }}>
+                                    <Grid item xs={6}>
+                                        <span className="text-sm">{company.name}</span>
+                                    </Grid>
+                                    <Grid item xs={6}>
+                                        <TextField
+                                            select
+                                            fullWidth
+                                            size="small"
+                                            value={companyRoles[company.id] || 'PARTNER'}
+                                            onChange={(e) => setCompanyRoles({
+                                                ...companyRoles,
+                                                [company.id]: e.target.value
+                                            })}
+                                        >
+                                            <MenuItem value="PRIMARY_INVESTOR">Primary Investor</MenuItem>
+                                            <MenuItem value="PARTNER">Partner</MenuItem>
+                                            <MenuItem value="SUBSIDIARY">Subsidiary</MenuItem>
+                                        </TextField>
+                                    </Grid>
+                                </Grid>
+                            ))}
+                        </div>
+                    </Grid>
+                )}
+ 
                 <Grid item xs={12}>
                     <TextField
                         fullWidth

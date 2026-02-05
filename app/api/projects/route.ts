@@ -37,19 +37,26 @@ export async function GET(request: NextRequest) {
   ];
 
   try {
-    const projects = await prisma.project.findMany({
+    const project = await prisma.project.findMany({
       where,
       orderBy: { updatedAt: 'desc' },
       include: {
+      include: {
         owner: { select: { name: true, email: true } },
-        registeredCompany: { select: { name: true, registrationNumber: true } },
+        // registeredCompany: { select: { name: true, registrationNumber: true } }, // REMOVED relation
+        projectCompanies: {
+            include: {
+                company: { select: { id: true, name: true, registrationNumber: true } }
+            }
+        },
         _count: {
             select: { members: true, projectRecords: true }
         }
       }
+      }
     });
 
-    return NextResponse.json(projects);
+    return NextResponse.json(project);
   } catch (error: any) {
     console.error('Projects API Error:', error);
     return NextResponse.json({ error: 'Failed to fetch projects', details: error.message }, { status: 500 });
@@ -77,7 +84,8 @@ export async function POST(request: NextRequest) {
         type,
         priority,
         sector,
-        registeredCompanyId 
+        registeredCompanyId,
+        companies // Array of { companyId, role }
     } = body;
 
     if (!name) {
@@ -91,8 +99,7 @@ export async function POST(request: NextRequest) {
     const sequence = (count + 1).toString().padStart(3, '0');
     const referenceNumber = `PRJ-${year}-${sequence}`;
 
-    const project = await prisma.project.create({
-      data: {
+    const projectData: any = {
         name,
         description,
         status: status || 'DRAFT',
@@ -104,7 +111,6 @@ export async function POST(request: NextRequest) {
         type: type || 'INVESTMENT',
         priority: priority || 'MEDIUM',
         sector,
-        registeredCompanyId,
         referenceNumber,
 
         ownerUserId: userId,
@@ -115,7 +121,31 @@ export async function POST(request: NextRequest) {
                 role: 'MANAGER'
             }
         }
-      }
+    };
+
+    // Handle M:N Companies
+    if (companies && Array.isArray(companies) && companies.length > 0) {
+        projectData.projectCompanies = {
+            create: companies.map((c: any) => ({
+                companyId: c.companyId || c.id, // Handle both formats
+                role: c.role || 'PRIMARY_INVESTOR'
+            }))
+        };
+        // Set legacy field to the first one for backward compatibility
+        projectData.registeredCompanyId = companies[0].companyId || companies[0].id;
+    } else if (registeredCompanyId) {
+        // Fallback for legacy requests
+        projectData.registeredCompanyId = registeredCompanyId;
+        projectData.projectCompanies = {
+            create: [{
+                companyId: registeredCompanyId,
+                role: 'PRIMARY_INVESTOR'
+            }]
+        };
+    }
+
+    const project = await prisma.project.create({
+      data: projectData
     });
 
     return NextResponse.json(project);

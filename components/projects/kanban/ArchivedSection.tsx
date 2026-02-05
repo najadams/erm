@@ -3,7 +3,9 @@
 import React from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { Box, Paper, Typography, Chip, IconButton, Collapse } from '@mui/material';
-import { Archive, ChevronDown, ChevronUp } from 'lucide-react';
+import ArchiveIcon from '@mui/icons-material/Archive';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import KanbanCard from './KanbanCard';
 
 interface ArchivedSectionProps {
@@ -61,7 +63,7 @@ export default function ArchivedSection({
           onClick={onToggle}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Archive size={20} color="#546e7a" />
+            <ArchiveIcon sx={{ fontSize: 20, color: '#546e7a' }} />
             <Typography variant="h6" fontWeight="bold" color="#546e7a">
               Archived
             </Typography>
@@ -81,7 +83,7 @@ export default function ArchivedSection({
               {isExpanded ? 'Hide' : 'Show'}
             </Typography>
             <IconButton size="small">
-              {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+              {isExpanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
             </IconButton>
           </Box>
         </Box>
