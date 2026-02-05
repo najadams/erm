@@ -36,6 +36,11 @@ export async function GET(
                 user: { select: { id: true, name: true, email: true } }
             }
         },
+        projectGroups: {
+            include: {
+                group: true
+            }
+        },
         _count: {
             select: { projectRecords: true }
         }
@@ -177,6 +182,47 @@ export async function PATCH(
             endDate: endDate ? new Date(endDate) : undefined,
         } as any
     });
+
+    // RETENTION LOGIC: Trigger 'CASE_CLOSED' policies
+    if (status === 'COMPLETED' && proj.status !== 'COMPLETED') {
+        const recordsToUpdate = await prisma.record.findMany({
+            where: {
+                projectRecords: { some: { projectId: id } },
+                retentionPolicy: { trigger: 'CASE_CLOSED' }
+            },
+            include: { retentionPolicy: true }
+        });
+
+        const today = new Date();
+
+        await Promise.all(recordsToUpdate.map(async (record) => {
+            if (!record.retentionPolicy || record.retentionPolicy.durationValue === null) return;
+
+            const { durationValue, durationUnit } = record.retentionPolicy;
+            // Create a fresh date object for calculation
+            let dispositionDate = new Date(today);
+
+            switch (durationUnit) {
+                case 'YEARS':
+                    dispositionDate.setFullYear(dispositionDate.getFullYear() + durationValue);
+                    break;
+                case 'MONTHS':
+                    dispositionDate.setMonth(dispositionDate.getMonth() + durationValue);
+                    break;
+                case 'DAYS':
+                    dispositionDate.setDate(dispositionDate.getDate() + durationValue);
+                    break;
+                case 'PERMANENT':
+                    // PERMANENT records do not get a disposition date (or it's null)
+                    return; 
+            }
+
+            await prisma.record.update({
+                where: { id: record.id },
+                data: { dispositionDate }
+            });
+        }));
+    }
 
     // Audit Log for Status Change
     if (status && status !== proj.status) {

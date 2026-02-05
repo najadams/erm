@@ -37,10 +37,9 @@ export async function GET(request: NextRequest) {
   ];
 
   try {
-    const project = await prisma.project.findMany({
+    const projects = await prisma.project.findMany({
       where,
       orderBy: { updatedAt: 'desc' },
-      include: {
       include: {
         owner: { select: { name: true, email: true } },
         // registeredCompany: { select: { name: true, registrationNumber: true } }, // REMOVED relation
@@ -53,10 +52,9 @@ export async function GET(request: NextRequest) {
             select: { members: true, projectRecords: true }
         }
       }
-      }
     });
 
-    return NextResponse.json(project);
+    return NextResponse.json(projects);
   } catch (error: any) {
     console.error('Projects API Error:', error);
     return NextResponse.json({ error: 'Failed to fetch projects', details: error.message }, { status: 500 });
@@ -95,8 +93,29 @@ export async function POST(request: NextRequest) {
     // Generate Reference Number
     // Format: PRJ-{YYYY}-{SEQ}
     const year = new Date().getFullYear();
-    const count = await prisma.project.count();
-    const sequence = (count + 1).toString().padStart(3, '0');
+    
+    // Find last project to determine sequence
+    const lastProject = await prisma.project.findFirst({
+        where: {
+            referenceNumber: { startsWith: `PRJ-${year}-` }
+        },
+        orderBy: { referenceNumber: 'desc' },
+        select: { referenceNumber: true }
+    });
+
+    let sequenceNum = 1;
+    if (lastProject?.referenceNumber) {
+        const parts = lastProject.referenceNumber.split('-');
+        // Expected format: PRJ-YYYY-NNN
+        if (parts.length === 3) {
+             const lastSeq = parseInt(parts[2], 10);
+             if (!isNaN(lastSeq)) {
+                 sequenceNum = lastSeq + 1;
+             }
+        }
+    }
+    
+    const sequence = sequenceNum.toString().padStart(3, '0');
     const referenceNumber = `PRJ-${year}-${sequence}`;
 
     const projectData: any = {

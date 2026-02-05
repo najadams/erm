@@ -63,6 +63,7 @@ model Group {
   sharedRecords Record[] @relation("GroupSharedRecords")
   companyPermissions CompanyAccess[]
   projectRecords Record[] @relation("ProjectRecords")
+  projectGroups ProjectGroup[]
   
   // Magic String Removal (Link to Department)
   departments Department[]
@@ -734,11 +735,25 @@ model Project {
   projectCompanies ProjectCompany[] // New M:N relation
   
   members     ProjectMember[]
+  projectGroups ProjectGroup[] // New M:N relation
   projectRecords ProjectRecord[]
   auditLogs   AuditLog[]
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model ProjectGroup {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  groupId   String
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  role      String   // MANAGER, CONTRIBUTOR, VIEW_ONLY
+  
+  addedAt   DateTime @default(now())
+  
+  @@unique([projectId, groupId])
 }
 
 model ProjectCompany {

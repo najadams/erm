@@ -35,6 +35,7 @@ interface ProjectDetails {
   ownerUserId: string;
   registeredCompany: any;
   members: any[];
+  projectGroups: any[];
   visibility: string;
   startDate?: string;
   endDate?: string;

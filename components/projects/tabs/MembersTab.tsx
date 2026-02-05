@@ -19,14 +19,18 @@ import {
     FormControl,
     InputLabel,
     Select,
-    CircularProgress
+    CircularProgress,
+    Tabs,
+    Tab
 } from '@mui/material';
 import PersonIcon from '@mui/icons-material/Person';
+import GroupIcon from '@mui/icons-material/Group';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import UserAutocomplete from '../UserAutocomplete';
+import GroupAutocomplete from '../GroupAutocomplete';
 
 interface Member {
   id: string; // ProjectMember ID
@@ -39,66 +43,93 @@ interface Member {
   }
 }
 
+interface ProjectGroup {
+    id: string; // ProjectGroup ID
+    groupId: string;
+    role: string;
+    group: {
+        id: string;
+        name: string;
+        type: string;
+    }
+}
+
 interface MembersTabProps {
     members: Member[];
+    groups?: ProjectGroup[];
     projectId: string;
     currentUser?: { id: string; role?: string; } | null;
     onUpdate?: () => void;
 }
 
-export default function MembersTab({ members, projectId, currentUser, onUpdate }: MembersTabProps) {
+export default function MembersTab({ members, groups = [], projectId, currentUser, onUpdate }: MembersTabProps) {
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<ProjectGroup | null>(null);
   
   const [openAdd, setOpenAdd] = useState(false);
+  const [addTab, setAddTab] = useState(0); // 0 = User, 1 = Group
+
   const [newUser, setNewUser] = useState<any>(null);
+  const [newGroup, setNewGroup] = useState<any>(null);
   const [newRole, setNewRole] = useState('CONTRIBUTOR');
   
   const [loading, setLoading] = useState(false);
 
   // Derive permissions
-  // This is a client-side check for UI only. API enforces security.
-  // currentUser might be ownerUserId (we don't pass ownerUserId here though, but we can check if currentUser is a manager in the list)
-  // Actually, easiest is to check if currentUser is in members list with role 'MANAGER' or if we can infer "Owner" from somewhere.
-  // Current logic: Check if currentUser is in the list as MANAGER.
-  // Note: Owner is often also in the member list, or handled separately.
-  // If currentUser is NOT in the list (e.g. strict Owner who didn't add themselves as member?), we might miss it.
-  // Ideally parent passes `canManage` prop. But let's try to infer or be lenient (UI shows buttons, API might reject).
-  
   const currentMemberRec = members.find(m => m.user.id === currentUser?.id);
-  const canManage = currentMemberRec?.role === 'MANAGER'; 
-  // Note: Explicit Project Owner check is missing here strictly speaking, but usually Owner makes themselves Manager or we should pass `isOwner`.
-  // Let's rely on `canManage` being reasonably accurate or just show controls if logged in? No, showing controls to everyone is bad UX.
-  // For now, I'll update parent to pass `isOwner` or `canManage`. I'll assume `canManage` prop might be passed in future, but for now calculate it.
-  // If the user is the Project Owner (from parent?), they should see controls.
-  // I'll add `isOwner` prop to be safe.
+  const canManage = currentMemberRec?.role === 'MANAGER'; // Or owner
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, member: Member) => {
     setMenuAnchor(event.currentTarget);
     setSelectedMember(member);
+    setSelectedGroup(null);
+  };
+
+  const handleGroupMenuOpen = (event: React.MouseEvent<HTMLElement>, group: ProjectGroup) => {
+    setMenuAnchor(event.currentTarget);
+    setSelectedGroup(group);
+    setSelectedMember(null);
   };
 
   const handleMenuClose = () => {
     setMenuAnchor(null);
     setSelectedMember(null);
+    setSelectedGroup(null);
   };
 
   const handleAddMember = async () => {
-      if (!newUser) return;
       setLoading(true);
       try {
-          const res = await fetch(`/api/projects/${projectId}/members`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: newUser.email, role: newRole })
-          });
-          
-          if (res.ok) {
-              setOpenAdd(false);
-              setNewUser(null);
-              if (onUpdate) onUpdate();
+          if (addTab === 0) {
+              if (!newUser) return;
+              const res = await fetch(`/api/projects/${projectId}/members`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ email: newUser.email, role: newRole })
+              });
+              if (res.ok) {
+                  setOpenAdd(false);
+                  setNewUser(null);
+                  if (onUpdate) onUpdate();
+              } else {
+                  alert('Failed to add member');
+              }
           } else {
-              alert('Failed to add member');
+              if (!newGroup) return;
+               const res = await fetch(`/api/projects/${projectId}/groups`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ groupId: newGroup.id, role: newRole })
+              });
+              if (res.ok) {
+                  setOpenAdd(false);
+                  setNewGroup(null);
+                  if (onUpdate) onUpdate();
+              } else {
+                  const data = await res.json();
+                  alert(data.error || 'Failed to add group');
+              }
           }
       } catch (e) {
           console.error(e);
@@ -108,36 +139,61 @@ export default function MembersTab({ members, projectId, currentUser, onUpdate }
   };
 
   const handleChangeRole = async (role: string) => {
-      if (!selectedMember) return;
       setLoading(true);
       try {
-           const res = await fetch(`/api/projects/${projectId}/members`, {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ memberId: selectedMember.id, role })
-          });
-          if (res.ok) {
-              handleMenuClose();
-              if (onUpdate) onUpdate();
-          } else {
-              alert('Failed to update role');
+          if (selectedMember) {
+            const res = await fetch(`/api/projects/${projectId}/members`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ memberId: selectedMember.id, role })
+            });
+            if (res.ok) {
+                handleMenuClose();
+                if (onUpdate) onUpdate();
+            } else {
+                alert('Failed to update role');
+            }
+          } else if (selectedGroup) {
+             const res = await fetch(`/api/projects/${projectId}/groups`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ groupId: selectedGroup.group.id, role })
+            });
+            if (res.ok) {
+                handleMenuClose();
+                if (onUpdate) onUpdate();
+            } else {
+                alert('Failed to update role');
+            }
           }
       } catch(e) { console.error(e); }
       finally { setLoading(false); }
   };
 
   const handleDelete = async () => {
-      if (!selectedMember || !confirm('Remove this member?')) return;
+      if (!confirm('Remove this member/group?')) return;
       setLoading(true);
       try {
-           const res = await fetch(`/api/projects/${projectId}/members?memberId=${selectedMember.id}`, {
-              method: 'DELETE'
-          });
-          if (res.ok) {
-              handleMenuClose();
-              if (onUpdate) onUpdate();
-          } else {
-              alert('Failed to remove member');
+          if (selectedMember) {
+            const res = await fetch(`/api/projects/${projectId}/members?memberId=${selectedMember.id}`, {
+                method: 'DELETE'
+            });
+            if (res.ok) {
+                handleMenuClose();
+                if (onUpdate) onUpdate();
+            } else {
+                alert('Failed to remove member');
+            }
+          } else if (selectedGroup) {
+             const res = await fetch(`/api/projects/${projectId}/groups?groupId=${selectedGroup.group.id}`, {
+                method: 'DELETE'
+            });
+            if (res.ok) {
+                handleMenuClose();
+                if (onUpdate) onUpdate();
+            } else {
+                alert('Failed to remove group');
+            }
           }
       } catch(e) { console.error(e); }
       finally { setLoading(false); }
@@ -147,23 +203,49 @@ export default function MembersTab({ members, projectId, currentUser, onUpdate }
     <Box>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
             <Typography variant="h6">Project Team</Typography>
-            {/* We really need to know if currentUser is allowed. 
-                I'll allow the button if we have a currentUser for now, relying on API to fail. 
-                Optimistically show if user is likely manager.
-            */}
             <Button startIcon={<AddIcon />} variant="outlined" size="small" onClick={() => setOpenAdd(true)}>
                 Add Member
             </Button>
         </Box>
 
         <List sx={{ width: '100%', bgcolor: 'background.paper', borderRadius: 2, border: '1px solid #eee' }}>
+        
+        {/* Groups Section */}
+        {groups.map((g) => (
+             <ListItem 
+                key={g.id} 
+                divider 
+                secondaryAction={
+                    <IconButton edge="end" onClick={(e) => handleGroupMenuOpen(e, g)}>
+                        <MoreVertIcon />
+                    </IconButton>
+                }
+            >
+            <ListItemAvatar>
+                <Avatar sx={{ bgcolor: 'secondary.main' }}>
+                    <GroupIcon />
+                </Avatar>
+            </ListItemAvatar>
+            <ListItemText
+                primary={g.group.name}
+                secondary={`Group • ${g.group.type}`}
+            />
+            <Chip 
+                label={g.role} 
+                size="small" 
+                color={g.role === 'MANAGER' ? 'secondary' : 'default'} 
+                variant="outlined" 
+                sx={{ mr: 2 }}
+            />
+            </ListItem>
+        ))}
+
+        {/* Users Section */}
         {members.map((member) => (
             <ListItem 
                 key={member.id} 
                 divider 
                 secondaryAction={
-                    // Only show actions if not self? Or allow leaving?
-                    // Also don't show actions for OWNER usually... but we don't know who is owner easily here without prop.
                     <IconButton edge="end" onClick={(e) => handleMenuOpen(e, member)}>
                         <MoreVertIcon />
                     </IconButton>
@@ -187,6 +269,12 @@ export default function MembersTab({ members, projectId, currentUser, onUpdate }
             />
             </ListItem>
         ))}
+        
+        {members.length === 0 && groups.length === 0 && (
+            <ListItem>
+                <ListItemText primary="No members yet" sx={{ textAlign: 'center', color: 'text.secondary' }} />
+            </ListItem>
+        )}
         </List>
 
         {/* Action Menu */}
@@ -206,13 +294,28 @@ export default function MembersTab({ members, projectId, currentUser, onUpdate }
         {/* Add Member Modal */}
         <Dialog open={openAdd} onClose={() => setOpenAdd(false)} fullWidth maxWidth="xs">
             <DialogTitle>Add Team Member</DialogTitle>
-            <DialogContent sx={{ pt: 2 }}>
+            <DialogContent sx={{ pt: 0 }}>
+                <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+                    <Tabs value={addTab} onChange={(e, v) => setAddTab(v)} variant="fullWidth">
+                        <Tab label="User" />
+                        <Tab label="Group" />
+                    </Tabs>
+                </Box>
+                
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 1 }}>
-                    <UserAutocomplete 
-                        value={newUser}
-                        onChange={setNewUser}
-                        label="Find User by Name/Email"
-                    />
+                    {addTab === 0 ? (
+                        <UserAutocomplete 
+                            value={newUser}
+                            onChange={setNewUser}
+                            label="Find User by Name/Email"
+                        />
+                    ) : (
+                        <GroupAutocomplete
+                            value={newGroup}
+                            onChange={setNewGroup}
+                            label="Find Group"
+                        />
+                    )}
                     
                     <FormControl fullWidth>
                         <InputLabel>Role</InputLabel>
@@ -220,7 +323,7 @@ export default function MembersTab({ members, projectId, currentUser, onUpdate }
                             value={newRole}
                             label="Role"
                             onChange={(e) => setNewRole(e.target.value)}
-                            native // Use native for simplicity or MenuItem if I imported it
+                            native 
                         >
                             <option value="CONTRIBUTOR">Contributor</option>
                             <option value="MANAGER">Manager</option>
@@ -231,7 +334,7 @@ export default function MembersTab({ members, projectId, currentUser, onUpdate }
             </DialogContent>
             <DialogActions>
                 <Button onClick={() => setOpenAdd(false)}>Cancel</Button>
-                <Button onClick={handleAddMember} variant="contained" disabled={!newUser || loading}>
+                <Button onClick={handleAddMember} variant="contained" disabled={(!newUser && !newGroup) || loading}>
                     {loading ? 'Adding...' : 'Add'}
                 </Button>
             </DialogActions>
