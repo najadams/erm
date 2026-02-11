@@ -1,6 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 // Schema for adding a group
 const AddGroupSchema = z.object({
@@ -14,14 +16,49 @@ const UpdateGroupSchema = z.object({
   role: z.enum(['MANAGER', 'CONTRIBUTOR', 'VIEW_ONLY']),
 });
 
-export async function POST(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const projectId = params.id;
-    const body = await request.json();
+// Helper to check permissions
+async function getManagerPerms(projectId: string, userId: string, userRole?: string) {
+    if (userRole === 'ADMIN') return { canManage: true };
+
+    const project = await prisma.project.findUnique({
+        where: { id: projectId },
+        include: { members: true }
+    });
+
+    if (!project) return null;
+
+    const isOwner = project.ownerUserId === userId;
+    const member = project.members.find(m => m.userId === userId);
     
+    return {
+        isOwner,
+        canManage: isOwner || member?.role === 'MANAGER',
+        project
+    };
+}
+
+export async function POST(
+  request: NextRequest,
+  props: { params: Promise<{ id: string }> }
+) {
+  const params = await props.params;
+  const session = await getServerSession(authOptions);
+
+  if (!session || !session.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const userId = (session.user as any).id;
+  const userRole = (session.user as any).role;
+  const projectId = params.id;
+
+  // Check Permissions
+  const perms = await getManagerPerms(projectId, userId, userRole);
+  if (!perms) return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+  if (!perms.canManage) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+  try {
+    const body = await request.json();
     const validated = AddGroupSchema.safeParse(body);
     
     if (!validated.success) {
@@ -32,15 +69,6 @@ export async function POST(
     }
 
     const { groupId, role } = validated.data;
-
-    // Check if project exists
-    const project = await prisma.project.findUnique({
-      where: { id: projectId },
-    });
-
-    if (!project) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
-    }
 
     // Check if group exists
     const group = await prisma.group.findUnique({
@@ -91,13 +119,27 @@ export async function POST(
 }
 
 export async function PATCH(
-    request: Request,
-    { params }: { params: { id: string } }
+    request: NextRequest,
+    props: { params: Promise<{ id: string }> }
 ) {
-    try {
-        const projectId = params.id;
-        const body = await request.json();
+    const params = await props.params;
+    const session = await getServerSession(authOptions);
 
+    if (!session || !session.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userId = (session.user as any).id;
+    const userRole = (session.user as any).role;
+    const projectId = params.id;
+
+    // Check Permissions
+    const perms = await getManagerPerms(projectId, userId, userRole);
+    if (!perms) return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    if (!perms.canManage) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+    try {
+        const body = await request.json();
         const validated = UpdateGroupSchema.safeParse(body);
 
         if (!validated.success) {
@@ -133,11 +175,26 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
+  const session = await getServerSession(authOptions);
+
+  if (!session || !session.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const userId = (session.user as any).id;
+  const userRole = (session.user as any).role;
+  const projectId = params.id;
+
+  // Check Permissions
+  const perms = await getManagerPerms(projectId, userId, userRole);
+  if (!perms) return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+  if (!perms.canManage) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
   try {
-    const projectId = params.id;
     const { searchParams } = new URL(request.url);
     const groupId = searchParams.get('groupId');
 

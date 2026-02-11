@@ -49,7 +49,17 @@ export async function GET(
 }
 
 // Helper to check permissions
-async function getProjectPermission(projectId: string, userId: string) {
+async function getProjectPermission(projectId: string, userId: string, userRole?: string) {
+    if (userRole === 'ADMIN') {
+        return {
+            isOwner: false,
+            member: null,
+            canEdit: true,
+            canContribute: true,
+            isMember: true 
+        };
+    }
+
     const project = await prisma.project.findUnique({
         where: { id: projectId },
         include: { members: true }
@@ -82,9 +92,10 @@ export async function POST(
 
     const projectId = params.id;
     const userId = (session.user as any).id;
+    const userRole = (session.user as any).role;
 
     // RBAC Check
-    const perms = await getProjectPermission(projectId, userId);
+    const perms = await getProjectPermission(projectId, userId, userRole);
     if (!perms) return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     if (!perms.canContribute) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
@@ -149,6 +160,7 @@ export async function DELETE(
 
     const projectId = params.id;
     const userId = (session.user as any).id;
+    const userRole = (session.user as any).role;
     const { searchParams } = new URL(request.url);
     const recordId = searchParams.get('recordId');
 
@@ -157,7 +169,7 @@ export async function DELETE(
     }
 
     // RBAC Check
-    const perms = await getProjectPermission(projectId, userId);
+    const perms = await getProjectPermission(projectId, userId, userRole);
     if (!perms) return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     
     // Deletion requires Manager permissions (or if user added it? Keeping it strict for now)

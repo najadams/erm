@@ -4,13 +4,18 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from '@/lib/prisma';
 
 // Helper to check permissions
-async function getManagerPerms(projectId: string, userId: string) {
+async function getManagerPerms(projectId: string, userId: string, userRole?: string) {
+    if (userRole === 'ADMIN') return { canManage: true, project: null as any }; // Project might be needed but for permission check this is enough. 
+    // Wait, some logic below uses perms.project.ownerUserId. So we should fetch project even for Admin.
+
     const project = await prisma.project.findUnique({
         where: { id: projectId },
         include: { members: true }
     });
 
     if (!project) return null;
+
+    if (userRole === 'ADMIN') return { isOwner: false, canManage: true, project };
 
     const isOwner = project.ownerUserId === userId;
     const member = project.members.find(m => m.userId === userId);
@@ -58,8 +63,9 @@ export async function POST(
 
     const projectId = params.id;
     const userId = (session.user as any).id;
+    const userRole = (session.user as any).role;
 
-    const perms = await getManagerPerms(projectId, userId);
+    const perms = await getManagerPerms(projectId, userId, userRole);
     if (!perms) return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     if (!perms.canManage) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
@@ -91,7 +97,7 @@ export async function POST(
         
         // Prevent adding Owner as member (they are already implicit, but maybe we want explicit?)
         // Schema says specific relation for Owner. Member is separate.
-        if (userToAdd.id === perms.project.ownerUserId) {
+        if (perms.project && userToAdd.id === perms.project.ownerUserId) {
              return NextResponse.json({ error: 'User is the project owner' }, { status: 400 });
         }
 
@@ -127,8 +133,9 @@ export async function PATCH(
 
     const projectId = params.id;
     const userId = (session.user as any).id;
+    const userRole = (session.user as any).role;
 
-    const perms = await getManagerPerms(projectId, userId);
+    const perms = await getManagerPerms(projectId, userId, userRole);
     if (!perms) return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     if (!perms.canManage) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
@@ -171,10 +178,11 @@ export async function DELETE(
 
     const projectId = params.id;
     const userId = (session.user as any).id;
+    const userRole = (session.user as any).role;
     const { searchParams } = new URL(request.url);
     const memberId = searchParams.get('memberId'); // ProjectMember ID
 
-    const perms = await getManagerPerms(projectId, userId);
+    const perms = await getManagerPerms(projectId, userId, userRole);
     if (!perms) return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     if (!perms.canManage) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 

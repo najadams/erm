@@ -17,7 +17,8 @@
 
 import { prisma } from '@/lib/prisma';
 import { AccessLevel, AccessType, Prisma } from '@prisma/client';
-import { ROLES, EVERYONE_GROUP_ID, hasClearance, getRequiredClearance } from '@/lib/permissions';
+import { ROLES, EVERYONE_GROUP_ID, hasClearance, getRequiredClearance, hasPermission, isGovernanceAction, hasGovernanceAuthority, PERMISSIONS } from '@/lib/permissions';
+import { canEditInStatus } from '@/lib/lifecycle';
 
 // =============================================================================
 // TYPES
@@ -128,6 +129,32 @@ export class ACS {
       };
     }
 
+    // 4.5 RBAC PERMISSION CHECK (Global Permissions subject to Clearance)
+    // Check for VIEW_ALL_RECORDS
+    if (['DISCOVERY', 'VIEW'].includes(action)) {
+      if (hasPermission(user.role, 'VIEW_ALL_RECORDS')) {
+        return { allowed: true, reason: 'Role has VIEW_ALL_RECORDS permission', accessLevel: AccessLevel.VIEW };
+      }
+      if (hasPermission(user.role, 'VIEW_DEPARTMENT_RECORDS')) {
+         if (record.departmentId && record.departmentId === user.departmentId) {
+             return { allowed: true, reason: 'Role has VIEW_DEPARTMENT_RECORDS permission', accessLevel: AccessLevel.VIEW };
+         }
+      }
+    }
+
+    // Check for GOVERNANCE Actions
+    if (action === 'GOVERNANCE') {
+        if (hasGovernanceAuthority(user.role)) {
+            return { allowed: true, reason: 'Role has Governance Authority', accessLevel: AccessLevel.GOVERNANCE };
+        }
+    } else if (isGovernanceAction(action as any)) {
+      // If the user's role has this specific governance permission, allow it
+      // Note: We cast action to Permission because Action superset overlaps
+      if (hasPermission(user.role, action as any)) {
+          return { allowed: true, reason: `Role has explicit governance permission: ${action}`, accessLevel: AccessLevel.GOVERNANCE };
+      }
+    }
+
     // 5. CHECK FOR EXPLICIT DENY (Highest Priority, ignore expired)
     const now = new Date();
     const explicitDeny = record.access.some((a: any) =>
@@ -140,8 +167,20 @@ export class ACS {
       return { allowed: false, reason: 'Explicit DENY in ACL' };
     }
 
-    // 6. LOCK STATE CHECK (For edit actions)
+    // 6. LIFECYCLE & LOCK STATE CHECK
     if (['EDIT_METADATA', 'EDIT_CONTENT', 'DELETE'].includes(action)) {
+      // A. Lifecycle Check
+      const editType = action === 'EDIT_CONTENT' ? 'CONTENT' : 'METADATA';
+      // Note: DELETE handled separately or follows DRAFT only rule usually.
+      // canEditInStatus handles DRAFT/SUBMITTED/REGISTERED/ARCHIVED
+      if (action !== 'DELETE' && !canEditInStatus(record.status, editType)) {
+         // Exception: Governance overriding? 
+         // Records Officer might need to edit metadata of Registered records?
+         // Current canEditInStatus says NO. We stick to that for "Verified = Locked" behavior.
+         return { allowed: false, reason: `Cannot edit record in '${record.status}' state` };
+      }
+
+      // B. Lock Check
       if (record.isLocked) {
         return { allowed: false, reason: 'Record is locked' };
       }
@@ -192,35 +231,92 @@ export class ACS {
         return { allowed: true, reason: 'Project member - Discovery access', accessLevel: AccessLevel.VIEW };
       }
 
-      // For content access, need additional authorization
-      // Check if user has department scope or explicit permission
-      const hasDeptScope = record.departmentId && record.departmentId === user.departmentId;
+      // Check Content Access based on Project Role
+      const role = projectMembership.role || 'VIEW_ONLY';
+      // Note: isRecordOwner logic in Step 7 covers "Owner Access", but we need it here for Contributor check
+      const isRecordOwner = record.ownerUserId === userId; 
       const hasExplicitPerm = explicitAllow !== undefined;
+      // Note: Department Logic (Step 11) will catch Same-Department access later.
+      // But strictly following the prompt: 
+      // - Managers/ViewOnly/Owners get access via Project (Cross-Dept) if they have Clearance.
+      // - Contributors DO NOT get access via Project unless Owner/Explicit.
 
-      if (hasDeptScope || hasExplicitPerm) {
-        // Project member with additional authorization gets full project access
-        if (projectMembership.projectStatus === 'ON_HOLD') {
-          // Frozen project: read-only
-          if (['VIEW', 'COMMENT'].includes(action)) {
-            return { allowed: true, reason: 'Project member (ON_HOLD) + dept/explicit', accessLevel: AccessLevel.COMMENT };
-          }
-        } else {
-          // Active project: full collaboration
-          if (['VIEW', 'COMMENT', 'EDIT_METADATA'].includes(action)) {
-            return { allowed: true, reason: 'Project member + dept/explicit', accessLevel: AccessLevel.EDIT_METADATA };
-          }
-          if (action === 'EDIT_CONTENT' && projectMembership.role === 'MANAGER') {
-            return { allowed: true, reason: 'Project MANAGER', accessLevel: AccessLevel.EDIT_CONTENT };
-          }
+      // Frozen project check
+      if (projectMembership.projectStatus === 'ON_HOLD') {
+        if (['EDIT_METADATA', 'EDIT_CONTENT'].includes(action)) {
+           return { allowed: false, reason: 'Project is ON_HOLD' };
         }
       }
 
-      // Project member without additional auth: Discovery only
-      // (If we reach here, action is not DISCOVERY since that case returned early)
-      return {
-        allowed: false,
-        reason: 'Project membership grants discovery only. Need department scope or explicit permission for content access.'
-      };
+      switch (role) {
+        case 'OWNER': // Project Owner
+          // Record Discovery: YES (Handled above)
+          // Record Content View: YES (if department OR clearance allows) -> Since Clearance is Step 4, we allow.
+          if (['VIEW', 'COMMENT'].includes(action)) {
+            return { allowed: true, reason: 'Project Owner', accessLevel: AccessLevel.COMMENT };
+          }
+          // Record Edit: YES (if owner) -> Assuming Record Owner
+          if (['EDIT_METADATA', 'EDIT_CONTENT'].includes(action)) {
+            if (isRecordOwner) {
+               return { allowed: true, reason: 'Project Owner + Record Owner', accessLevel: AccessLevel.EDIT_CONTENT };
+            }
+             // Fallback: If they are not record owner, they don't get edit rights via Project Role 'OWNER' per spec.
+             // However, Managers get edit rights on unlocked content. 
+             // If Project Owner implies Manager rights, we should allow. 
+             // Strictly following spec: "Record Edit: YES (if owner)". 
+             // We will DENY here (fall through) if not owner.
+          }
+          break;
+
+        case 'MANAGER':
+          // Record Discovery: YES
+          // Record Content View: YES (if department OR clearance allows)
+          if (['VIEW', 'COMMENT'].includes(action)) {
+            return { allowed: true, reason: 'Project Manager', accessLevel: AccessLevel.COMMENT };
+          }
+          // Record Edit: YES (if content not locked)
+          if (['EDIT_METADATA', 'EDIT_CONTENT'].includes(action)) {
+             if (!record.isLocked) {
+                return { allowed: true, reason: 'Project Manager (Unlocked)', accessLevel: AccessLevel.EDIT_CONTENT };
+             } else {
+                return { allowed: false, reason: 'Record is Locked' };
+             }
+          }
+          break;
+
+        case 'CONTRIBUTOR':
+          // Record Discovery: YES
+          // Record Content View: YES (if owner OR explicit ACL)
+          if (['VIEW', 'COMMENT'].includes(action)) {
+             if (isRecordOwner || hasExplicitPerm) {
+                return { allowed: true, reason: 'Project Contributor (Owner/Explicit)', accessLevel: explicitAllow?.level || AccessLevel.COMMENT };
+             }
+             // IMPORTANT: We do NOT return allowed=true here for generic Contributors.
+             // This means Cross-Department Contributors CANNOT view.
+             // Same-Department Contributors will be saved by Step 11.
+          }
+          // Record Edit: YES (if owner AND draft)
+          if (['EDIT_METADATA', 'EDIT_CONTENT'].includes(action)) {
+             if (isRecordOwner && record.status === 'DRAFT') {
+                return { allowed: true, reason: 'Project Contributor (Owner + Draft)', accessLevel: AccessLevel.EDIT_CONTENT };
+             }
+          }
+          break;
+
+        case 'VIEW_ONLY':
+          // Record Discovery: YES
+          // Record Content View: YES (if department OR clearance allows)
+          if (['VIEW', 'COMMENT'].includes(action)) {
+             return { allowed: true, reason: 'Project View Only', accessLevel: AccessLevel.COMMENT }; // ViewOnly can Comment? "Access: YES". Usually View.
+          }
+          // Record Edit: NO
+          if (['EDIT_METADATA', 'EDIT_CONTENT'].includes(action)) {
+             return { allowed: false, reason: 'View Only Role' };
+          }
+          break;
+      }
+      
+      // If we haven't returned, proceed to next steps (e.g. Dept check)
     }
 
     // 11. DEPARTMENT VISIBILITY (View/Comment within department)
@@ -237,7 +333,7 @@ export class ACS {
   /**
    * Check project membership for a user and record
    */
-  private static async checkProjectMembership(
+   private static async checkProjectMembership(
     userId: string,
     recordId: string
   ): Promise<{ isMember: boolean; role?: string; projectStatus?: string; projectId?: string }> {
@@ -245,7 +341,10 @@ export class ACS {
       where: {
         recordId,
         project: {
-          members: { some: { userId } }
+          OR: [
+            { members: { some: { userId } } },
+            { ownerUserId: userId }
+          ]
         }
       },
       include: {
@@ -253,6 +352,7 @@ export class ACS {
           select: {
             id: true,
             status: true,
+            ownerUserId: true,
             members: {
               where: { userId },
               select: { role: true }
@@ -266,9 +366,16 @@ export class ACS {
       return { isMember: false };
     }
 
+    let role = 'VIEW_ONLY';
+    if (projectRecord.project.ownerUserId === userId) {
+      role = 'OWNER';
+    } else if (projectRecord.project.members[0]) {
+      role = projectRecord.project.members[0].role;
+    }
+
     return {
       isMember: true,
-      role: projectRecord.project.members[0]?.role,
+      role: role,
       projectStatus: projectRecord.project.status,
       projectId: projectRecord.project.id
     };
