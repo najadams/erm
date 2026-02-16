@@ -47,6 +47,7 @@ export const authOptions: NextAuthOptions = {
           name: user.name,
           role: user.role,
           departmentId: user.departmentId,
+          clearanceLevel: user.clearanceLevel,
         };
       }
     })
@@ -60,6 +61,7 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.role = (user as any).role;
         token.departmentId = (user as any).departmentId;
+        token.clearanceLevel = (user as any).clearanceLevel;
       }
       return token;
     },
@@ -68,6 +70,7 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).id = token.id;
         (session.user as any).role = token.role;
         (session.user as any).departmentId = token.departmentId;
+        (session.user as any).clearanceLevel = token.clearanceLevel;
       }
       return session;
     }

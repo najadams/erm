@@ -21,13 +21,23 @@ const CLASSIFICATIONS = [
 
 interface SecurityControlProps {
   data: {
-    classification: string;
+    securityClassification: string;
   };
   onChange: (field: string, value: string) => void;
+  userClearanceLevel?: number;
 }
 
-export default function SecurityControl({ data, onChange }: SecurityControlProps) {
-  const selectedClassification = CLASSIFICATIONS.find(c => c.value === data.classification);
+// Maps classification values to required clearance levels
+const CLEARANCE_MAP: Record<string, number> = {
+  OFFICIAL: 1,
+  OFFICIAL_CONFIDENTIAL: 2,
+  RESTRICTED: 3,
+  SECRET: 4
+};
+
+export default function SecurityControl({ data, onChange, userClearanceLevel = 5 }: SecurityControlProps) {
+  const selectedClassification = CLASSIFICATIONS.find(c => c.value === data.securityClassification);
+  const allowedClassifications = CLASSIFICATIONS.filter(c => userClearanceLevel >= (CLEARANCE_MAP[c.value] || 1));
 
   return (
     <Paper variant="outlined" sx={{ p: 3, mb: 3 }}>
@@ -40,11 +50,11 @@ export default function SecurityControl({ data, onChange }: SecurityControlProps
         <FormControl fullWidth>
           <InputLabel>Classification Level</InputLabel>
           <Select
-            value={data.classification}
+            value={data.securityClassification}
             label="Classification Level"
-            onChange={(e) => onChange('classification', e.target.value)}
+            onChange={(e) => onChange('securityClassification', e.target.value)}
           >
-            {CLASSIFICATIONS.map((cls) => (
+            {allowedClassifications.map((cls) => (
               <MenuItem key={cls.value} value={cls.value}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Chip label={cls.label} size="small" color={cls.color} sx={{ minWidth: 140 }} />

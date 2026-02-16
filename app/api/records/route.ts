@@ -65,7 +65,12 @@ export async function GET(request: NextRequest) {
       }
   }
 
-  if (status) filters.push({ status });
+  if (status) {
+    filters.push({ status });
+  } else {
+    // Default to active records — enables PostgreSQL partial index usage
+    filters.push({ status: { in: ['DRAFT', 'SUBMITTED', 'REGISTERED'] } });
+  }
   if (projectId) filters.push({ projectId });
   if (registeredCompanyId) filters.push({ registeredCompanyId });
   
@@ -269,8 +274,19 @@ export async function POST(request: NextRequest) {
     const metadataValues = JSON.parse(rawMetadata || '{}');
 
     // Governance Fields
-    const classification = formData.get('classification') as string || 'OFFICIAL';
+    const securityClassification = formData.get('securityClassification') as string || 'OFFICIAL';
     const isLegalHold = formData.get('isLegalHold') === 'true';
+
+    // Security Clearance Check
+    // Ensure user's clearance level meets the required level for the chosen classification
+    const { getRequiredClearance } = await import('@/lib/permissions');
+    const userClearance = (session.user as any)?.clearanceLevel ?? 1;
+    const requiredClearance = getRequiredClearance(securityClassification);
+    if (userClearance < requiredClearance) {
+      return NextResponse.json({
+        error: `Insufficient security clearance. Your clearance level (${userClearance}) does not meet the required level (${requiredClearance}) for ${securityClassification} documents.`
+      }, { status: 403 });
+    }
 
     // Final metadata to be stored - will be mapped from UUID keys to field names
     let finalMetadata: Record<string, any> = {};
@@ -718,7 +734,7 @@ export async function POST(request: NextRequest) {
                   companySnapshotRegNo,
 
                   // Governance Fields
-                  classification: classification as any,
+                  securityClassification: securityClassification as any,
                   isLegalHold,
 
                   // Metadata (JSONB)

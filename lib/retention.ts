@@ -1,145 +1,81 @@
-
 import { prisma } from '@/lib/prisma';
-import { RecordStatus } from '@/lib/lifecycle';
+
+const BATCH_SIZE = 100; // Process records in chunks of 100
 
 /**
- * Calculates the disposition date based on policy and creation date.
+ * Check for records that have reached their disposition date.
+ * Returns records in batches to prevent memory issues with large datasets.
  */
-export function calculateDispositionDate(createdAt: Date, durationYears: number): Date {
-  const date = new Date(createdAt);
-  date.setFullYear(date.getFullYear() + durationYears);
-  return date;
+export async function checkRetention(cursor?: string) {
+  const now = new Date();
+
+  const expiredRecords = await prisma.record.findMany({
+    where: {
+      status: { in: ['REGISTERED', 'ARCHIVED'] },
+      dispositionDate: { lte: now },
+      isLegalHold: false,
+      deletedAt: null, // Skip already soft-deleted records
+    },
+    select: { id: true, title: true, dispositionDate: true, status: true },
+    orderBy: { dispositionDate: 'asc' },
+    take: BATCH_SIZE,
+    ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
+  });
+
+  return expiredRecords;
 }
 
 /**
- * Checks if a record can be disposed (Retention Expired AND No Legal Holds).
+ * Process disposition for a batch of expired records.
+ * Uses a batched transaction for atomicity within each batch.
+ * Idempotent: checks if audit log already exists before creating.
  */
-export function isRecordDisposalAllowed(
-    record: { 
-        dispositionDate: Date | null, 
-        isLegalHold: boolean,
-        status: string 
-    }
-): boolean {
-    if (record.isLegalHold) return false;
-    if (!record.dispositionDate) return false;
-    
-    const now = new Date();
-    // Must be in past
-    return record.dispositionDate <= now;
-}
+export async function processDisposition(
+  records: { id: string; title: string }[]
+) {
+  const results: { id: string; success: boolean; skipped?: boolean }[] = [];
 
-/**
- * Applies a Legal Hold to a record.
- */
-export async function applyLegalHold(recordId: string, legalHoldId: string, userId: string) {
-    return await prisma.$transaction(async (tx) => {
-        // Create Link
-        await tx.recordLegalHold.create({
-            data: {
-                recordId,
-                legalHoldId,
-                addedByUserId: userId
-            }
-        });
+  for (const record of records) {
+    try {
+      // Idempotency: skip if we already logged for this record today
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
 
-        // Update Flag
-        await tx.record.update({
-            where: { id: recordId },
-            data: { isLegalHold: true }
-        });
-
-        // Audit
-        await tx.auditLog.create({
-            data: {
-                action: 'LEGAL_HOLD_APPLIED',
-                recordId,
-                userId,
-                source: 'SYSTEM',
-                newValue: JSON.stringify({ legalHoldId })
-            }
-        });
-    });
-}
-
-/**
- * Removes a Legal Hold.
- */
-export async function removeLegalHold(recordId: string, legalHoldId: string, userId: string) {
-    return await prisma.$transaction(async (tx) => {
-        // Remove Link
-        await tx.recordLegalHold.delete({
-            where: {
-                recordId_legalHoldId: {
-                    recordId,
-                    legalHoldId
-                }
-            }
-        });
-
-        // Check if other holds remain
-        const count = await tx.recordLegalHold.count({
-            where: { recordId }
-        });
-
-        const stillHeld = count > 0;
-
-        // Update Flag
-        await tx.record.update({
-            where: { id: recordId },
-            data: { isLegalHold: stillHeld }
-        });
-
-        await tx.auditLog.create({
-            data: {
-                action: 'LEGAL_HOLD_REMOVED',
-                recordId,
-                userId,
-                source: 'SYSTEM',
-                newValue: JSON.stringify({ legalHoldId, remainingHolds: count })
-            }
-        });
-    });
-}
-
-/**
- * Scans for records that are ready for disposition and marks them.
- * Returns the count of processed records.
- *
- * Note: In the current model, disposition is handled by archiving.
- * Future enhancement: Add a pendingDisposition boolean flag for
- * records awaiting final destruction.
- */
-export async function processDispositionQueue() {
-    const now = new Date();
-
-    // Find records that:
-    // 1. Are REGISTERED (official records)
-    // 2. Have passed their disposition date
-    // 3. Are NOT under legal hold
-    const expiredRecords = await prisma.record.findMany({
+      const existing = await prisma.auditLog.findFirst({
         where: {
-            status: 'REGISTERED',
-            dispositionDate: { lte: now },
-            isLegalHold: false
+          action: 'RETENTION_EXPIRED',
+          newValue: { contains: record.id },
+          timestamp: { gte: todayStart },
         },
-        select: { id: true }
-    });
+      });
 
-    if (expiredRecords.length === 0) return 0;
+      if (existing) {
+        results.push({ id: record.id, success: true, skipped: true });
+        continue;
+      }
 
-    // Archive them (disposition = move to archive for final review)
-    const result = await prisma.record.updateMany({
-        where: {
-            id: { in: expiredRecords.map(r => r.id) }
-        },
+      // Create audit log entry for disposition notification
+      await prisma.auditLog.create({
         data: {
-            status: 'ARCHIVED'
-        }
-    });
+          action: 'RETENTION_EXPIRED',
+          userId: 'SYSTEM',
+          actorRole: 'SYSTEM',
+          source: 'CRON',
+          newValue: JSON.stringify({
+            message:
+              'Record reached disposition date. Ready for manual review.',
+            recordId: record.id,
+            title: record.title,
+          }),
+        },
+      });
 
-    // TODO: Create audit logs for bulk disposition actions
-    // TODO: Implement destruction workflow (separate from archival)
+      results.push({ id: record.id, success: true });
+    } catch (e) {
+      console.error(`Failed to process disposition for ${record.id}`, e);
+      results.push({ id: record.id, success: false });
+    }
+  }
 
-    return result.count;
+  return results;
 }

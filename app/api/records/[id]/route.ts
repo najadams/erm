@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { hasPermission } from '@/lib/permissions';
+import { invalidateCache, invalidatePattern, CacheKeys } from '@/lib/cache';
 
 import { assertTransitionAllowed, RecordStatus } from '@/lib/lifecycle';
 import { canAccessRecord } from '@/lib/access'; // Kept for compatibility if other funcs used, but we prefer ACS
@@ -74,6 +75,7 @@ export async function GET(
         department: { select: { id: true, name: true } },
         auditLogs: {
             orderBy: { timestamp: 'desc' },
+            take: 50, // Limit to 50 most recent actions for performance
             include: { user: { select: { name: true, email: true } } }
         },
         // Access list removed for security. Use /api/records/:id/access
@@ -172,6 +174,10 @@ export async function PATCH(
               }
           });
           
+          // Invalidate caches after status change
+          await invalidateCache(CacheKeys.record(id));
+          await invalidatePattern('stats:*');
+          await invalidatePattern('acs:*');
           if (!metadata) return NextResponse.json(updated);
       }
 
@@ -247,6 +253,8 @@ export async function PATCH(
               ]);
           }
 
+          // Invalidate record cache after metadata update
+          await invalidateCache(CacheKeys.record(id));
           return NextResponse.json({ success: true, changes: auditEntries.length });
       }
       
@@ -295,54 +303,83 @@ export async function DELETE(
         // 2. Strict Lifecycle Safeguard
         // These statuses are defined in schema.prisma RecordStatus enum
         const LOCKED_STATES = ['REGISTERED', 'LOCKED', 'ARCHIVED'];
-        if (record.status && LOCKED_STATES.includes(record.status)) {
-             return NextResponse.json({
-                 error: `Cannot delete Official Record in '${record.status}' state. This requires a formal Disposition process.`
-             }, { status: 403 });
-        }
+        const isOfficial = record.status && LOCKED_STATES.includes(record.status);
 
         // 3. Permission Checks for Drafts/Submitted
         const isOwner = record.ownerUserId === userId;
         const canDelete = hasPermission(userRole, 'WORKSPACE_DELETE_DRAFT');
-        const isAdmin = hasPermission(userRole, 'MANAGE_USERS'); // Proxy for Admin power, or check specific DELETE perm
+        const isAdmin = hasPermission(userRole, 'MANAGE_USERS'); // Proxy for Admin power
 
         if (record.status === 'DRAFT') {
             if (!isOwner && !isAdmin) {
                 return NextResponse.json({ error: 'You can only delete your own drafts.' }, { status: 403 });
             }
+            // HARD DELETE DRAFTS (Maintain cleanup behavior)
+             await prisma.$transaction(async (tx: any) => {
+                 await tx.auditLog.create({
+                     data: {
+                         action: 'DELETE',
+                         userId: userId,
+                         actorRole: userRole,
+                         source: 'API',
+                         newValue: JSON.stringify({ title: record.title, status: record.status })
+                     }
+                 });
+                 await tx.record.delete({ where: { id } });
+            });
+            // Invalidate caches
+            await invalidateCache(CacheKeys.record(id));
+            await invalidatePattern('stats:*');
+            return NextResponse.json({ success: true, method: 'HARD_DELETE' });
         } 
-        // Allow deleting Submitted if you are admin/approver? (Rejecting usually sets back to draft, but hard delete might be needed)
         
-        // 4. Perform Deletion
-        // Note: This will likely cascade delete Metadata/Versions/AuditLogs depending on Schema.
-        // Ideally AuditLogs should refer to Record as Optional and SetNull on delete.
-        // Let's assume schema handles cascading or we transactionally delete.
-        
-        // Transaction: Create Audit Log (orphaned) -> Delete Record
-        await prisma.$transaction(async (tx: any) => {
-             // Create Audit Log of deletion (must be before delete if we want to snapshot, 
-             // but 'recordId' will be nullified if foreign key restricted, or we leave it as string?)
-             // Schema: recordId String? relation... onDelete: SetNull usually.
-             
-             await tx.auditLog.create({
-                 data: {
-                     action: 'DELETE',
-                     userId: userId,
-                     actorRole: userRole,
-                     source: 'API',
-                     newValue: JSON.stringify({
-                         title: record.title,
-                         status: record.status,
-                         deletedAt: new Date().toISOString()
-                     })
-                     // recordId intentionally left null or if we set it, it becomes null upon delete
-                 }
-             });
+        // OFFICIAL RECORDS: Soft Delete
+        // Requires Admin/Records Officer or specific permission (e.g. DISPOSITION)
+        // For now, we allow Admin or Records Officer to soft delete.
+        if (isOfficial) {
+            if (!isAdmin && userRole !== 'RECORDS_OFFICER') {
+                 return NextResponse.json({ 
+                     error: `Official records can only be deleted by Administrators or Records Officers.` 
+                 }, { status: 403 });
+            }
 
-             await tx.record.delete({ where: { id } });
-        });
+            await prisma.$transaction(async (tx: any) => {
+                 await tx.auditLog.create({
+                     data: {
+                         action: 'SOFT_DELETE',
+                         userId: userId,
+                         actorRole: userRole,
+                         source: 'API',
+                         newValue: JSON.stringify({ title: record.title, deletedAt: new Date() })
+                     }
+                 });
+                 
+                 // Perform Soft Delete
+                 await tx.record.update({ 
+                     where: { id },
+                     data: { deletedAt: new Date() }
+                 });
+            });
+            // Invalidate caches
+            await invalidateCache(CacheKeys.record(id));
+            await invalidatePattern('stats:*');
+            await invalidatePattern('acs:*');
+            return NextResponse.json({ success: true, method: 'SOFT_DELETE' });
+        }
 
-        return NextResponse.json({ success: true });
+        // Catch-all for other states (e.g. SUBMITTED) -> Treat as Draft? or Soft Delete?
+        // Let's treat SUBMITTED as Draft-like (hard delete if rejected) or Soft Delete if we want history.
+        // SAFE OPTION: Soft Delete everything else to be safe.
+        // Actually, SUBMITTED usually implies it's in a workflow. Deleting it might break verify queue?
+        // Let's allow hard delete for SUBMITTED if user has permission.
+        if (record.status === 'SUBMITTED') {
+             if (!isOwner && !isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+             // Hard delete submitted?
+             await prisma.record.delete({ where: { id } });
+             return NextResponse.json({ success: true, method: 'HARD_DELETE' });
+        }
+
+        return NextResponse.json({ error: 'Unhandled record state' }, { status: 400 });
 
     } catch (error: any) {
         console.error('Delete Error:', error);

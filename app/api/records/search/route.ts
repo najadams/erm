@@ -28,21 +28,44 @@ export async function GET(request: NextRequest) {
   // We'll treat it as standard WHERE input. 
 
   try {
-    const records = await prisma.record.findMany({
-      where: {
+    let ftsIds: string[] = [];
+
+    // 1. Try High-Performance FTS first
+    try {
+        const ftsResults: any[] = await prisma.$queryRaw`
+            SELECT id FROM "Record"
+            WHERE search_vector @@ plainto_tsquery('english', ${q})
+            LIMIT 50
+        `;
+        ftsIds = ftsResults.map(r => r.id);
+    } catch (e) {
+        console.warn('FTS Query Failed (db might not support vector yet):', e);
+    }
+
+    // 2. Build Filter
+    const whereCondition: any = {
         AND: [
-          accessClause,
-          {
-            OR: [
-              { title: { contains: q, mode: 'insensitive' } },
-              { referenceNumber: { contains: q, mode: 'insensitive' } },
-              { classificationNode: { name: { contains: q, mode: 'insensitive' } } }
-            ]
-          },
-          ...(classificationNodeId ? [{ classificationNodeId }] : []), 
-          { status: 'REGISTERED' } // Only link to registered records
+            accessClause,
+            { status: 'REGISTERED' },
+            ...(classificationNodeId ? [{ classificationNodeId }] : [])
         ]
-      },
+    };
+
+    if (ftsIds.length > 0) {
+        // MATCH FOUND via FTS
+        whereCondition.AND.push({ id: { in: ftsIds } });
+    } else {
+        // FALLBACK: ILIKE on Title & Ref (Slower but reliable for partial words if FTS fails)
+        whereCondition.AND.push({
+            OR: [
+                { title: { contains: q, mode: 'insensitive' } },
+                { referenceNumber: { contains: q, mode: 'insensitive' } }
+            ]
+        });
+    }
+
+    const records = await prisma.record.findMany({
+      where: whereCondition,
       select: {
         id: true,
         title: true,

@@ -8,26 +8,26 @@ datasource db {
 }
 
 model User {
-  id               String    @id @default(uuid())
-  email            String    @unique
-  password         String // Hashed password
-  name             String?
-  role             String    @default("USER") // ADMIN, USER, AUDITOR, RECORDS_MANAGER
-  clearanceLevel   Int       @default(1)      // 1=Public, 5=Top Secret
-  isActive         Boolean   @default(true)   // For soft delete/deactivation
-  createdAt        DateTime  @default(now())
-  
+  id             String   @id @default(uuid())
+  email          String   @unique
+  password       String // Hashed password
+  name           String?
+  role           String   @default("USER") // ADMIN, USER, AUDITOR, RECORDS_MANAGER
+  clearanceLevel Int      @default(1) // 1=Public, 5=Top Secret
+  isActive       Boolean  @default(true) // For soft delete/deactivation
+  createdAt      DateTime @default(now())
+
   // Relations
-  records          Record[]  // Records owned by user
-  legalHoldsOwned  LegalHold[] @relation("LegalHoldOwner")
-  auditLogs        AuditLog[]
-  groups           Group[]
-  uploadedVersions RecordVersion[] // Versions uploaded by user
+  records                Record[] // Records owned by user
+  legalHoldsOwned        LegalHold[]          @relation("LegalHoldOwner")
+  auditLogs              AuditLog[]
+  groups                 Group[]
+  uploadedVersions       RecordVersion[] // Versions uploaded by user
   createdClassifications ClassificationNode[] // Classifications created by user
 
   // Department Relation
-  departmentId     String?
-  department       Department? @relation(fields: [departmentId], references: [id])
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
 
   // New: Account Expiry
   accountExpiresAt DateTime?
@@ -38,7 +38,7 @@ model User {
 
   // Shared Records
   sharedRecords Record[] @relation("UserSharedRecords")
-  
+
   // Record Access
   accessPermissions RecordAccess[]
 
@@ -46,28 +46,28 @@ model User {
   ownedProjects       Project[]       @relation("ProjectOwner")
   projectMemberships  ProjectMember[]
   addedProjectRecords ProjectRecord[]
-  
+
   // Access Requests
-  requests            AccessRequest[] @relation("Requester")
-  reviews             AccessRequest[] @relation("Reviewer")
-  companyPermissions  CompanyAccess[]
+  requests           AccessRequest[] @relation("Requester")
+  reviews            AccessRequest[] @relation("Reviewer")
+  companyPermissions CompanyAccess[]
 }
 
 model Group {
-  id        String   @id @default(uuid())
-  name      String
-  type      String // DEPARTMENT, TEAM, PROJECT
-  users     User[]
-  
+  id    String @id @default(uuid())
+  name  String
+  type  String // DEPARTMENT, TEAM, PROJECT
+  users User[]
+
   // Relations
-  sharedRecords Record[] @relation("GroupSharedRecords")
+  sharedRecords      Record[]        @relation("GroupSharedRecords")
   companyPermissions CompanyAccess[]
-  projectRecords Record[] @relation("ProjectRecords")
-  projectGroups ProjectGroup[]
-  
+  projectRecords     Record[]        @relation("ProjectRecords")
+  projectGroups      ProjectGroup[]
+
   // Magic String Removal (Link to Department)
   departments Department[]
-  
+
   // Record Access
   accessPermissions RecordAccess[]
 
@@ -80,14 +80,14 @@ model Group {
 // ---------------------------------------------------------
 
 model Organization {
-  id          String           @id @default(uuid())
-  name        String
-  status      String           @default("ACTIVE") // ACTIVE, SUSPENDED
-  departments Department[]
-  categories  RecordCategory[]
+  id                  String               @id @default(uuid())
+  name                String
+  status              String               @default("ACTIVE") // ACTIVE, SUSPENDED
+  departments         Department[]
+  categories          RecordCategory[]
   classificationNodes ClassificationNode[] // New dynamic classification tree
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
 }
 
 model Department {
@@ -100,18 +100,18 @@ model Department {
   parent         Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
   children       Department[] @relation("DepartmentHierarchy")
   records        Record[]
-  
-  // New Relations
-  users          User[]
-  classifications ClassificationNode[]
-  retentionPolicies RetentionPolicy[]
-  
-  // Link to Group (Magic String Removal)
-  linkedGroupId  String?
-  linkedGroup    Group?       @relation(fields: [linkedGroupId], references: [id])
 
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  // New Relations
+  users             User[]
+  classifications   ClassificationNode[]
+  retentionPolicies RetentionPolicy[]
+
+  // Link to Group (Magic String Removal)
+  linkedGroupId String?
+  linkedGroup   Group?  @relation(fields: [linkedGroupId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model RecordCategory {
@@ -128,29 +128,29 @@ model RecordCategory {
 }
 
 model RecordType {
-  id                String               @id @default(uuid())
+  id                String         @id @default(uuid())
   categoryId        String
-  category          RecordCategory       @relation(fields: [categoryId], references: [id])
+  category          RecordCategory @relation(fields: [categoryId], references: [id])
   name              String
   code              String
   description       String?
-  versioningEnabled Boolean              @default(true)
-  approvalRequired  Boolean              @default(false)
+  versioningEnabled Boolean        @default(true)
+  approvalRequired  Boolean        @default(false)
   retentionYears    Int?
-  isActive          Boolean              @default(true)
-  
+  isActive          Boolean        @default(true)
+
   retentionPolicyId String?
-  retentionPolicy   RetentionPolicy?     @relation(fields: [retentionPolicyId], references: [id])
+  retentionPolicy   RetentionPolicy? @relation(fields: [retentionPolicyId], references: [id])
 
   // Link to ClassificationNode (Level 3)
-  classificationNodeId String? @unique
+  classificationNodeId String?             @unique
   classificationNode   ClassificationNode? @relation(fields: [classificationNodeId], references: [id])
-  
-  metadataFields    RecordTypeMetadata[]
-  records           Record[]
-  
-  createdAt         DateTime             @default(now())
-  updatedAt         DateTime             @updatedAt
+
+  metadataFields RecordTypeMetadata[]
+  records        Record[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // ---------------------------------------------------------
@@ -158,18 +158,18 @@ model RecordType {
 // ---------------------------------------------------------
 
 model MetadataField {
-  id              String               @id @default(uuid())
-  name            String               @unique // e.g. "invoice_number"
-  label           String               // e.g. "Invoice Number"
-  dataType        String               // text, number, date, enum, etc.
-  required        Boolean              @default(false)
-  searchable      Boolean              @default(false)
-  validationRules String?              // JSON string
-  enumValues      String?              // JSON string
-  
-  recordTypes     RecordTypeMetadata[]
+  id              String  @id @default(uuid())
+  name            String  @unique // e.g. "invoice_number"
+  label           String // e.g. "Invoice Number"
+  dataType        String // text, number, date, enum, etc.
+  required        Boolean @default(false)
+  searchable      Boolean @default(false)
+  validationRules String? // JSON string
+  enumValues      String? // JSON string
+
+  recordTypes    RecordTypeMetadata[]
   // recordValues relation removed
-  templateFields  TemplateField[]     // New: used in dynamic templates
+  templateFields TemplateField[] // New: used in dynamic templates
 }
 
 model RecordTypeMetadata {
@@ -190,38 +190,38 @@ model RecordTypeMetadata {
 // ---------------------------------------------------------
 
 model ClassificationNode {
-  id             String                @id @default(uuid())
+  id             String       @id @default(uuid())
   organizationId String
-  organization   Organization          @relation(fields: [organizationId], references: [id])
-  
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
   // Department Scope (Optional - if null, global for organization)
-  departmentId   String?
-  department     Department?           @relation(fields: [departmentId], references: [id])
-  
-  name           String
-  level          Int                   // 1, 2, or 3
-  parentId       String?
-  parent         ClassificationNode?   @relation("ClassificationHierarchy", fields: [parentId], references: [id])
-  children       ClassificationNode[]  @relation("ClassificationHierarchy")
-  code           String?
-  securityLevel  Int         @default(1) // 1=Public, 5=Top Secret
-  lastSequenceNumber Int     @default(0) // Tracks the last used sequence for this node (if it's a leaf)
-  isLeaf         Boolean     @default(false) // true only for level 3
-  isActive       Boolean               @default(true)
-  createdById    String
-  createdBy      User                  @relation(fields: [createdById], references: [id])
-  createdAt      DateTime              @default(now())
-  updatedAt      DateTime              @updatedAt
-  
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+
+  name               String
+  level              Int // 1, 2, or 3
+  parentId           String?
+  parent             ClassificationNode?  @relation("ClassificationHierarchy", fields: [parentId], references: [id])
+  children           ClassificationNode[] @relation("ClassificationHierarchy")
+  code               String?
+  securityLevel      Int                  @default(1) // 1=Public, 5=Top Secret
+  lastSequenceNumber Int                  @default(0) // Tracks the last used sequence for this node (if it's a leaf)
+  isLeaf             Boolean              @default(false) // true only for level 3
+  isActive           Boolean              @default(true)
+  createdById        String
+  createdBy          User                 @relation(fields: [createdById], references: [id])
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
   // Relations
-  templates      MetadataTemplate[]
-  records        Record[]
-  
+  templates MetadataTemplate[]
+  records   Record[]
+
   retentionPolicyId String?
-  retentionPolicy   RetentionPolicy?      @relation(fields: [retentionPolicyId], references: [id])
-  
+  retentionPolicy   RetentionPolicy? @relation(fields: [retentionPolicyId], references: [id])
+
   // Link to RecordType (One-to-One for L3)
-  recordType        RecordType?
+  recordType RecordType?
 
   @@index([organizationId])
   @@index([parentId])
@@ -229,19 +229,19 @@ model ClassificationNode {
 }
 
 model MetadataTemplate {
-  id                  String         @id @default(uuid())
-  classificationNodeId String        // Must be Level 3 (isLeaf = true)
-  classificationNode  ClassificationNode @relation(fields: [classificationNodeId], references: [id])
-  name                String        // e.g. "Vendor Invoice Template"
-  version             Int            @default(1)
-  isActive            Boolean        @default(true)
-  createdAt           DateTime       @default(now())
-  updatedAt           DateTime       @updatedAt
-  
+  id                   String             @id @default(uuid())
+  classificationNodeId String // Must be Level 3 (isLeaf = true)
+  classificationNode   ClassificationNode @relation(fields: [classificationNodeId], references: [id])
+  name                 String // e.g. "Vendor Invoice Template"
+  version              Int                @default(1)
+  isActive             Boolean            @default(true)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
   // Relations
-  templateFields      TemplateField[]
+  templateFields TemplateField[]
   // Note: Records are queried via classificationNodeId + templateVersion, not direct relation
-  
+
   @@unique([classificationNodeId, version])
   @@index([classificationNodeId])
 }
@@ -251,11 +251,11 @@ model TemplateField {
   templateId      String
   template        MetadataTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
   metadataFieldId String
-  metadataField   MetadataField   @relation(fields: [metadataFieldId], references: [id])
+  metadataField   MetadataField    @relation(fields: [metadataFieldId], references: [id])
   required        Boolean          @default(false)
   displayOrder    Int              @default(0)
   editable        Boolean          @default(true)
-  
+
   @@unique([templateId, metadataFieldId])
   @@index([templateId])
 }
@@ -265,58 +265,58 @@ model TemplateField {
 // ---------------------------------------------------------
 
 model Record {
-  id            String   @id @default(uuid())
-  recordTypeId  String?  // Legacy field - kept for backward compatibility
-  recordType    RecordType? @relation(fields: [recordTypeId], references: [id])
-  
-  // New dynamic classification fields
-  classificationNodeId String?  // FK to Level 3 ClassificationNode
-  classificationNode   ClassificationNode? @relation(fields: [classificationNodeId], references: [id])
-  templateVersion      Int?     // Version of template used at creation
-  // Note: Template is queried via classificationNodeId + templateVersion, not direct FK
-  
-  departmentId  String?
-  department    Department? @relation(fields: [departmentId], references: [id])
+  id           String      @id @default(uuid())
+  recordTypeId String? // Legacy field - kept for backward compatibility
+  recordType   RecordType? @relation(fields: [recordTypeId], references: [id])
 
-  projectId     String?
-  project       Group?    @relation("ProjectRecords", fields: [projectId], references: [id])
-  
-  title         String
-  ownerUserId   String?  // Renamed from userId to match spec, but keeping mapping if convenient? No, let's use ownerUserId to match spec.
-  user          User?    @relation(fields: [ownerUserId], references: [id])
-  
-  referenceNumber String?  // Non-unique at column level to allow versions to share it
-  status        RecordStatus   @default(DRAFT)
-  
-  classification Classification @default(OFFICIAL)
-  
+  // New dynamic classification fields
+  classificationNodeId String? // FK to Level 3 ClassificationNode
+  classificationNode   ClassificationNode? @relation(fields: [classificationNodeId], references: [id])
+  templateVersion      Int? // Version of template used at creation
+  // Note: Template is queried via classificationNodeId + templateVersion, not direct FK
+
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+
+  projectId String?
+  project   Group?  @relation("ProjectRecords", fields: [projectId], references: [id])
+
+  title       String
+  ownerUserId String? // Renamed from userId to match spec, but keeping mapping if convenient? No, let's use ownerUserId to match spec.
+  user        User?   @relation(fields: [ownerUserId], references: [id])
+
+  referenceNumber String? // Non-unique at column level to allow versions to share it
+  status          RecordStatus @default(DRAFT)
+
+  securityClassification SecurityClassification @default(OFFICIAL)
+
   // Context & Snapshots (Record-Centric Architecture)
-  contextType          String?  // COMPANY, PROJECT, NONE
-  companySnapshotName  String?  // Immutable snapshot of company name at creation
-  companySnapshotRegNo String?  // Immutable snapshot of registration number at creation
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
+  contextType          String? // COMPANY, PROJECT, NONE
+  companySnapshotName  String? // Immutable snapshot of company name at creation
+  companySnapshotRegNo String? // Immutable snapshot of registration number at creation
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Metadata (JSONB)
-  metadata      Json?
-  
+  metadata Json?
+
   // Relations
-  versions      RecordVersion[]
-  auditLogs     AuditLog[]
-  access        RecordAccess[]
+  versions  RecordVersion[]
+  auditLogs AuditLog[]
+  access    RecordAccess[]
 
   // Parent/Child Relationship
-  parentId      String?
-  parent        Record?  @relation("RecordHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
-  children      Record[] @relation("RecordHierarchy")
+  parentId String?
+  parent   Record?  @relation("RecordHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children Record[] @relation("RecordHierarchy")
 
   // Legacy/Convenience relations for existing code (Optional, but might break if removed abruptly. 
   // For this Refactor, I am FOLLOWING THE SPEC which removes them. 
   // I will map shared lists via RecordAccess or keep them for now?)
   // The spec says RecordAccess for permissions. I will comment out legacy shared lists to enforce new usage or keep them as "Shortcuts"?
   // The user prompt implies a full replacement. I will implement RecordAccess.
-  
+
   // Keeping these for now to minimize compile errors in unconnected parts, 
   // but they should be migrated to RecordAccess logic eventually.
   sharedWithGroups Group[] @relation("GroupSharedRecords")
@@ -325,28 +325,24 @@ model Record {
   // ---------------------------------------------------------
   // GOVERNANCE & COMPLIANCE
   // ---------------------------------------------------------
-  
+
   retentionPolicyId String?
   retentionPolicy   RetentionPolicy? @relation(fields: [retentionPolicyId], references: [id])
-  dispositionDate   DateTime?        // Calculated: createdAt + policy.duration
-  
-  // Governance Locks (orthogonal to lifecycle status)
-  isLocked          Boolean          @default(false) // Prevents content/metadata edits
-  lockedAt          DateTime?        // When locked
-  lockedById        String?          // Who locked it
-  lockedReason      String?          // Why locked (governance justification)
+  dispositionDate   DateTime? // Calculated: createdAt + policy.duration
 
-  isLegalHold       Boolean          @default(false) // Optimized flag - supersedes isLocked
-  legalHolds        RecordLegalHold[]
+  // Governance Locks (orthogonal to lifecycle status)
+  isLocked     Boolean   @default(false) // Prevents content/metadata edits
+  lockedAt     DateTime? // When locked
+  lockedById   String? // Who locked it
+  lockedReason String? // Why locked (governance justification)
+
+  isLegalHold Boolean           @default(false) // Optimized flag - supersedes isLocked
+  legalHolds  RecordLegalHold[]
 
   // Versioning
-  versionGroupId    String?          // UUID shared by all versions of a record
-  versionNumber     Int              @default(1)
-  isLatest          Boolean          @default(true)
-
-  @@index([versionGroupId])
-  @@unique([referenceNumber, versionNumber]) // Ensure uniqueness per version
-  @@unique([versionGroupId, versionNumber])  // GIPC FIX: Versioning Race Condition
+  versionGroupId String? // UUID shared by all versions of a record
+  versionNumber  Int     @default(1)
+  isLatest       Boolean @default(true)
 
   // GIPC Relations
   registeredCompanyId String?
@@ -355,11 +351,24 @@ model Record {
   accessRequests      AccessRequest[]
 
   // FTS
-  search_vector       Unsupported("tsvector")?
+  search_vector Unsupported("tsvector")?
+
+  // Soft Delete
+  deletedAt DateTime?
+
+  @@unique([referenceNumber, versionNumber]) // Ensure uniqueness per version
+  @@unique([versionGroupId, versionNumber]) // GIPC FIX: Versioning Race Condition
+  @@index([versionGroupId])
   @@index([search_vector], type: Gin)
-  
   // JSONB Index for Metadata
   @@index([metadata(ops: JsonbOps)], type: Gin)
+  // Performance Optimization Indexes
+  @@index([ownerUserId])
+  @@index([departmentId])
+  @@index([status])
+  @@index([securityClassification])
+  @@index([registeredCompanyId])
+  @@index([deletedAt])
 }
 
 enum RetentionTrigger {
@@ -398,64 +407,64 @@ enum LegalHoldStatus {
 }
 
 model RetentionPolicy {
-  id              String   @id @default(uuid())
-  name            String   @unique
-  description     String?
-  
-  durationValue   Int?
-  durationUnit    DurationUnit @default(YEARS)
+  id          String  @id @default(uuid())
+  name        String  @unique
+  description String?
 
-  trigger         RetentionTrigger @default(CREATION_DATE)
+  durationValue Int?
+  durationUnit  DurationUnit @default(YEARS)
+
+  trigger           RetentionTrigger  @default(CREATION_DATE)
   dispositionAction DispositionAction @default(DESTROY)
 
-  preventDeletion Boolean  @default(true)
+  preventDeletion Boolean         @default(true)
   status          RetentionStatus @default(ACTIVE)
 
   // Scope (optional)
-  departmentId    String?
-  department      Department? @relation(fields: [departmentId], references: [id])
-  
-  recordTypes     RecordType[]
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+
+  recordTypes         RecordType[]
   classificationNodes ClassificationNode[]
-  records         Record[]
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  records             Record[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model LegalHold {
-  id              String   @id @default(uuid())
-  name            String   // Case Name
-  caseReference   String?  // e.g. CASE-2026-001
-  description     String?  // Scope Summary
-  
-  ownerId         String?  // Made optional for migration safety, but logic should enforce it
-  owner           User?    @relation("LegalHoldOwner", fields: [ownerId], references: [id])
-  
-  startDate       DateTime @default(now())
-  endDate         DateTime? // Estimated end date
-  
-  status          LegalHoldStatus @default(ACTIVE)
-  
+  id            String  @id @default(uuid())
+  name          String // Case Name
+  caseReference String? // e.g. CASE-2026-001
+  description   String? // Scope Summary
+
+  ownerId String? // Made optional for migration safety, but logic should enforce it
+  owner   User?   @relation("LegalHoldOwner", fields: [ownerId], references: [id])
+
+  startDate DateTime  @default(now())
+  endDate   DateTime? // Estimated end date
+
+  status LegalHoldStatus @default(ACTIVE)
+
   notificationRecipients String? // JSON array or comma-separated
-  notes           String?
-  
-  records         RecordLegalHold[]
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  notes                  String?
+
+  records RecordLegalHold[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model RecordLegalHold {
-  id          String    @id @default(uuid())
-  recordId    String
-  record      Record    @relation(fields: [recordId], references: [id], onDelete: Cascade)
-  legalHoldId String
-  legalHold   LegalHold @relation(fields: [legalHoldId], references: [id])
+  id            String    @id @default(uuid())
+  recordId      String
+  record        Record    @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  legalHoldId   String
+  legalHold     LegalHold @relation(fields: [legalHoldId], references: [id])
   addedByUserId String? // Audit who added it
-  
-  createdAt   DateTime  @default(now())
-  
+
+  createdAt DateTime @default(now())
+
   @@unique([recordId, legalHoldId])
 }
 
@@ -474,12 +483,12 @@ model RecordVersion {
 }
 
 enum AccessLevel {
-  VIEW           // See metadata/existence only
-  COMMENT        // View + Comment
-  EDIT_METADATA  // Modify metadata (Draft/Submitted)
-  EDIT_CONTENT   // Modify content/files (Draft only)
-  GOVERNANCE     // Records Manager actions (Lock, Classify, Archive)
-  FULL           // Admin/System
+  VIEW // See metadata/existence only
+  COMMENT // View + Comment
+  EDIT_METADATA // Modify metadata (Draft/Submitted)
+  EDIT_CONTENT // Modify content/files (Draft only)
+  GOVERNANCE // Records Manager actions (Lock, Classify, Archive)
+  FULL // Admin/System
 }
 
 enum AccessType {
@@ -488,43 +497,42 @@ enum AccessType {
 }
 
 model CompanyAccess {
-  id                String            @id @default(uuid())
+  id                  String            @id @default(uuid())
   registeredCompanyId String
-  registeredCompany RegisteredCompany @relation(fields: [registeredCompanyId], references: [id], onDelete: Cascade)
-  
-  userId            String?
-  user              User?             @relation(fields: [userId], references: [id])
-  groupId           String?
-  group             Group?            @relation(fields: [groupId], references: [id])
-  
-  level             AccessLevel       @default(VIEW)
-  accessType        AccessType        @default(ALLOW)
-  
-  grantedById       String?   // Audit who granted this
-  
-  expiresAt         DateTime?
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  registeredCompany   RegisteredCompany @relation(fields: [registeredCompanyId], references: [id], onDelete: Cascade)
+
+  userId  String?
+  user    User?   @relation(fields: [userId], references: [id])
+  groupId String?
+  group   Group?  @relation(fields: [groupId], references: [id])
+
+  level      AccessLevel @default(VIEW)
+  accessType AccessType  @default(ALLOW)
+
+  grantedById String? // Audit who granted this
+
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }
 
-
 model RecordAccess {
-  id            String    @id @default(uuid())
+  id            String  @id @default(uuid())
   recordId      String
-  record        Record    @relation(fields: [recordId], references: [id], onDelete: Cascade)
-  principalType String    // "USER" or "GROUP"
+  record        Record  @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  principalType String // "USER" or "GROUP"
   userId        String?
-  user          User?     @relation(fields: [userId], references: [id])
+  user          User?   @relation(fields: [userId], references: [id])
   groupId       String?
-  group         Group?    @relation(fields: [groupId], references: [id])
-  
-  level         AccessLevel @default(VIEW)
-  accessType    AccessType  @default(ALLOW)
-  
+  group         Group?  @relation(fields: [groupId], references: [id])
+
+  level      AccessLevel @default(VIEW)
+  accessType AccessType  @default(ALLOW)
+
   // Legacy String field for migration (optional, can remove if we do a hard reset, but safer to keep/ignore for now)
   // permission    String    // DEPRECATED
-  
-  expiresAt     DateTime?
+
+  expiresAt DateTime?
 }
 
 model AuditLog {
@@ -541,11 +549,11 @@ model AuditLog {
   userId    String
   user      User     @relation(fields: [userId], references: [id])
   timestamp DateTime @default(now())
-  
+
   // Spec fields
-  oldValue  String? // JSON
-  newValue  String? // JSON
-  reason    String? // Governance justification
+  oldValue String? // JSON
+  newValue String? // JSON
+  reason   String? // Governance justification
 }
 
 enum ResourceType {
@@ -553,7 +561,7 @@ enum ResourceType {
   COMPANY
 }
 
-model AccountRequest { // Renamed from AccessRequest
+model AccountRequest {
   id        String   @id @default(uuid())
   email     String   @unique
   name      String
@@ -562,39 +570,39 @@ model AccountRequest { // Renamed from AccessRequest
   createdAt DateTime @default(now())
 }
 
-model AccessRequest { // Unified Access Request (Record + Company)
-  id          String      @id @default(uuid())
-  
+model AccessRequest {
+  id String @id @default(uuid())
+
   requesterId String
-  requester   User        @relation("Requester", fields: [requesterId], references: [id])
-  
+  requester   User   @relation("Requester", fields: [requesterId], references: [id])
+
   resourceType ResourceType
-  
+
   // Resource Links (One must be present)
-  recordId    String?
-  record      Record?     @relation(fields: [recordId], references: [id], onDelete: Cascade)
-  
+  recordId String?
+  record   Record? @relation(fields: [recordId], references: [id], onDelete: Cascade)
+
   registeredCompanyId String?
   registeredCompany   RegisteredCompany? @relation(fields: [registeredCompanyId], references: [id], onDelete: Cascade)
-  
-  status      String      @default("PENDING") // PENDING, APPROVED, REJECTED
-  reason      String
+
+  status         String      @default("PENDING") // PENDING, APPROVED, REJECTED
+  reason         String
   requestedLevel AccessLevel @default(VIEW)
-  
+
   // Approval
-  approvedLevel AccessLevel?
-  reviewedById String?
-  reviewedBy   User?       @relation("Reviewer", fields: [reviewedById], references: [id])
-  reviewedAt   DateTime?
+  approvedLevel   AccessLevel?
+  reviewedById    String?
+  reviewedBy      User?        @relation("Reviewer", fields: [reviewedById], references: [id])
+  reviewedAt      DateTime?
   rejectionReason String?
-  
-  expiresAt   DateTime?
+
+  expiresAt DateTime?
 
   // Batch grouping for multi-record requests
-  batchId     String?
+  batchId String?
 
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([batchId])
 }
@@ -612,43 +620,44 @@ enum RecordStatus {
   REGISTERED
   ARCHIVED
 }
+
 // Note: LOCKED removed from enum - now represented by isLocked boolean on Record
 // This allows a REGISTERED record to be locked/unlocked without changing lifecycle stage
 
 model ApiKey {
-  id          String   @id @default(uuid())
-  keyHash     String   @unique
-  prefix      String   // e.g. "sk_live_..."
-  name        String   // e.g. "Zapier Integration"
-  scopes      String?  // JSON array of scopes ["records:read", "records:write"]
-  
+  id      String  @id @default(uuid())
+  keyHash String  @unique
+  prefix  String // e.g. "sk_live_..."
+  name    String // e.g. "Zapier Integration"
+  scopes  String? // JSON array of scopes ["records:read", "records:write"]
+
   // Optional: Link to a generic "Service Account" user?
   // For now, let's keep it simple. If we need a user ID for "createdBy", we can add it.
   createdByUserId String?
-  
-  expiresAt   DateTime?
-  lastUsedAt  DateTime?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  isActive    Boolean  @default(true)
+
+  expiresAt  DateTime?
+  lastUsedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  isActive  Boolean  @default(true)
 }
 
 model Webhook {
-  id          String   @id @default(uuid())
-  url         String
-  events      String   // JSON array of events ["RECORD.CREATED", "RECORD.STATUS_CHANGED"]
-  secret      String   // For signing payload
-  
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id     String @id @default(uuid())
+  url    String
+  events String // JSON array of events ["RECORD.CREATED", "RECORD.STATUS_CHANGED"]
+  secret String // For signing payload
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model SystemSetting {
   id          String   @id @default(uuid())
   key         String   @unique // e.g. "ALLOW_USER_UPLOADS"
-  value       String   // JSON value or simple string
+  value       String // JSON value or simple string
   description String?
   updatedAt   DateTime @updatedAt
 }
@@ -658,27 +667,27 @@ model SystemSetting {
 // ---------------------------------------------------------
 
 model RegisteredCompany {
-  id                String   @id @default(uuid())
-  name              String
-  registrationNumber String  @unique
-  investorType      String   // "FOREIGN", "LOCAL", "JOINT_VENTURE"
-  sector            String?  // Primary Core Sector (e.g. "Agriculture")
-  subSectors        String[] // Secondary Sub-sectors (e.g. "Crop farming")
-  strategicTags     String[] // GIPC Strategic Tags (e.g. "Export-oriented")
-  tin               String?
-  contactDetails    String?  // JSON or text
+  id                 String   @id @default(uuid())
+  name               String
+  registrationNumber String   @unique
+  investorType       String // "FOREIGN", "LOCAL", "JOINT_VENTURE"
+  sector             String? // Primary Core Sector (e.g. "Agriculture")
+  subSectors         String[] // Secondary Sub-sectors (e.g. "Crop farming")
+  strategicTags      String[] // GIPC Strategic Tags (e.g. "Export-oriented")
+  tin                String?
+  contactDetails     String? // JSON or text
 
   // Relations
-  records           Record[] // All records related to this company
+  records          Record[] // All records related to this company
   // projects          Project[] // DEPRECATED: 1:1 relation
-  projectCompanies  ProjectCompany[] // New M:N relation
-  
+  projectCompanies ProjectCompany[] // New M:N relation
+
   // Governance
   accessPermissions CompanyAccess[]
-  accessRequests    AccessRequest[] 
-  
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  accessRequests    AccessRequest[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // Enums for Project Governance
@@ -709,95 +718,95 @@ enum ProjectPriority {
 }
 
 model Project {
-  id          String   @id @default(uuid())
+  id          String  @id @default(uuid())
   name        String
   description String?
-  
+
   // Governance Fields
-  referenceNumber String?          @unique // e.g. PRJ-2026-001
-  status          ProjectStatus    @default(DRAFT)
-  type            ProjectType      @default(INVESTMENT)
-  priority        ProjectPriority  @default(MEDIUM)
-  sector          String?          // Specific sector for this project (snapshot or override)
-  
-  startDate   DateTime?
-  endDate     DateTime?
-  
+  referenceNumber String?         @unique // e.g. PRJ-2026-001
+  status          ProjectStatus   @default(DRAFT)
+  type            ProjectType     @default(INVESTMENT)
+  priority        ProjectPriority @default(MEDIUM)
+  sector          String? // Specific sector for this project (snapshot or override)
+
+  startDate DateTime?
+  endDate   DateTime?
+
   // Visibility & Ownership
-  visibility  String   @default("PRIVATE") // PRIVATE, ORG, RESTRICTED
+  visibility  String @default("PRIVATE") // PRIVATE, ORG, RESTRICTED
   ownerUserId String
-  owner       User     @relation("ProjectOwner", fields: [ownerUserId], references: [id])
-  
+  owner       User   @relation("ProjectOwner", fields: [ownerUserId], references: [id])
+
   // Relations
   registeredCompanyId String? // DEPRECATED: Kept for migration
   // registeredCompany   RegisteredCompany? @relation(fields: [registeredCompanyId], references: [id]) // Commented out to prevent ambiguity
-  
+
   projectCompanies ProjectCompany[] // New M:N relation
-  
-  members     ProjectMember[]
-  projectGroups ProjectGroup[] // New M:N relation
+
+  members        ProjectMember[]
+  projectGroups  ProjectGroup[] // New M:N relation
   projectRecords ProjectRecord[]
-  auditLogs   AuditLog[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  auditLogs      AuditLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model ProjectGroup {
-  id        String   @id @default(uuid())
+  id        String  @id @default(uuid())
   projectId String
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   groupId   String
-  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  role      String   // MANAGER, CONTRIBUTOR, VIEW_ONLY
-  
-  addedAt   DateTime @default(now())
-  
+  group     Group   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  role      String // MANAGER, CONTRIBUTOR, VIEW_ONLY
+
+  addedAt DateTime @default(now())
+
   @@unique([projectId, groupId])
 }
 
 model ProjectCompany {
-  id        String   @id @default(uuid())
+  id        String            @id @default(uuid())
   projectId String
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project   Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
   companyId String
   company   RegisteredCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  
-  role      String   @default("PRIMARY_INVESTOR") // PRIMARY_INVESTOR, PARTNER, SUBSIDIARY
-  
-  addedAt   DateTime @default(now())
-  
+
+  role String @default("PRIMARY_INVESTOR") // PRIMARY_INVESTOR, PARTNER, SUBSIDIARY
+
+  addedAt DateTime @default(now())
+
   @@unique([projectId, companyId])
 }
 
 model ProjectMember {
-  id          String   @id @default(uuid())
-  projectId   String
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
-  role        String   // MANAGER, CONTRIBUTOR, VIEW_ONLY
-  joinedAt    DateTime @default(now())
-  
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  role      String // MANAGER, CONTRIBUTOR, VIEW_ONLY
+  joinedAt  DateTime @default(now())
+
   @@unique([projectId, userId])
 }
 
 model ProjectRecord {
-  id              String   @id @default(uuid())
-  projectId       String
-  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  recordId        String
-  record          Record   @relation(fields: [recordId], references: [id], onDelete: Cascade)
-  versionGroupId  String? // Optional: Pin to specific version or track latest
-  
-  addedById       String
-  addedBy         User     @relation(fields: [addedById], references: [id])
-  addedAt         DateTime @default(now())
-  
+  id             String  @id @default(uuid())
+  projectId      String
+  project        Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  recordId       String
+  record         Record  @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  versionGroupId String? // Optional: Pin to specific version or track latest
+
+  addedById String
+  addedBy   User     @relation(fields: [addedById], references: [id])
+  addedAt   DateTime @default(now())
+
   @@unique([projectId, recordId])
 }
 
-enum Classification {
+enum SecurityClassification {
   OFFICIAL
   OFFICIAL_CONFIDENTIAL
   RESTRICTED

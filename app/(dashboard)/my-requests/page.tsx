@@ -12,7 +12,9 @@ import TableRow from '@mui/material/TableRow';
 import Chip from '@mui/material/Chip';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
+import Button from '@mui/material/Button';
 import Link from 'next/link';
+import CancelIcon from '@mui/icons-material/Cancel';
 
 const statusColor: Record<string, 'warning' | 'success' | 'error' | 'default'> = {
   PENDING: 'warning',
@@ -24,6 +26,7 @@ export default function MyRequestsPage() {
   const [requests, setRequests] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [statusFilter, setStatusFilter] = React.useState('ALL');
+  const [cancelling, setCancelling] = React.useState<string | null>(null);
 
   const fetchRequests = async () => {
     setLoading(true);
@@ -45,6 +48,24 @@ export default function MyRequestsPage() {
     fetchRequests();
   }, [statusFilter]);
 
+  const handleCancel = async (requestId: string) => {
+    if (!confirm('Cancel this access request?')) return;
+    setCancelling(requestId);
+    try {
+      const res = await fetch(`/api/my-requests?id=${requestId}`, { method: 'DELETE' });
+      if (res.ok) {
+        setRequests(prev => prev.filter(r => r.id !== requestId));
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Failed to cancel');
+      }
+    } catch {
+      alert('Error cancelling request');
+    } finally {
+      setCancelling(null);
+    }
+  };
+
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" fontWeight="bold" sx={{ mb: 3 }}>
@@ -60,10 +81,24 @@ export default function MyRequestsPage() {
 
       <Paper sx={{ width: '100%', overflow: 'hidden' }}>
         {loading ? (
-          <Box sx={{ p: 4, textAlign: 'center' }}>Loading...</Box>
+          <Box sx={{ p: 6, textAlign: 'center' }}>
+            <Typography variant="body2" color="text.secondary">Loading requests...</Typography>
+          </Box>
         ) : requests.length === 0 ? (
-          <Box sx={{ p: 4, textAlign: 'center' }}>
-            No {statusFilter !== 'ALL' ? statusFilter.toLowerCase() : ''} requests.
+          <Box sx={{ p: 6, textAlign: 'center' }}>
+            <Typography variant="h6" fontWeight="bold" color="text.secondary" sx={{ mb: 1 }}>
+              {statusFilter !== 'ALL' ? `No ${statusFilter.toLowerCase()} requests` : 'No access requests yet'}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              {statusFilter === 'ALL'
+                ? 'When you request access to records or companies, they will appear here.'
+                : `You don't have any ${statusFilter.toLowerCase()} requests.`}
+            </Typography>
+            {statusFilter === 'ALL' && (
+              <Button variant="outlined" onClick={() => window.location.href = '/records'}>
+                Browse Records
+              </Button>
+            )}
           </Box>
         ) : (
           <Table>
@@ -134,9 +169,16 @@ export default function MyRequestsPage() {
                       </Typography>
                     )}
                     {req.status === 'PENDING' && (
-                      <Typography variant="caption" color="text.secondary">
-                        Awaiting review
-                      </Typography>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="error"
+                        startIcon={<CancelIcon />}
+                        onClick={() => handleCancel(req.id)}
+                        disabled={cancelling === req.id}
+                      >
+                        {cancelling === req.id ? 'Cancelling...' : 'Cancel'}
+                      </Button>
                     )}
                     {req.status === 'APPROVED' && req.expiresAt && (
                       <Typography variant="caption" color="text.secondary">

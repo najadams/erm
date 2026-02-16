@@ -40,7 +40,7 @@ interface AccessRequest {
     id: string;
     title: string;
     referenceNumber?: string;
-    classification?: string;
+    securityClassification?: string;
   };
   reviewedBy?: { name: string };
 }
@@ -286,7 +286,7 @@ export default function BatchRequestCard({
                     <Typography variant="caption" color="text.secondary">{req.record?.title}</Typography>
                   </TableCell>
                   <TableCell>
-                    <Chip label={req.record?.classification || 'OFFICIAL'} size="small" variant="outlined" />
+                    <Chip label={req.record?.securityClassification || 'OFFICIAL'} size="small" variant="outlined" />
                   </TableCell>
                   <TableCell>
                     <Chip label={req.requestedLevel} size="small" color="info" variant="outlined" />

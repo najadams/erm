@@ -138,8 +138,13 @@ export const ROLE_CAPABILITIES: Record<Role, Permission[]> = {
     'VIEW_OWN_RECORDS'
   ],
 
-  // Approvers: department-level verification
+  // Approvers: department-level verification + content creation
   APPROVER: [
+    'WORKSPACE_UPLOAD',
+    'WORKSPACE_EDIT_DRAFT',
+    'WORKSPACE_DELETE_DRAFT',
+    'SUBMIT_RECORD',
+    'EDIT_METADATA',
     'VIEW_OWN_RECORDS',
     'VIEW_DEPARTMENT_RECORDS',
     'VERIFY_SUBMISSION',
@@ -219,16 +224,16 @@ export const ROLE_CAPABILITIES: Record<Role, Permission[]> = {
 
 export const CLEARANCE_LEVELS = {
   PUBLIC: 1,
-  OFFICIAL: 2,
-  OFFICIAL_CONFIDENTIAL: 3,
-  RESTRICTED: 4,
-  SECRET: 5
+  OFFICIAL: 1,
+  OFFICIAL_CONFIDENTIAL: 2,
+  RESTRICTED: 3,
+  SECRET: 4
 } as const;
 
 export type ClearanceLevel = typeof CLEARANCE_LEVELS[keyof typeof CLEARANCE_LEVELS];
 
 /**
- * Maps Classification enum to required clearance level
+ * Maps SecurityClassification enum to required clearance level
  */
 export function getRequiredClearance(classification: string): number {
   const mapping: Record<string, number> = {

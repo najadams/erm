@@ -87,9 +87,10 @@ export default function UserSearch({ value, onChange, type }: UserSearchProps) {
             open={open}
             onOpen={() => setOpen(true)}
             onClose={() => setOpen(false)}
-            isOptionEqualToValue={(option, value) => option.id === value.id}
-            getOptionLabel={(option) => option.name || option.email || ''}
-            options={options}
+            value={value || null}
+            isOptionEqualToValue={(option, val) => option?.id === val?.id}
+            getOptionLabel={(option) => option?.name || option?.email || ''}
+            options={options as any[]}
             loading={loading}
             onInputChange={onInputChange}
             onChange={(event, newValue) => {

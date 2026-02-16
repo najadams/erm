@@ -8,8 +8,8 @@ export const dynamic = 'force-dynamic';
 async function isAdminOrManager() {
   const session = await getServerSession(authOptions);
   const role = (session?.user as any)?.role;
-  // Use valid roles from lib/permissions.ts (RECORDS_MANAGER and MANAGER are invalid)
-  return role === 'ADMIN' || role === 'RECORDS_OFFICER';
+  // Use valid roles from lib/permissions.ts
+  return role === 'ADMIN' || role === 'RECORDS_OFFICER' || role === 'APPROVER';
 }
 
 export async function PATCH(
@@ -75,7 +75,7 @@ export async function PATCH(
     // 1. Create Access (Record or Company)
     // 2. Update Request Status
 
-    const level = approvedLevel || accessRequest.requestedLevel || 'READ';
+    const level = approvedLevel || accessRequest.requestedLevel || 'VIEW';
     const resourceType = accessRequest.resourceType;
 
     const transactionSteps: any[] = [

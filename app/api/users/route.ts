@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import bcrypt from 'bcryptjs';
+import { invalidateForUser } from '@/lib/access-cache';
+import { invalidateCache, CacheKeys } from '@/lib/cache';
 
 const EVERYONE_GROUP_ID = '00000000-0000-0000-0000-000000000000';
 
@@ -152,6 +154,10 @@ export async function PATCH(request: NextRequest) {
         select: { id: true, name: true, email: true, role: true, isActive: true, createdAt: true, groups: { select: { id: true, name: true } } }
     });
 
+    // Invalidate access caches when role/clearance/department change
+    await invalidateForUser(id);
+    await invalidateCache(CacheKeys.acs(id));
+
     return NextResponse.json(updatedUser);
 
   } catch (error) {
@@ -197,6 +203,11 @@ export async function DELETE(request: NextRequest) {
           data: { isActive: false },
            select: { id: true, isActive: true }
       });
+
+      // Invalidate deactivated user's access cache
+      await invalidateForUser(id);
+      await invalidateCache(CacheKeys.acs(id));
+
       return NextResponse.json(updatedUser);
 
   } catch (error) {

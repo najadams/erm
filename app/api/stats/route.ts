@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { ROLES, hasPermission } from '@/lib/permissions';
+import { cacheAside, CacheTTL } from '@/lib/cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,6 +18,10 @@ export async function GET(request: NextRequest) {
   const isAdmin = user.role === ROLES.ADMIN || user.role === ROLES.RECORDS_OFFICER || user.role === ROLES.APPROVER;
 
   try {
+    // Cache key includes userId + role for per-user stats
+    const cacheKey = `stats:${user.id}:${user.role}`;
+
+    const response = await cacheAside(cacheKey, CacheTTL.STATS, async () => {
     const now = new Date();
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
@@ -46,13 +51,28 @@ export async function GET(request: NextRequest) {
         pendingDocs = await prisma.record.count({ where: { status: 'DRAFT', ownerUserId: user.id } });
     }
 
-    const response: any = {
+    // My pending access requests
+    const myPendingRequests = await prisma.accessRequest.count({
+        where: { requesterId: user.id, status: 'PENDING' }
+    });
+
+    // Pending access requests for admin/officer/approver to review
+    let pendingAccessRequests = 0;
+    if (user.role === ROLES.ADMIN || user.role === ROLES.RECORDS_OFFICER || user.role === ROLES.APPROVER) {
+        pendingAccessRequests = await prisma.accessRequest.count({
+            where: { status: 'PENDING' }
+        });
+    }
+
+    const result: any = {
         documents: {
             total: totalDocs,
             mine: myDocs,
             thisMonth: thisMonthDocs,
             pending: pendingDocs
-        }
+        },
+        myPendingRequests,
+        pendingAccessRequests
     };
 
     // 2. Admin Stats (Only if authorized)
@@ -65,14 +85,17 @@ export async function GET(request: NextRequest) {
              where: { timestamp: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } } // Last 30 days
         });
 
-        response.admin = {
+        result.admin = {
             users: totalUsers,
             groups: totalGroups
         };
-        response.audit = {
+        result.audit = {
             recentLogs
         };
     }
+
+    return result;
+    }); // end cacheAside
 
     return NextResponse.json(response);
 

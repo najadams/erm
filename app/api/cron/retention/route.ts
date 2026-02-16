@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { processDispositionQueue } from '@/lib/retention';
+import { checkRetention, processDisposition } from '@/lib/retention';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
@@ -19,13 +19,25 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // 2. Process Queue
-        const count = await processDispositionQueue();
+        // 2. Check for expired records
+        const expiredRecords = await checkRetention();
+        
+        if (expiredRecords.length === 0) {
+            return NextResponse.json({ 
+                success: true, 
+                processedCount: 0,
+                message: 'No records pending disposition.'
+            });
+        }
+
+        // 3. Process them
+        const results = await processDisposition(expiredRecords);
+        const processed = results.filter(r => r.success && !r.skipped).length;
 
         return NextResponse.json({ 
             success: true, 
-            processedCount: count,
-            message: `Identified ${count} records ready for disposition.`
+            processedCount: processed,
+            message: `Identified ${processed} records ready for disposition.`
         });
     } catch (error: any) {
         console.error('Retention Cron Error:', error);

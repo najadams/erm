@@ -60,7 +60,7 @@ export default function AccessRequestDashboard() {
   const [openDialog, setOpenDialog] = React.useState(false);
   const [actionType, setActionType] = React.useState<'APPROVE' | 'REJECT' | null>(null);
   const [reviewNote, setReviewNote] = React.useState('');
-  const [approvedLevel, setApprovedLevel] = React.useState('READ');
+  const [approvedLevel, setApprovedLevel] = React.useState('VIEW');
   const [expiresAt, setExpiresAt] = React.useState('');
   const [processing, setProcessing] = React.useState(false);
 

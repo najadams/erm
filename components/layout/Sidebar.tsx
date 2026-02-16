@@ -34,25 +34,30 @@ import SendIcon from '@mui/icons-material/Send';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import Collapse from '@mui/material/Collapse';
 
+import Badge from '@mui/material/Badge';
+import Chip from '@mui/material/Chip';
+
 import { useRouter, usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import useSWR from 'swr';
 
 interface NavItem {
   label: string;
   icon: React.ReactNode;
   href: string;
   requiresRole?: string[];
+  badgeKey?: string;
 }
 
 import { ROLES, mapLegacyRole } from '@/lib/permissions';
 
 // Lifecycle Navigation Structure
 const WORKSPACE_NAV: NavItem[] = [
-  { label: 'Dashboard', icon: <FolderIcon />, href: '/' }, 
+  { label: 'Dashboard', icon: <FolderIcon />, href: '/' },
   { label: 'Projects', icon: <BusinessIcon />, href: '/projects' },
   { label: 'My Uploads', icon: <CloudUploadIcon />, href: '/upload/my-uploads' },
-  { label: 'My Requests', icon: <SendIcon />, href: '/my-requests' },
-  { label: 'Pending Verification', icon: <FactCheckIcon />, href: '/upload/verification', requiresRole: [ROLES.ADMIN, ROLES.RECORDS_OFFICER, ROLES.APPROVER] },
+  { label: 'My Requests', icon: <SendIcon />, href: '/my-requests', badgeKey: 'myPendingRequests' },
+  { label: 'Pending Verification', icon: <FactCheckIcon />, href: '/upload/verification', requiresRole: [ROLES.ADMIN, ROLES.RECORDS_OFFICER, ROLES.APPROVER], badgeKey: 'pendingDocs' },
 ];
 
 const RECORDS_NAV: NavItem[] = [
@@ -67,7 +72,7 @@ const GOVERNANCE_NAV: NavItem[] = [
 ];
 
 const ADMIN_NAV: NavItem[] = [
-  { label: 'Access Requests', icon: <LockOpenIcon />, href: '/admin/access-requests', requiresRole: [ROLES.ADMIN, ROLES.RECORDS_OFFICER] },
+  { label: 'Access Requests', icon: <LockOpenIcon />, href: '/admin/access-requests', requiresRole: [ROLES.ADMIN, ROLES.RECORDS_OFFICER], badgeKey: 'pendingAccessRequests' },
   { label: 'System Health', icon: <AssessmentIcon />, href: '/admin/system-health', requiresRole: [ROLES.ADMIN, ROLES.AUDITOR] },
   { label: 'Registered Companies', icon: <BusinessIcon />, href: '/admin/companies', requiresRole: [ROLES.ADMIN, ROLES.RECORDS_OFFICER] },
   { label: 'System Audit Logs', icon: <SecurityIcon />, href: '/admin/audit', requiresRole: [ROLES.ADMIN, ROLES.AUDITOR] }, 
@@ -90,6 +95,26 @@ export default function Sidebar() {
   const { data: session } = useSession();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
+  // Fetch badge counts
+  const statsFetcher = (url: string) => fetch(url).then(r => r.ok ? r.json() : null);
+  const { data: stats } = useSWR('/api/stats', statsFetcher, { refreshInterval: 30000, revalidateOnFocus: true });
+
+  const getBadgeCount = (key?: string): number => {
+    if (!key || !stats) return 0;
+    if (key === 'pendingDocs') return stats.documents?.pending || 0;
+    return stats[key] || 0;
+  };
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    workspace: true,
+    records: true,
+    governance: true,
+    admin: true,
+  });
+
+  const toggleSection = (section: string) => {
+    setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
+
   // Map legacy/db role to canonical role
   const userRole = mapLegacyRole((session?.user as any)?.role);
   const sidebarWidth = isCollapsed ? 80 : 280;
@@ -101,12 +126,19 @@ export default function Sidebar() {
 
   const renderNavItem = (item: NavItem) => {
     if (!canAccess(item)) return null;
-    
+
     const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
-    
+    const badgeCount = getBadgeCount(item.badgeKey);
+
+    const icon = badgeCount > 0 ? (
+      <Badge badgeContent={badgeCount} color="error" max={99} sx={{ '& .MuiBadge-badge': { fontSize: '0.6rem', minWidth: 16, height: 16 } }}>
+        {item.icon}
+      </Badge>
+    ) : item.icon;
+
     const buttonContent = (
       <Button
-        startIcon={isCollapsed ? null : item.icon}
+        startIcon={isCollapsed ? null : icon}
         onClick={() => router.push(item.href)}
         sx={{
           justifyContent: isCollapsed ? 'center' : 'flex-start',
@@ -124,12 +156,19 @@ export default function Sidebar() {
           width: '100%',
         }}
       >
-        {isCollapsed ? item.icon : item.label}
+        {isCollapsed ? icon : (
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+            <span>{item.label}</span>
+            {badgeCount > 0 && !isCollapsed && (
+              <Chip label={badgeCount} size="small" color="error" sx={{ height: 20, fontSize: '0.65rem', ml: 1 }} />
+            )}
+          </Box>
+        )}
       </Button>
     );
 
     return isCollapsed ? (
-      <Tooltip title={item.label} placement="right" arrow key={item.label}>
+      <Tooltip title={`${item.label}${badgeCount > 0 ? ` (${badgeCount})` : ''}`} placement="right" arrow key={item.label}>
         {buttonContent}
       </Tooltip>
     ) : (
@@ -190,32 +229,56 @@ export default function Sidebar() {
         {/* Workspace Section */}
         <Box sx={{ mb: 2 }}>
           {(!isCollapsed) && (
-             <Typography variant="overline" sx={{ px: 3, color: 'rgba(255,255,255,0.5)', fontWeight: 'bold' }}>
-               My Workspace
-             </Typography>
+            <Box
+              onClick={() => toggleSection('workspace')}
+              sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', px: 3, py: 0.5, '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' }, borderRadius: 1 }}
+            >
+              <Typography variant="overline" sx={{ color: 'rgba(255,255,255,0.5)', fontWeight: 'bold' }}>
+                My Workspace
+              </Typography>
+              {openSections.workspace ? <ExpandLessIcon sx={{ color: 'rgba(255,255,255,0.4)', fontSize: 18 }} /> : <ExpandMoreIcon sx={{ color: 'rgba(255,255,255,0.4)', fontSize: 18 }} />}
+            </Box>
           )}
-          {WORKSPACE_NAV.map(renderNavItem)}
+          <Collapse in={isCollapsed || openSections.workspace}>
+            {WORKSPACE_NAV.map(renderNavItem)}
+          </Collapse>
         </Box>
 
          {/* Records Section */}
         <Box sx={{ mb: 2 }}>
           {(!isCollapsed) && (
-             <Typography variant="overline" sx={{ px: 3, color: 'rgba(255,255,255,0.5)', fontWeight: 'bold' }}>
-               Records Repository
-             </Typography>
+            <Box
+              onClick={() => toggleSection('records')}
+              sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', px: 3, py: 0.5, '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' }, borderRadius: 1 }}
+            >
+              <Typography variant="overline" sx={{ color: 'rgba(255,255,255,0.5)', fontWeight: 'bold' }}>
+                Records Repository
+              </Typography>
+              {openSections.records ? <ExpandLessIcon sx={{ color: 'rgba(255,255,255,0.4)', fontSize: 18 }} /> : <ExpandMoreIcon sx={{ color: 'rgba(255,255,255,0.4)', fontSize: 18 }} />}
+            </Box>
           )}
-          {RECORDS_NAV.map(renderNavItem)}
+          <Collapse in={isCollapsed || openSections.records}>
+            {RECORDS_NAV.map(renderNavItem)}
+          </Collapse>
         </Box>
 
          {/* Governance Section - Role Based */}
          {(GOVERNANCE_NAV.some(canAccess)) && (
             <Box sx={{ mb: 2 }}>
                {(!isCollapsed) && (
-                  <Typography variant="overline" sx={{ px: 3, color: 'rgba(255,255,255,0.5)', fontWeight: 'bold' }}>
-                    Governance
-                  </Typography>
+                 <Box
+                   onClick={() => toggleSection('governance')}
+                   sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', px: 3, py: 0.5, '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' }, borderRadius: 1 }}
+                 >
+                   <Typography variant="overline" sx={{ color: 'rgba(255,255,255,0.5)', fontWeight: 'bold' }}>
+                     Governance
+                   </Typography>
+                   {openSections.governance ? <ExpandLessIcon sx={{ color: 'rgba(255,255,255,0.4)', fontSize: 18 }} /> : <ExpandMoreIcon sx={{ color: 'rgba(255,255,255,0.4)', fontSize: 18 }} />}
+                 </Box>
                )}
-               {GOVERNANCE_NAV.map(renderNavItem)}
+               <Collapse in={isCollapsed || openSections.governance}>
+                 {GOVERNANCE_NAV.map(renderNavItem)}
+               </Collapse>
             </Box>
          )}
 
@@ -223,11 +286,19 @@ export default function Sidebar() {
          {(ADMIN_NAV.some(canAccess)) && (
             <Box sx={{ mb: 2 }}>
                {(!isCollapsed) && (
-                  <Typography variant="overline" sx={{ px: 3, color: 'rgba(255,255,255,0.5)', fontWeight: 'bold' }}>
-                    Administration
-                  </Typography>
+                 <Box
+                   onClick={() => toggleSection('admin')}
+                   sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', px: 3, py: 0.5, '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' }, borderRadius: 1 }}
+                 >
+                   <Typography variant="overline" sx={{ color: 'rgba(255,255,255,0.5)', fontWeight: 'bold' }}>
+                     Administration
+                   </Typography>
+                   {openSections.admin ? <ExpandLessIcon sx={{ color: 'rgba(255,255,255,0.4)', fontSize: 18 }} /> : <ExpandMoreIcon sx={{ color: 'rgba(255,255,255,0.4)', fontSize: 18 }} />}
+                 </Box>
                )}
-               {ADMIN_NAV.map(renderNavItem)}
+               <Collapse in={isCollapsed || openSections.admin}>
+                 {ADMIN_NAV.map(renderNavItem)}
+               </Collapse>
             </Box>
          )}
         
@@ -244,7 +315,7 @@ export default function Sidebar() {
                 <Button
                   fullWidth
                   onClick={() => {
-                      import('next-auth/react').then(({ signOut }) => signOut());
+                      import('next-auth/react').then(({ signOut }) => signOut({ callbackUrl: '/login' }));
                   }}
                   sx={{
                     justifyContent: 'center',
@@ -266,7 +337,7 @@ export default function Sidebar() {
               fullWidth
               startIcon={<LogoutIcon />}
               onClick={() => {
-                  import('next-auth/react').then(({ signOut }) => signOut());
+                  import('next-auth/react').then(({ signOut }) => signOut({ callbackUrl: '/login' }));
               }}
               sx={{
                 justifyContent: 'flex-start',

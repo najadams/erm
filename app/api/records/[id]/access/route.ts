@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { ROLES } from '@/lib/permissions';
+import { invalidateForRecord } from '@/lib/access-cache';
+import { invalidatePattern } from '@/lib/cache';
 
 export async function GET(
   request: NextRequest,
@@ -191,6 +193,10 @@ export async function POST(
           return accessRecord;
       });
 
+      // Invalidate materialized access cache for this record
+      await invalidateForRecord(id);
+      await invalidatePattern('acs:*');
+
       return NextResponse.json(result);
 
   } catch (error: any) {
@@ -257,6 +263,10 @@ export async function DELETE(
                 }
             });
         });
+
+        // Invalidate materialized access cache for this record
+        await invalidateForRecord(id);
+        await invalidatePattern('acs:*');
 
         return NextResponse.json({ success: true });
     } catch (error: any) {

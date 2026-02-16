@@ -74,7 +74,7 @@ function UploadPageContent() {
 
   // Security classification (matches schema enum)
   const [security, setSecurity] = useState({
-    classification: 'OFFICIAL' as 'OFFICIAL' | 'OFFICIAL_CONFIDENTIAL' | 'RESTRICTED' | 'SECRET'
+    securityClassification: 'OFFICIAL' as 'OFFICIAL' | 'OFFICIAL_CONFIDENTIAL' | 'RESTRICTED' | 'SECRET'
   });
 
   const [compliance, setCompliance] = useState({
@@ -179,7 +179,7 @@ function UploadPageContent() {
     }
 
     // Security Classification
-    formData.append('classification', security.classification);
+    formData.append('securityClassification', security.securityClassification);
 
     // Compliance
     formData.append('isLegalHold', String(compliance.isLegalHold));
@@ -310,6 +310,7 @@ function UploadPageContent() {
             <SecurityControl
                 data={security}
                 onChange={handleSecurityChange}
+                userClearanceLevel={(session?.user as any)?.clearanceLevel ?? 1}
             />
 
             <ComplianceControl

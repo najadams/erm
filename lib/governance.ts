@@ -342,12 +342,43 @@ export async function executeGovernanceAction(
           break;
 
         case 'CHANGE_CLASSIFICATION':
-          oldValue = { classificationNodeId: record.classificationNodeId };
+          let targetClassificationId = newValue;
+          let targetSecurity = undefined;
+          let targetMetadata = undefined;
+
+          // Handle complex object payload
+          if (typeof newValue === 'object' && newValue !== null && newValue.classificationNodeId) {
+              targetClassificationId = newValue.classificationNodeId;
+              targetSecurity = newValue.securityClassification;
+              targetMetadata = newValue.metadata;
+          }
+
+          oldValue = { 
+              classificationNodeId: record.classificationNodeId,
+              securityClassification: record.securityClassification
+          };
+
+          const updateData: any = { classificationNodeId: targetClassificationId };
+          if (targetSecurity) {
+              updateData.securityClassification = targetSecurity;
+          }
+
+          // Merge metadata if provided
+          if (targetMetadata) {
+              const currentMetadata = (record.metadata as any) || {};
+              updateData.metadata = { ...currentMetadata, ...targetMetadata };
+          }
+
           updatedRecord = await tx.record.update({
             where: { id: recordId },
-            data: { classificationNodeId: newValue }
+            data: updateData
           });
-          newValueLog = { classificationNodeId: newValue };
+
+          newValueLog = { 
+              classificationNodeId: targetClassificationId,
+              securityClassification: targetSecurity,
+              metadataKeysUpdated: targetMetadata ? Object.keys(targetMetadata) : []
+          };
           break;
 
         case 'CHANGE_SECURITY_LEVEL':
@@ -425,8 +456,8 @@ export async function executeGovernanceAction(
     if (action === 'CHANGE_CLASSIFICATION' && result.record) {
       // The record's classification enum (OFFICIAL/RESTRICTED/etc.) is the primary
       // clearance gate. If it changed, revalidate access grants.
-      const oldClassification = record?.classification || 'OFFICIAL';
-      const newClassification = result.record.classification || 'OFFICIAL';
+      const oldClassification = record?.securityClassification || 'OFFICIAL';
+      const newClassification = result.record.securityClassification || 'OFFICIAL';
       if (oldClassification !== newClassification) {
         const flagged = await revalidateAccessOnClassificationChange(
           recordId, oldClassification, newClassification, actorId

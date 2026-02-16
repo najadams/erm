@@ -61,3 +61,5 @@ verify_security_breach.js
 verify*
 cleanu*
 .gitignore
+setup_test_users.js
+.gitignore

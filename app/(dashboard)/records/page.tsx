@@ -13,6 +13,7 @@ import Stack from '@mui/material/Stack';
 import Checkbox from '@mui/material/Checkbox';
 import Button from '@mui/material/Button';
 import Slide from '@mui/material/Slide';
+import CircularProgress from '@mui/material/CircularProgress';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
@@ -189,10 +190,26 @@ function RecordsContent() {
         </Box>
         
         {isLoading ? (
-           <Box sx={{ p: 4, textAlign: 'center', color: 'text.secondary' }}>Loading...</Box>
+           <Box sx={{ p: 6, textAlign: 'center', color: 'text.secondary' }}>
+             <CircularProgress size={32} sx={{ mb: 2 }} />
+             <Typography variant="body2">Loading records...</Typography>
+           </Box>
         ) : records.length === 0 ? (
-          <Box sx={{ p: 4, textAlign: 'center', color: 'text.secondary' }}>
-            No records found.
+          <Box sx={{ p: 6, textAlign: 'center', color: 'text.secondary' }}>
+            <DescriptionIcon sx={{ fontSize: 48, opacity: 0.3, mb: 2 }} />
+            <Typography variant="h6" fontWeight="bold" sx={{ mb: 1 }}>
+              {filters.q || filters.status ? 'No matching records' : 'No records yet'}
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 3 }}>
+              {filters.q || filters.status
+                ? 'Try adjusting your search or filters.'
+                : 'Upload your first document to get started.'}
+            </Typography>
+            {!filters.q && !filters.status && (
+              <Button variant="contained" startIcon={<LockPersonIcon />} onClick={() => router.push('/upload')}>
+                Upload Document
+              </Button>
+            )}
           </Box>
         ) : (
           records.map((record: any) => (
@@ -251,15 +268,17 @@ function RecordsContent() {
               <Box sx={{ width: '20%', color: 'text.secondary' }}>
                 {new Date(record.createdAt).toLocaleDateString()}
               </Box>
-              <Box sx={{ width: '15%' }}>
+              <Box sx={{ width: '15%', display: 'flex', alignItems: 'center', gap: 0.5 }}>
                   <Chip
-                   label={record.status.replace('_', ' ')}
+                   label={record.isLocked ? `${record.status} (LOCKED)` : record.status}
                    size="small"
-                   variant={record.status === 'ACTIVE' ? 'filled' : 'outlined'}
+                   variant="outlined"
                    color={
-                       record.status === 'verified' || record.status === 'ACTIVE' ? 'success' :
-                       record.status === 'ARCHIVED' ? 'default' :
-                       record.status === 'd' ? 'warning' : 'primary'
+                       record.isLocked ? 'error' :
+                       record.status === 'REGISTERED' ? 'success' :
+                       record.status === 'SUBMITTED' ? 'info' :
+                       record.status === 'ARCHIVED' ? 'warning' :
+                       'default'
                    }
                    sx={{ fontWeight: 500 }}
                  />

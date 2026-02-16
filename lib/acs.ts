@@ -16,6 +16,7 @@
  */
 
 import { prisma } from '@/lib/prisma';
+import { cacheAside, CacheKeys, CacheTTL } from '@/lib/cache';
 import { AccessLevel, AccessType, Prisma } from '@prisma/client';
 import { ROLES, EVERYONE_GROUP_ID, hasClearance, getRequiredClearance, hasPermission, isGovernanceAction, hasGovernanceAuthority, PERMISSIONS } from '@/lib/permissions';
 import { canEditInStatus } from '@/lib/lifecycle';
@@ -109,6 +110,13 @@ export class ACS {
       return { allowed: false, reason: 'Record not found' };
     }
 
+    // 3.5 SOFT DELETE CHECK
+    if (record.deletedAt && action !== 'DELETE' && action !== 'GOVERNANCE') {
+        // Only allow if specific RESTORE action (if we had one) or maybe Admin?
+        // For now, treat as not found or denied.
+        return { allowed: false, reason: 'Record is deleted' };
+    }
+
     // 4. SECURITY CLEARANCE CHECK (Hard Barrier)
     const recordSecurityLevel = record.classificationNode?.securityLevel ?? 1;
     const userClearance = user.clearanceLevel ?? 1;
@@ -121,11 +129,11 @@ export class ACS {
     }
 
     // 4b. CLASSIFICATION ENUM CLEARANCE CHECK
-    const requiredClassClearance = getRequiredClearance(record.classification);
+    const requiredClassClearance = getRequiredClearance(record.securityClassification);
     if (!hasClearance(userClearance, requiredClassClearance)) {
       return {
         allowed: false,
-        reason: `Insufficient clearance for classification ${record.classification}: requires ${requiredClassClearance}, has ${userClearance}`
+        reason: `Insufficient clearance for classification ${record.securityClassification}: requires ${requiredClassClearance}, has ${userClearance}`
       };
     }
 
@@ -427,9 +435,33 @@ export class ACS {
 
   /**
    * Generates a Prisma WHERE clause to filter lists efficiently.
-   * For list queries, we show records the user can at least DISCOVER.
+   * Tries materialized cache (UserVisibleRecords) first, then falls back
+   * to the full computation with Redis caching.
    */
   static async getWhereClause(userId: string): Promise<Prisma.RecordWhereInput> {
+    // Try materialized cache first (fastest path)
+    try {
+      const { getVisibleRecordIds } = await import('@/lib/access-cache');
+      const cachedIds = await getVisibleRecordIds(userId);
+      if (cachedIds && cachedIds.length > 0) {
+        return { id: { in: cachedIds }, deletedAt: null };
+      }
+    } catch (e) {
+      // access-cache unavailable or error — fall through to raw computation
+    }
+
+    // Fall back to full computation (with Redis caching)
+    return cacheAside(CacheKeys.acs(userId), CacheTTL.ACS, async () => {
+      return this.getWhereClauseRaw(userId);
+    });
+  }
+
+  /**
+   * Raw (uncached) WHERE clause computation.
+   * Used by access-cache.ts to rebuild the materialized cache.
+   * Also used as fallback when no cache is available.
+   */
+  static async getWhereClauseRaw(userId: string): Promise<Prisma.RecordWhereInput> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: { groups: true }
@@ -437,9 +469,9 @@ export class ACS {
 
     if (!user) return { id: 'nothing' };
 
-    // Admin/Auditor see all
+    // Admin/Auditor see all (but filter deleted by default to keep lists clean)
     if ([ROLES.ADMIN, ROLES.AUDITOR].includes(user.role as any)) {
-      return {};
+      return { deletedAt: null };
     }
 
     const userGroupIds = await this.getEffectiveGroups(user);
@@ -499,12 +531,12 @@ export class ACS {
             },
 
             // 7. OFFICIAL records: discoverable by all authenticated users
-            { classification: 'OFFICIAL' },
+            { securityClassification: 'OFFICIAL' },
 
             // 8. OFFICIAL_CONFIDENTIAL: discoverable by same department only
             ...(user.departmentId ? [{
               AND: [
-                { classification: 'OFFICIAL_CONFIDENTIAL' as any },
+                { securityClassification: 'OFFICIAL_CONFIDENTIAL' as any },
                 { departmentId: user.departmentId }
               ]
             }] : []),
@@ -523,9 +555,9 @@ export class ACS {
                 { classificationNode: { securityLevel: { lte: userClearance } } }
               ]
             },
-            // B2. Classification enum clearance
+            // B2. SecurityClassification enum clearance
             {
-              classification: {
+              securityClassification: {
                 in: (['OFFICIAL', 'OFFICIAL_CONFIDENTIAL', 'RESTRICTED', 'SECRET'] as const)
                   .filter(c => userClearance >= getRequiredClearance(c))
               }
@@ -546,7 +578,9 @@ export class ACS {
               }
             }
           }
-        }
+        },
+        // D. Soft Delete Filter
+        { deletedAt: null }
       ]
     };
   }
@@ -667,7 +701,7 @@ export class ACS {
       }
 
       // Catalog-only (discovered via classification visibility but no content access)
-      const canRequest = ['OFFICIAL', 'OFFICIAL_CONFIDENTIAL'].includes(record.classification);
+      const canRequest = ['OFFICIAL', 'OFFICIAL_CONFIDENTIAL'].includes(record.securityClassification);
       result.set(record.id, { level: 'DISCOVERY', canViewContent: false, ...( canRequest ? { canRequest: true } : {}) } as any);
     }
 

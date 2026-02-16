@@ -105,24 +105,74 @@ export default function VerificationPage() {
       });
   };
 
+  const getSecurityColor = (level: string) => {
+    switch (level) {
+      case 'SECRET': return 'error';
+      case 'RESTRICTED': return 'warning';
+      case 'OFFICIAL_CONFIDENTIAL': return 'info';
+      default: return 'success';
+    }
+  };
+
   const columns: GridColDef[] = [
-    { field: 'title', headerName: 'Title', flex: 1 },
-    { 
-        field: 'user', 
-        headerName: 'Uploaded By', 
-        width: 180,
-        valueGetter: (params: any) => params?.name || 'Unknown' // Depends on API include.user
+    {
+        field: 'referenceNumber',
+        headerName: 'Ref',
+        width: 140,
+        valueGetter: (params: any) => params || '—'
     },
-    { 
-        field: 'createdAt', 
-        headerName: 'Submission Date', 
-        width: 180, 
-        valueFormatter: (params: any) => new Date(params.value).toLocaleString()
+    { field: 'title', headerName: 'Title', flex: 1, minWidth: 200 },
+    {
+        field: 'securityClassification',
+        headerName: 'Security',
+        width: 160,
+        renderCell: (params: GridRenderCellParams) => (
+            <Chip
+                label={(params.value || 'OFFICIAL').replace('_', ' ')}
+                size="small"
+                color={getSecurityColor(params.value) as any}
+                variant="outlined"
+            />
+        )
+    },
+    {
+        field: 'classificationNode',
+        headerName: 'Classification',
+        width: 180,
+        valueGetter: (params: any) => {
+            if (!params) return '—';
+            const parts = [];
+            if (params.parent?.parent?.name) parts.push(params.parent.parent.name);
+            if (params.parent?.name) parts.push(params.parent.name);
+            parts.push(params.name);
+            return parts.join(' > ');
+        }
+    },
+    {
+        field: 'user',
+        headerName: 'Uploaded By',
+        width: 150,
+        valueGetter: (params: any) => params?.name || 'Unknown'
+    },
+    {
+        field: 'createdAt',
+        headerName: 'Submitted',
+        width: 150,
+        valueFormatter: (params: any) => {
+            const date = new Date(params);
+            const now = new Date();
+            const diffMs = now.getTime() - date.getTime();
+            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+            if (diffHours < 24) return `${diffHours}h ago`;
+            const diffDays = Math.floor(diffHours / 24);
+            if (diffDays < 7) return `${diffDays}d ago`;
+            return date.toLocaleDateString();
+        }
     },
     {
       field: 'actions',
       headerName: 'Actions',
-      width: 180,
+      width: 150,
       sortable: false,
       renderCell: (params: GridRenderCellParams) => {
         const record = params.row;
@@ -138,18 +188,18 @@ export default function VerificationPage() {
                 </IconButton>
             </Tooltip>
             <Tooltip title="Approve (Make Official)">
-                <IconButton 
-                    size="small" 
-                    color="success" 
+                <IconButton
+                    size="small"
+                    color="success"
                     onClick={() => openDialog(record, 'APPROVE')}
                 >
                     <CheckCircleIcon fontSize="small" />
                 </IconButton>
             </Tooltip>
             <Tooltip title="Reject (Return to Draft)">
-                <IconButton 
-                    size="small" 
-                    color="error" 
+                <IconButton
+                    size="small"
+                    color="error"
                     onClick={() => openDialog(record, 'REJECT')}
                 >
                     <CancelIcon fontSize="small" />

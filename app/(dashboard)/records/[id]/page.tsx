@@ -6,6 +6,9 @@ import { useSession } from 'next-auth/react';
 import useSWR from 'swr';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
+import Breadcrumbs from '@mui/material/Breadcrumbs';
+import Link from '@mui/material/Link';
+import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import Paper from '@mui/material/Paper';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
@@ -57,6 +60,11 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 
 import UserSearch from '@/components/UserSearch'; // Assuming this exists or using simple text field for now
+import ClassificationSelect from '@/components/upload/ClassificationSelect';
+import SecurityControl from '@/components/upload/SecurityControl';
+import DynamicField from '@/components/upload/DynamicField';
+import Alert from '@mui/material/Alert';
+import PeopleIcon from '@mui/icons-material/People';
 
 export default function RecordDetailsPage(props: { params: Promise<{ id: string }> }) {
   const params = React.use(props.params);
@@ -69,6 +77,9 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
   const [accessDenied, setAccessDenied] = useState(false);
   const [limitedInfo, setLimitedInfo] = useState<any>(null); // For restricted view
   
+  // Governance Action Loading
+  const [governanceLoading, setGovernanceLoading] = useState(false);
+
   // Dialog States
   const [openUpload, setOpenUpload] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -85,12 +96,25 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
 
   // Access Grant State
   const [openAccessDialog, setOpenAccessDialog] = useState(false);
+  const [selectedPrincipal, setSelectedPrincipal] = useState<any>(null);
   const [accessForm, setAccessForm] = useState({
       principalType: 'USER',
       principalId: '',
       level: 'VIEW',
       accessType: 'ALLOW'
   });
+
+  // Change Classification Dialog State
+  const [openClassificationDialog, setOpenClassificationDialog] = useState(false);
+  const [newClassificationId, setNewClassificationId] = useState<string | null>(null);
+  const [classificationReason, setClassificationReason] = useState('');
+  const [loadingAccess, setLoadingAccess] = useState(false);
+  const [classificationAccess, setClassificationAccess] = useState<any>(null);
+  
+  // Dynamic Classification State
+  const [newSecurity, setNewSecurity] = useState('OFFICIAL');
+  const [newTemplate, setNewTemplate] = useState<any>(null);
+  const [dynamicValues, setDynamicValues] = useState<any>({});
 
   // Tab State
   const [tabIndex, setTabIndex] = useState(0);
@@ -138,6 +162,7 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
   }, [recordData, error]);
 
   const handleGovernanceAction = async (action: string, reason: string, newValue?: any) => {
+      setGovernanceLoading(true);
       try {
           const res = await fetch(`/api/records/${id}/governance`, {
               method: 'PATCH',
@@ -152,6 +177,8 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
           }
       } catch (e) {
           alert('System error');
+      } finally {
+          setGovernanceLoading(false);
       }
   };
 
@@ -217,13 +244,6 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
   const handleSubmitRequest = async () => {
       setSubmittingRequest(true);
       try {
-          // Assuming an API endpoint for access requests
-         // Note: The previous code had it embedded or separate.
-         // Step 59 mentioned "Refactor Unified Access Governance" ... "create new API"
-         // I will assume there is an endpoint closer to what was discussed.
-         // Or just use the generic request logic if it exists.
-         // For now, I'll alert as placeholder or use a generic endpoint if I know it.
-         
          const res = await fetch(`/api/records/${id}/access-request`, {
              method: 'POST',
              headers: { 'Content-Type': 'application/json' },
@@ -232,13 +252,16 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
                  requestedLevel: requestLevel
              })
          });
-         
+
          if(res.ok) {
-             alert('Request submitted');
+             const data = await res.json();
+             setExistingRequest(data);
              setOpenRequestDialog(false);
-             mutate(); // Refresh to show pending status
+             setRequestReason('');
+             mutate();
          } else {
-             alert('Failed to submit request');
+             const err = await res.json();
+             alert(err.error || 'Failed to submit request');
          }
       } catch(e) {
           alert("Error submitting request");
@@ -247,6 +270,106 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
       }
   };
   
+  const handleOpenClassificationDialog = () => {
+      setOpenClassificationDialog(true);
+      setNewClassificationId(null);
+      setClassificationReason('');
+      setNewSecurity(record?.securityClassification || 'OFFICIAL');
+      setNewTemplate(null);
+      setDynamicValues({});
+  };
+
+  const handleNewClassificationChange = async (nodeId: string | null) => {
+      setNewClassificationId(nodeId);
+      setNewTemplate(null);
+      setDynamicValues({});
+
+      if (nodeId) {
+          // 1. Fetch Impact Analysis (Access)
+          setLoadingAccess(true);
+          try {
+              const res = await fetch(`/api/records/${id}/access-impact?newClassificationId=${nodeId}`);
+              if (res.ok) {
+                  const data = await res.json();
+                  setClassificationAccess(data);
+              }
+          } catch (e) {
+              console.error(e);
+          } finally {
+              setLoadingAccess(false);
+          }
+
+          // 2. Fetch Template Details
+          try {
+              const res = await fetch(`/api/classifications/${nodeId}`);
+              if (res.ok) {
+                  const nodeData = await res.json();
+                  const template = nodeData.templates?.find((t: any) => t.isActive) || nodeData.templates?.[0];
+                  if (template) {
+                      setNewTemplate(template);
+                  }
+              }
+          } catch (e) {
+              console.error("Failed to fetch template", e);
+          }
+      } else {
+          setClassificationAccess(null);
+      }
+  };
+
+  const handleChangeClassification = async () => {
+      if (!newClassificationId) return;
+      if (classificationReason.length < 10) {
+          alert('Please provide a detailed reason (min 10 chars)');
+          return;
+      }
+
+      setGovernanceLoading(true);
+      try {
+          // Construct Payload
+          const payload: any = {
+              action: 'CHANGE_CLASSIFICATION',
+              reason: classificationReason,
+              newValue: {
+                  classificationNodeId: newClassificationId,
+                  securityClassification: newSecurity,
+                  metadata: {}
+              }
+          };
+
+          // Collect Dynamic Metadata
+          if (newTemplate) {
+             newTemplate.templateFields.forEach((tf: any) => {
+                  const fieldId = tf.metadataFieldId;
+                  const val = dynamicValues[fieldId];
+                  if (val !== undefined && val !== null && val !== '') {
+                      payload.newValue.metadata[fieldId] = val;
+                  }
+             });
+          }
+
+          const res = await fetch(`/api/records/${id}/governance`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+          });
+
+          if (res.ok) {
+              setOpenClassificationDialog(false);
+              mutate(); // Refresh
+              alert('Classification updated successfully');
+          } else {
+              const data = await res.json();
+              alert(data.error || 'Failed to change classification');
+          }
+      } catch (e) {
+          console.error(e);
+          alert('An error occurred');
+      } finally {
+          setGovernanceLoading(false);
+      }
+  };
+
   const handleGrantAccess = async () => {
       // Implement API call to grant access
       // POST /api/records/:id/access
@@ -331,7 +454,7 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
                    <Button variant="outlined" onClick={() => router.back()}>Go Back</Button>
                    {/* Only show Request Access for OFFICIAL/OFFICIAL_CONFIDENTIAL records.
                        RESTRICTED/SECRET records require proactive grant by Records Officer. */}
-                   {(!limitedInfo?.classification || ['OFFICIAL', 'OFFICIAL_CONFIDENTIAL'].includes(limitedInfo.classification)) ? (
+                   {(!limitedInfo?.securityClassification || ['OFFICIAL', 'OFFICIAL_CONFIDENTIAL'].includes(limitedInfo.securityClassification)) ? (
                        <Button
                             variant={existingRequest ? "outlined" : "contained"}
                             color={existingRequest ? "warning" : "primary"}
@@ -374,14 +497,19 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
   if (!record) return <Box sx={{ p: 4, textAlign: 'center' }}>Record not found.</Box>;
 
   // Helper
-  const getStatusColor = (s: string) => {
+  const getStatusColor = (s: string, isLocked?: boolean) => {
+      if (isLocked) return 'error';
       switch(s) {
           case 'REGISTERED': return 'success';
-          case 'LOCKED': return 'error';
           case 'SUBMITTED': return 'info';
           case 'ARCHIVED': return 'warning';
           default: return 'default';
       }
+  };
+
+  const getStatusLabel = (s: string, isLocked?: boolean) => {
+      if (isLocked) return `${s} (LOCKED)`;
+      return s;
   };
 
   const currentVersion = record.versions?.[0];
@@ -413,15 +541,28 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
 
   return (
       <Box sx={{ p: 3, maxWidth: 1600, mx: 'auto' }}>
+        {/* Breadcrumbs */}
+        <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />} sx={{ mb: 2 }}>
+          <Link underline="hover" color="inherit" href="/" sx={{ cursor: 'pointer' }}>
+            Dashboard
+          </Link>
+          <Link underline="hover" color="inherit" href="/records" sx={{ cursor: 'pointer' }}>
+            Records
+          </Link>
+          <Typography color="text.primary" variant="body2" noWrap sx={{ maxWidth: 300 }}>
+            {record.referenceNumber || record.title}
+          </Typography>
+        </Breadcrumbs>
+
         {/* 1. Header Zone (Immutable Identity) */}
         <Paper elevation={0} sx={{ p: 2, mb: 3, border: '1px solid #e2e8f0', bgcolor: '#f8fafc' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Chip 
-                        label={record.status} 
-                        color={getStatusColor(record.status) as any} 
+                    <Chip
+                        label={getStatusLabel(record.status, record.isLocked)}
+                        color={getStatusColor(record.status, record.isLocked) as any}
                         variant="filled"
-                        sx={{ fontWeight: 'bold' }} 
+                        sx={{ fontWeight: 'bold' }}
                     />
                     <Box>
                         <Typography variant="h5" fontWeight="bold">
@@ -433,7 +574,7 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
                     </Box>
                 </Box>
                 <Box sx={{ textAlign: 'right' }}>
-                    <Typography variant="caption" display="block" color="text.secondary">OWNER</Typography>
+                    <Typography variant="caption" display="block" color="text.secondary">Uploaded By</Typography>
                     <Typography variant="body2" fontWeight="medium">{record.user?.name || 'Unknown'}</Typography>
                     <Typography variant="caption" color="text.secondary">
                         Reg: {new Date(record.createdAt).toLocaleDateString()}
@@ -455,38 +596,44 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
                         />
                         <CardContent sx={{ pt: 0 }}>
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                {record.status === 'LOCKED' ? (
-                                    <Button 
-                                        variant="contained" 
-                                        color="primary" 
+                                {governanceLoading && (
+                                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 1 }}>
+                                        <CircularProgress size={24} />
+                                    </Box>
+                                )}
+                                {record.isLocked ? (
+                                    <Button
+                                        variant="contained"
+                                        color="primary"
                                         startIcon={<LockOpenIcon />}
                                         onClick={() => {
                                             const reason = prompt('Reason for UNLOCKING this record?');
                                             if (reason) handleGovernanceAction('UNLOCK', reason);
                                         }}
-                                        disabled={!isRecordsOfficer && !isAdmin} 
+                                        disabled={governanceLoading || (!isRecordsOfficer && !isAdmin)}
                                     >
                                         Unlock Record
                                     </Button>
                                 ) : (
-                                    <Button 
-                                        variant="outlined" 
-                                        color="error" 
+                                    <Button
+                                        variant="outlined"
+                                        color="error"
                                         startIcon={<LockIcon />}
                                         onClick={() => {
                                             const reason = prompt('Reason for LOCKING this record? (Freezes all edits)');
                                             if (reason) handleGovernanceAction('LOCK', reason);
                                         }}
-                                        disabled={record.status !== 'REGISTERED' || (!isRecordsOfficer && !isAdmin)}
+                                        disabled={governanceLoading || record.status !== 'REGISTERED' || (!isRecordsOfficer && !isAdmin)}
                                     >
                                         Lock Record
                                     </Button>
                                 )}
-                                
+
                                 {record.status === 'DRAFT' && isAdmin && (
                                      <Button
                                         variant="contained"
                                         color="success"
+                                        disabled={governanceLoading}
                                         onClick={() => handleGovernanceAction('REGISTER', 'Admin direct registration')}
                                      >
                                          Register Record
@@ -496,6 +643,7 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
                                      <Button
                                         variant="contained"
                                         color="primary"
+                                        disabled={governanceLoading}
                                         onClick={() => handleRequestVerification(record.id)}
                                      >
                                          Submit for Registration
@@ -506,11 +654,24 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
                                     <Button
                                         variant="contained"
                                         color="success"
-                                         onClick={() => {
+                                        disabled={governanceLoading}
+                                        onClick={() => {
                                               handleGovernanceAction('REGISTER', 'Registration Approval');
-                                         }}
+                                        }}
                                     >
                                         Register Record
+                                    </Button>
+                                )}
+
+                                {(isAdmin || isRecordsOfficer) && record.status !== 'ARCHIVED' && (
+                                    <Button
+                                        variant="outlined"
+                                        color="warning"
+                                        startIcon={<SecurityIcon />}
+                                        disabled={governanceLoading}
+                                        onClick={handleOpenClassificationDialog}
+                                    >
+                                        Change Classification
                                     </Button>
                                 )}
                             </Box>
@@ -535,15 +696,27 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
                                  <Box sx={{ mt: 2 }}>
                                      <Typography variant="caption" color="text.secondary">EXPLICIT GRANTS</Typography>
                                      <Stack spacing={1} sx={{ mt: 1 }}>
-                                         {permissions.explicit.map((p: any) => (
-                                             <Chip 
-                                                 key={p.id} 
-                                                 label={`${p.principalType === 'USER' ? p.user?.name : p.group?.name} (${p.level})`} 
-                                                 size="small" 
-                                                 variant="outlined"
-                                                 onDelete={canManageAccess ? () => handleRevokeAccess(p.id) : undefined}
-                                             />
-                                         ))}
+                                         {permissions.explicit.map((p: any) => {
+                                             const isExpired = p.expiresAt && new Date(p.expiresAt) < new Date();
+                                             const isExpiringSoon = p.expiresAt && !isExpired &&
+                                                 (new Date(p.expiresAt).getTime() - Date.now()) < 7 * 24 * 60 * 60 * 1000;
+                                             return (
+                                                 <Box key={p.id}>
+                                                     <Chip
+                                                         label={`${p.principalType === 'USER' ? p.user?.name : p.group?.name} (${p.level})`}
+                                                         size="small"
+                                                         variant="outlined"
+                                                         color={isExpired ? 'error' : isExpiringSoon ? 'warning' : 'default'}
+                                                         onDelete={canManageAccess ? () => handleRevokeAccess(p.id) : undefined}
+                                                     />
+                                                     {p.expiresAt && (
+                                                         <Typography variant="caption" display="block" color={isExpired ? 'error.main' : isExpiringSoon ? 'warning.main' : 'text.secondary'} sx={{ ml: 1 }}>
+                                                             {isExpired ? 'Expired' : 'Expires'}: {new Date(p.expiresAt).toLocaleDateString()}
+                                                         </Typography>
+                                                     )}
+                                                 </Box>
+                                             );
+                                         })}
                                      </Stack>
                                  </Box>
                              )}
@@ -554,11 +727,11 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
                      <Card variant="outlined">
                         <CardHeader title="Actions" titleTypographyProps={{ variant: 'subtitle2', fontWeight: 'bold' }} />
                         <CardContent sx={{ pt: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                             <Button 
-                                variant="outlined" 
+                             <Button
+                                variant="outlined"
                                 startIcon={<CloudUploadIcon />}
                                 onClick={() => setOpenUpload(true)}
-                                disabled={record.status === 'LOCKED' || record.status === 'ARCHIVED'}
+                                disabled={record.isLocked || record.status === 'ARCHIVED'}
                              >
                                 New Version
                              </Button>
@@ -945,20 +1118,19 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
                          <Select
                             value={accessForm.principalType}
                             label="Principal Type"
-                            onChange={(e) => setAccessForm({...accessForm, principalType: e.target.value, principalId: ''})}
+                            onChange={(e) => { setSelectedPrincipal(null); setAccessForm({...accessForm, principalType: e.target.value, principalId: ''}); }}
                          >
                             <MenuItem value="USER">User (Individual)</MenuItem>
                             <MenuItem value="GROUP">Group (Project/Dept)</MenuItem>
                          </Select>
                     </FormControl>
 
-                     <UserSearch 
+                     <UserSearch
                         type={accessForm.principalType as 'USER' | 'GROUP'}
-                        value={null}
+                        value={selectedPrincipal}
                         onChange={(newValue: any) => {
-                            if (newValue) {
-                                setAccessForm({ ...accessForm, principalId: newValue.id });
-                            }
+                            setSelectedPrincipal(newValue);
+                            setAccessForm({ ...accessForm, principalId: newValue?.id || '' });
                         }}
                     />
 
@@ -990,8 +1162,156 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
                 </Box>
             </DialogContent>
             <DialogActions>
-                <Button onClick={() => setOpenAccessDialog(false)}>Cancel</Button>
-                <Button variant="contained" onClick={handleGrantAccess}>Grant Access</Button>
+                <Button onClick={() => { setOpenAccessDialog(false); setSelectedPrincipal(null); }}>Cancel</Button>
+                <Button variant="contained" onClick={handleGrantAccess} disabled={!accessForm.principalId}>Grant Access</Button>
+            </DialogActions>
+        </Dialog>
+
+        {/* Change Classification Dialog */}
+        <Dialog open={openClassificationDialog} onClose={() => setOpenClassificationDialog(false)} maxWidth="sm" fullWidth>
+            <DialogTitle>Change Classification</DialogTitle>
+            <DialogContent>
+                <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    {/* Current classification */}
+                    <Box>
+                        <Typography variant="caption" color="text.secondary" fontWeight="bold">CURRENT CLASSIFICATION</Typography>
+                        <Typography variant="body1">{record?.recordType?.name || record?.securityClassification || 'Unclassified'}</Typography>
+                    </Box>
+
+                    {/* New classification selector */}
+                    <ClassificationSelect
+                        value={newClassificationId}
+                        onChange={(val) => handleNewClassificationChange(val as string)}
+                        label="New Classification"
+                        required
+                    />
+
+                    {/* Security Level Selection */}
+                    {newClassificationId && (
+                        <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                             <SecurityControl
+                                data={{ securityClassification: newSecurity }}
+                                onChange={(field, val) => setNewSecurity(val)}
+                                userClearanceLevel={(session?.user as any)?.clearanceLevel ?? 1}
+                             />
+                        </Box>
+                    )}
+
+                    {/* Dynamic Metadata Form */}
+                    {newTemplate && (
+                        <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'background.paper' }}>
+                            <Typography variant="subtitle2" fontWeight="bold" gutterBottom sx={{ color: 'primary.main' }}>
+                                Required Metadata for {newTemplate.name}
+                            </Typography>
+                            <Grid container spacing={2}>
+                                {newTemplate.templateFields
+                                    .sort((a: any, b: any) => a.displayOrder - b.displayOrder)
+                                    .map((tf: any) => (
+                                        <Grid size={{ xs: 12 }} key={tf.id}>
+                                            <DynamicField
+                                                field={tf.metadataField}
+                                                value={dynamicValues[tf.metadataFieldId]}
+                                                onChange={(val) => setDynamicValues((prev: any) => ({ ...prev, [tf.metadataFieldId]: val }))}
+                                                error={tf.required && !dynamicValues[tf.metadataFieldId]}
+                                            />
+                                        </Grid>
+                                    ))
+                                }
+                            </Grid>
+                        </Box>
+                    )}
+
+                    {/* Security Level Selection */}
+                    {newClassificationId && (
+                        <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                             <SecurityControl
+                                data={{ securityClassification: newSecurity }}
+                                onChange={(field, val) => setNewSecurity(val)}
+                                userClearanceLevel={(session?.user as any)?.clearanceLevel ?? 1}
+                             />
+                        </Box>
+                    )}
+
+                    {/* Current permissions - who has access */}
+                    <Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                            <PeopleIcon fontSize="small" color="action" />
+                            <Typography variant="subtitle2" fontWeight="bold">Current Permissions</Typography>
+                        </Box>
+                        <Alert severity="info" sx={{ mb: 1.5 }}>
+                            Changing classification may affect these users&apos; access to this record.
+                        </Alert>
+                        {loadingAccess ? (
+                            <Box sx={{ textAlign: 'center', py: 2 }}><CircularProgress size={24} /></Box>
+                        ) : (
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                {classificationAccess?.explicit && classificationAccess.explicit.length > 0 ? (
+                                    classificationAccess.explicit.map((p: any) => (
+                                        <Box key={p.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
+                                            <Box>
+                                                <Typography variant="body2" fontWeight="medium">
+                                                    {p.principalType === 'USER' ? p.user?.name || p.user?.email : p.group?.name}
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    {p.principalType === 'USER' ? 'User' : 'Group'} &bull; {p.level} access
+                                                </Typography>
+                                            </Box>
+                                            <Chip label={p.accessType || 'ALLOW'} size="small" color={p.accessType === 'DENY' ? 'error' : 'success'} variant="outlined" />
+                                        </Box>
+                                    ))
+                                ) : (
+                                    <Typography variant="body2" color="text.secondary">No explicit grants.</Typography>
+                                )}
+                                {classificationAccess?.inherited && classificationAccess.inherited.length > 0 && (
+                                    <Box sx={{ mt: 1 }}>
+                                        <Typography variant="caption" color="text.secondary" fontWeight="bold">INHERITED ACCESS</Typography>
+                                        {classificationAccess.inherited.map((inh: any, idx: number) => {
+                                            // Format source into user-friendly label
+                                            const sourceName = inh.sourceName || inh.source || 'Unknown source';
+                                            const friendlySource = sourceName
+                                                .replace(/^ProjectMember\..*/, `Project membership`)
+                                                .replace(/^CompanyAccess\..*/, `Company-level access`)
+                                                .replace(/^DepartmentMember\..*/, `Department membership`)
+                                                .replace(/^GroupMember\..*/, `Group membership`);
+                                            return (
+                                                <Box key={idx} sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1, mt: 0.5 }}>
+                                                    <Typography variant="body2">{friendlySource}</Typography>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        {inh.level} access {inh.description ? `\u2022 ${inh.description}` : ''}
+                                                    </Typography>
+                                                </Box>
+                                            );
+                                        })}
+                                    </Box>
+                                )}
+                            </Box>
+                        )}
+                    </Box>
+
+                    {/* Reason */}
+                    <TextField
+                        label="Reason for Change"
+                        multiline
+                        rows={3}
+                        fullWidth
+                        required
+                        value={classificationReason}
+                        onChange={(e) => setClassificationReason(e.target.value)}
+                        placeholder="Document why the classification is being changed (min 10 characters)..."
+                        helperText={classificationReason.length > 0 && classificationReason.length < 10 ? `${10 - classificationReason.length} more characters required` : undefined}
+                    />
+                </Box>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={() => setOpenClassificationDialog(false)}>Cancel</Button>
+                <Button
+                    variant="contained"
+                    color="warning"
+                    onClick={handleChangeClassification}
+                    disabled={!newClassificationId || classificationReason.length < 10}
+                >
+                    Change Classification
+                </Button>
             </DialogActions>
         </Dialog>
       </Box>

@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 async function isAdminOrManager() {
   const session = await getServerSession(authOptions);
   const role = (session?.user as any)?.role;
-  return role === 'ADMIN' || role === 'RECORDS_OFFICER' || role === 'RECORDS_MANAGER' || role === 'MANAGER';
+  return role === 'ADMIN' || role === 'RECORDS_OFFICER' || role === 'APPROVER' || role === 'RECORDS_MANAGER' || role === 'MANAGER';
 }
 
 export async function GET(request: NextRequest) {
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
                     select: { id: true, name: true, email: true, department: { select: { name: true, code: true } } }
                 },
                 record: {
-                    select: { id: true, title: true, referenceNumber: true, classification: true }
+                    select: { id: true, title: true, referenceNumber: true, securityClassification: true }
                 },
                 registeredCompany: {
                     select: { id: true, name: true, registrationNumber: true }

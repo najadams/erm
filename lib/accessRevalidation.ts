@@ -1,7 +1,7 @@
 /**
  * ACCESS REVALIDATION
  *
- * When a record's classification is escalated, existing access grants
+ * When a record's securityClassification is escalated, existing access grants
  * may become invalid if the user's clearance level is insufficient.
  *
  * This module flags affected grants for review — it does NOT auto-revoke.
@@ -13,7 +13,7 @@ import { getRequiredClearance } from '@/lib/permissions';
 
 /**
  * Flags access grants that are insufficient after a classification change.
- * Called after governance CHANGE_CLASSIFICATION or record.classification update.
+ * Called after governance CHANGE_CLASSIFICATION or record.securityClassification update.
  *
  * @returns Number of affected grants flagged for review
  */
