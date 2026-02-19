@@ -18,15 +18,21 @@ export const s3Client = new S3Client({
 export const BUCKET_NAME = process.env.MINIO_BUCKET || "uploads";
 
 /**
- * Get the public URL for a file.
- * Replaces internal docker endpoint with localhost for browser access if needed.
+ * Get the public (browser-facing) URL for a file.
+ *
+ * When MINIO_PUBLIC_URL is set, it is used as the full base path (including
+ * the bucket mapping), so only the object key is appended. Example:
+ *   MINIO_PUBLIC_URL=https://192.168.1.50/files  →  /files/{key}
+ *   nginx proxies /files/ → minio:9000/uploads/  (the bucket)
+ *
+ * When MINIO_PUBLIC_URL is not set (local dev), falls back to direct MinIO
+ * access: http://localhost:9000/{bucket}/{key}
  */
 export function getPublicUrl(key: string): string {
-    // If endpoint contains 'minio' (docker service name), replace with localhost for browser
-    // This is a naive check for the dev environment
-    let baseUrl = MINIO_ENDPOINT;
-    if (baseUrl.includes('minio')) {
-        baseUrl = 'http://localhost:9000';
+    const publicUrl = process.env.MINIO_PUBLIC_URL;
+    if (publicUrl) {
+        // MINIO_PUBLIC_URL maps directly to the bucket via nginx proxy
+        return `${publicUrl}/${key}`;
     }
-    return `${baseUrl}/${BUCKET_NAME}/${key}`;
+    return `${MINIO_ENDPOINT}/${BUCKET_NAME}/${key}`;
 }

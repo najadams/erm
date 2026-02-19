@@ -42,8 +42,10 @@ const envSchema = z.object({
 
   // --- Optional (graceful degradation) ---
   REDIS_URL: z.string().url().optional(),
+  REDIS_PASSWORD: z.string().optional(),
   MEILI_URL: z.string().url().optional(),
   MEILI_MASTER_KEY: z.string().optional(),
+  MINIO_PUBLIC_URL: z.string().url().optional(),
   CRON_SECRET: z.string().min(16).optional(),
 
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
