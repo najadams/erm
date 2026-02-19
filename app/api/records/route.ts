@@ -15,6 +15,8 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client, BUCKET_NAME, getPublicUrl } from "@/lib/s3";
+import { syncOnCreate } from '@/lib/search-sync';
+import { invalidateForUser } from '@/lib/access-cache';
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -142,6 +144,11 @@ export async function GET(request: NextRequest) {
      return NextResponse.json({ error: 'Permission Check Failed' }, { status: 403 });
   }
 
+  // 3. Pagination
+  const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
+  const pageSize = Math.min(Math.max(1, parseInt(searchParams.get('pageSize') || '50')), 100);
+  const skip = (page - 1) * pageSize;
+
   const where = {
     AND: [
       ...filters,
@@ -152,25 +159,30 @@ export async function GET(request: NextRequest) {
   const userId = (session.user as any).id;
 
   try {
-    const records = await prisma.record.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        user: { select: { name: true, email: true } },
-        recordType: { select: { name: true, code: true } },
-        access: true, // Needed for computeListAccess
-        classificationNode: {
-          include: {
-            parent: {
-              include: {
-                parent: true
+    const [records, totalCount] = await prisma.$transaction([
+      prisma.record.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: pageSize,
+        include: {
+          user: { select: { name: true, email: true } },
+          recordType: { select: { name: true, code: true } },
+          access: true, // Needed for computeListAccess
+          classificationNode: {
+            include: {
+              parent: {
+                include: {
+                  parent: true
+                }
               }
             }
           }
+          // Metadata is a scalar JSONB field, no include needed
         }
-        // Metadata is a scalar JSONB field, no include needed
-      }
-    });
+      }),
+      prisma.record.count({ where })
+    ]);
 
     // Compute per-record access level and strip sensitive data for catalog-only records
     const accessMap = await ACS.computeListAccess(userId, records);
@@ -188,7 +200,16 @@ export async function GET(request: NextRequest) {
       return { ...recordWithoutAcl, _accessLevel: accessInfo.level };
     });
 
-    return NextResponse.json(enriched);
+    return NextResponse.json({
+      records: enriched,
+      pagination: {
+        page,
+        pageSize,
+        totalCount,
+        totalPages: Math.ceil(totalCount / pageSize),
+        hasMore: page * pageSize < totalCount
+      }
+    });
   } catch (error: any) {
     console.error('Search API Error:', error);
     return NextResponse.json({ error: 'Failed to fetch records', details: error.message }, { status: 500 });
@@ -876,6 +897,18 @@ export async function POST(request: NextRequest) {
         }
     }
     
+    // Invalidate creator's ACS cache so next list view picks up the new record
+    invalidateForUser(userId).catch(err =>
+      console.warn('[ACS Cache] Failed to invalidate creator cache:', err.message)
+    );
+
+    // Sync to Meilisearch (fire-and-forget, non-blocking)
+    if (result?.id) {
+      syncOnCreate(result.id).catch(err =>
+        console.warn('[Search Sync] Failed to index new record:', err.message)
+      );
+    }
+
     return NextResponse.json(result);
 
   } catch (error: any) {

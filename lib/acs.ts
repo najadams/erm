@@ -451,9 +451,21 @@ export class ACS {
     }
 
     // Fall back to full computation (with Redis caching)
-    return cacheAside(CacheKeys.acs(userId), CacheTTL.ACS, async () => {
+    const result = await cacheAside(CacheKeys.acs(userId), CacheTTL.ACS, async () => {
       return this.getWhereClauseRaw(userId);
     });
+
+    // Fire-and-forget: populate UVR table for next time (non-blocking)
+    setImmediate(async () => {
+      try {
+        const { rebuildForUser } = await import('@/lib/access-cache');
+        await rebuildForUser(userId);
+      } catch (e) {
+        // Silently ignore — this is best-effort warming
+      }
+    });
+
+    return result;
   }
 
   /**
@@ -630,14 +642,17 @@ export class ACS {
    * Utility: Get user's effective access level on a record
    */
   static async getAccessLevel(userId: string, recordId: string): Promise<AccessLevel | null> {
-    // Check each level from highest to lowest
-    const levels: Action[] = ['FULL', 'GOVERNANCE', 'EDIT_CONTENT', 'EDIT_METADATA', 'COMMENT', 'VIEW', 'DISCOVERY'];
+    // Optimized: at most 2 calls instead of 7
+    // Try highest tier first (covers EDIT_CONTENT/GOVERNANCE/FULL paths)
+    const editResult = await this.evaluateWithReason(userId, recordId, 'EDIT_CONTENT');
+    if (editResult.allowed && editResult.accessLevel) {
+      return editResult.accessLevel;
+    }
 
-    for (const action of levels) {
-      const result = await this.evaluateWithReason(userId, recordId, action);
-      if (result.allowed && result.accessLevel) {
-        return result.accessLevel;
-      }
+    // Try read tier (covers VIEW/COMMENT/DISCOVERY paths)
+    const viewResult = await this.evaluateWithReason(userId, recordId, 'VIEW');
+    if (viewResult.allowed && viewResult.accessLevel) {
+      return viewResult.accessLevel;
     }
 
     return null;
@@ -653,6 +668,8 @@ export class ACS {
     records: any[]
   ): Promise<Map<string, { level: string; canViewContent: boolean }>> {
     const result = new Map<string, { level: string; canViewContent: boolean }>();
+
+    if (records.length === 0) return result;
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -673,6 +690,71 @@ export class ACS {
         });
       }
       return result;
+    }
+
+    // Pre-fetch project memberships for all records in one query
+    const recordIds = records.map(r => r.id);
+    const projectRecords = await prisma.projectRecord.findMany({
+      where: {
+        recordId: { in: recordIds },
+        project: {
+          OR: [
+            { members: { some: { userId } } },
+            { ownerUserId: userId }
+          ]
+        }
+      },
+      select: {
+        recordId: true,
+        project: {
+          select: {
+            id: true,
+            status: true,
+            ownerUserId: true,
+            members: {
+              where: { userId },
+              select: { role: true }
+            }
+          }
+        }
+      }
+    });
+
+    // Build recordId -> project membership lookup
+    const projectMembershipMap = new Map<string, { role: string; projectStatus: string }>();
+    for (const pr of projectRecords) {
+      let role = 'VIEW_ONLY';
+      if (pr.project.ownerUserId === userId) {
+        role = 'OWNER';
+      } else if (pr.project.members[0]) {
+        role = pr.project.members[0].role;
+      }
+      projectMembershipMap.set(pr.recordId, { role, projectStatus: pr.project.status });
+    }
+
+    // Pre-fetch company-level access grants for all relevant companies
+    const companyIds = [...new Set(records.map(r => r.registeredCompanyId).filter(Boolean))];
+    const companyAccessMap = new Map<string, string>(); // companyId -> accessLevel
+
+    if (companyIds.length > 0) {
+      const companyGrants = await prisma.companyAccess.findMany({
+        where: {
+          registeredCompanyId: { in: companyIds },
+          accessType: 'ALLOW',
+          AND: [
+            { OR: [{ userId }, { groupId: { in: userGroupIds } }] },
+            { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] }
+          ]
+        },
+        select: { registeredCompanyId: true, level: true }
+      });
+
+      for (const grant of companyGrants) {
+        const existing = companyAccessMap.get(grant.registeredCompanyId);
+        if (!existing || this.levelToNumber(grant.level) > this.levelToNumber(existing)) {
+          companyAccessMap.set(grant.registeredCompanyId, grant.level);
+        }
+      }
     }
 
     for (const record of records) {
@@ -700,11 +782,46 @@ export class ACS {
         continue;
       }
 
+      // Check project membership
+      const membership = projectMembershipMap.get(record.id);
+      if (membership) {
+        const { role, projectStatus } = membership;
+        if (['OWNER', 'MANAGER', 'VIEW_ONLY'].includes(role)) {
+          result.set(record.id, { level: role === 'MANAGER' ? 'EDIT_CONTENT' : 'VIEW', canViewContent: true });
+          continue;
+        }
+        if (role === 'CONTRIBUTOR') {
+          // Contributors get DISCOVERY only (need explicit ACL or department for content)
+          result.set(record.id, { level: 'DISCOVERY', canViewContent: false });
+          continue;
+        }
+      }
+
+      // Check company-level access
+      if (record.registeredCompanyId) {
+        const companyLevel = companyAccessMap.get(record.registeredCompanyId);
+        if (companyLevel) {
+          result.set(record.id, { level: companyLevel, canViewContent: true });
+          continue;
+        }
+      }
+
       // Catalog-only (discovered via classification visibility but no content access)
       const canRequest = ['OFFICIAL', 'OFFICIAL_CONFIDENTIAL'].includes(record.securityClassification);
-      result.set(record.id, { level: 'DISCOVERY', canViewContent: false, ...( canRequest ? { canRequest: true } : {}) } as any);
+      result.set(record.id, { level: 'DISCOVERY', canViewContent: false, ...(canRequest ? { canRequest: true } : {}) } as any);
     }
 
     return result;
+  }
+
+  /**
+   * Convert access level string to numeric value for comparison
+   */
+  private static levelToNumber(level: string): number {
+    const levels: Record<string, number> = {
+      'VIEW': 1, 'COMMENT': 2, 'EDIT_METADATA': 3,
+      'EDIT_CONTENT': 4, 'GOVERNANCE': 5, 'FULL': 6
+    };
+    return levels[level] || 0;
   }
 }

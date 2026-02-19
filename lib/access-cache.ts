@@ -118,16 +118,25 @@ export async function invalidateForRecord(recordId: string): Promise<void> {
 
 /**
  * Full rebuild for all active users. Use sparingly (e.g., after ACS logic changes).
+ * Processes users in parallel batches of CONCURRENCY_LIMIT to avoid overwhelming the DB.
  */
 export async function rebuildAll(): Promise<number> {
+  const CONCURRENCY_LIMIT = 5;
+
   const users = await prisma.user.findMany({
     where: { isActive: true },
     select: { id: true }
   });
 
   let total = 0;
-  for (const user of users) {
-    total += await rebuildForUser(user.id);
+
+  for (let i = 0; i < users.length; i += CONCURRENCY_LIMIT) {
+    const batch = users.slice(i, i + CONCURRENCY_LIMIT);
+    const results = await Promise.all(
+      batch.map(user => rebuildForUser(user.id))
+    );
+    total += results.reduce((sum, count) => sum + count, 0);
   }
+
   return total;
 }

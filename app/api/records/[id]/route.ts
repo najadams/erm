@@ -3,11 +3,13 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { hasPermission } from '@/lib/permissions';
-import { invalidateCache, invalidatePattern, CacheKeys } from '@/lib/cache';
+import { invalidateCache, CacheKeys } from '@/lib/cache';
+import { invalidateForRecord } from '@/lib/access-cache';
 
 import { assertTransitionAllowed, RecordStatus } from '@/lib/lifecycle';
-import { canAccessRecord } from '@/lib/access'; // Kept for compatibility if other funcs used, but we prefer ACS
+import { canAccessRecord } from '@/lib/access';
 import { ACS } from '@/lib/acs';
+import { syncOnUpdate, syncOnDelete } from '@/lib/search-sync';
 
 // Note: In a real app, use the same access control clause as the list view.
 // For now, we'll do a simple check.
@@ -86,7 +88,7 @@ export async function GET(
       return NextResponse.json({ error: 'Record not found' }, { status: 404 });
     }
 
-    const canDownload = await ACS.evaluate((session.user as any).id, id, 'VIEW');
+    const canDownload = hasAccess; // Reuse result from line 29
 
     let project = null;
     if ((record as any).projectId) {
@@ -145,6 +147,12 @@ export async function PATCH(
           return NextResponse.json({ error: 'Record not found' }, { status: 404 });
       }
 
+      // ACS Permission Gate: Evaluate EDIT_METADATA before any mutation
+      const canEdit = await ACS.evaluate(user.id, id, 'EDIT_METADATA');
+      if (!canEdit) {
+          return NextResponse.json({ error: 'You do not have permission to edit this record.' }, { status: 403 });
+      }
+
       // --- STATUS UPDATE ---
       if (status) {
           try {
@@ -176,8 +184,7 @@ export async function PATCH(
           
           // Invalidate caches after status change
           await invalidateCache(CacheKeys.record(id));
-          await invalidatePattern('stats:*');
-          await invalidatePattern('acs:*');
+          await invalidateForRecord(id);
           if (!metadata) return NextResponse.json(updated);
       }
 
@@ -255,6 +262,14 @@ export async function PATCH(
 
           // Invalidate record cache after metadata update
           await invalidateCache(CacheKeys.record(id));
+          // If security-sensitive fields changed, invalidate ACS caches for affected users
+          const sensitiveFields = ['securityClassification', 'classification'];
+          const hasSensitiveChange = auditEntries.some((e: any) => sensitiveFields.includes(e.metadata?.field));
+          if (hasSensitiveChange) {
+              await invalidateForRecord(id);
+          }
+          // Sync to Meilisearch
+          syncOnUpdate(id).catch(err => console.warn('[Search Sync] Update failed:', err.message));
           return NextResponse.json({ success: true, changes: auditEntries.length });
       }
       
@@ -293,6 +308,12 @@ export async function DELETE(
             return NextResponse.json({ error: 'Record not found' }, { status: 404 });
         }
 
+        // ACS Permission Gate: Evaluate DELETE before any action
+        const hasDeleteAccess = await ACS.evaluate(userId, id, 'DELETE');
+        if (!hasDeleteAccess) {
+            return NextResponse.json({ error: 'You do not have permission to delete this record.' }, { status: 403 });
+        }
+
         // 1.5 Legal Hold Block (Overrides everything)
         if (record.isLegalHold) {
              return NextResponse.json({ 
@@ -329,10 +350,10 @@ export async function DELETE(
             });
             // Invalidate caches
             await invalidateCache(CacheKeys.record(id));
-            await invalidatePattern('stats:*');
+            await invalidateForRecord(id);
             return NextResponse.json({ success: true, method: 'HARD_DELETE' });
-        } 
-        
+        }
+
         // OFFICIAL RECORDS: Soft Delete
         // Requires Admin/Records Officer or specific permission (e.g. DISPOSITION)
         // For now, we allow Admin or Records Officer to soft delete.
@@ -362,8 +383,9 @@ export async function DELETE(
             });
             // Invalidate caches
             await invalidateCache(CacheKeys.record(id));
-            await invalidatePattern('stats:*');
-            await invalidatePattern('acs:*');
+            await invalidateForRecord(id);
+            // Sync to Meilisearch (remove soft-deleted record)
+            syncOnDelete(id).catch(err => console.warn('[Search Sync] Delete failed:', err.message));
             return NextResponse.json({ success: true, method: 'SOFT_DELETE' });
         }
 
@@ -376,6 +398,8 @@ export async function DELETE(
              if (!isOwner && !isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
              // Hard delete submitted?
              await prisma.record.delete({ where: { id } });
+             // Sync to Meilisearch
+             syncOnDelete(id).catch(err => console.warn('[Search Sync] Delete failed:', err.message));
              return NextResponse.json({ success: true, method: 'HARD_DELETE' });
         }
 

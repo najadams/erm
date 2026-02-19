@@ -44,7 +44,7 @@ export default function CompanyDashboard() {
             const recordsRes = await fetch(recordsUrl);
             if (recordsRes.ok) {
                 const recoData = await recordsRes.json();
-                setRecords(recoData);
+                setRecords(recoData?.records ?? (Array.isArray(recoData) ? recoData : []));
             }
         } catch (e) {
             console.error(e);

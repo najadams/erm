@@ -65,6 +65,7 @@ import SecurityControl from '@/components/upload/SecurityControl';
 import DynamicField from '@/components/upload/DynamicField';
 import Alert from '@mui/material/Alert';
 import PeopleIcon from '@mui/icons-material/People';
+import RecordAccessPanel from '@/components/RecordAccessPanel';
 
 export default function RecordDetailsPage(props: { params: Promise<{ id: string }> }) {
   const params = React.use(props.params);
@@ -687,7 +688,7 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
                                  variant="outlined" 
                                  fullWidth 
                                  startIcon={<SecurityIcon />}
-                                 onClick={() => setOpenAccessDialog(true)}
+                                 onClick={() => setTabIndex(3)}
                                  disabled={!canManageAccess}
                              >
                                  Manage Permissions
@@ -860,6 +861,7 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
                         <Tab label="Metadata" />
                         <Tab label="Activity & Audit" />
                         <Tab label={`Versions (${record.versions?.length || 0})`} />
+                        <Tab label="Access & Permissions" icon={<PeopleIcon sx={{ fontSize: 18 }} />} iconPosition="start" />
                     </Tabs>
                     
                     {/* Metadata Tab */}
@@ -1060,6 +1062,16 @@ export default function RecordDetailsPage(props: { params: Promise<{ id: string 
                                 <Typography color="text.secondary">No versions found.</Typography>
                             )}
                         </Box>
+                    )}
+
+                    {/* Access & Permissions Tab */}
+                    {tabIndex === 3 && (
+                      <RecordAccessPanel
+                        recordId={id}
+                        canManageAccess={canManageAccess}
+                        isAdmin={isAdmin}
+                        onMutate={mutate}
+                      />
                     )}
                  </Paper>
             </Grid>

@@ -6,6 +6,7 @@
  */
 
 import { prisma } from '@/lib/prisma';
+import { invalidateForRecord } from '@/lib/access-cache';
 
 export async function processExpiredAccess(): Promise<number> {
   const now = new Date();
@@ -39,6 +40,8 @@ export async function processExpiredAccess(): Promise<number> {
         }
       })
     ]);
+    // Invalidate ACS caches for users who had access to this record
+    await invalidateForRecord(grant.recordId);
     totalProcessed++;
   }
 
@@ -69,6 +72,14 @@ export async function processExpiredAccess(): Promise<number> {
         }
       })
     ]);
+    // Invalidate ACS caches for records belonging to this company
+    const companyRecords = await prisma.record.findMany({
+      where: { registeredCompanyId: grant.registeredCompanyId },
+      select: { id: true }
+    });
+    for (const rec of companyRecords) {
+      await invalidateForRecord(rec.id);
+    }
     totalProcessed++;
   }
 

@@ -162,7 +162,7 @@ function ParentRecordSelect({ value, onChange }: { value: string | undefined, on
             const res = await fetch(`/api/records?q=${encodeURIComponent(input)}`);
             if (res.ok) {
                 const data = await res.json();
-                callback(data);
+                callback(data?.records ?? (Array.isArray(data) ? data : []));
             } else {
                 callback([]);
             }

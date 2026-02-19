@@ -36,7 +36,7 @@ export default function MyUploadsPage() {
       });
       if (!res.ok) throw new Error('Failed to fetch records');
       const data = await res.json();
-      setRecords(data);
+      setRecords(data?.records ?? (Array.isArray(data) ? data : []));
     } catch (err: any) {
       setError(err.message);
     } finally {

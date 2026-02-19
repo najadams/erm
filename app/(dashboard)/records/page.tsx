@@ -20,12 +20,15 @@ import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import DescriptionIcon from '@mui/icons-material/Description';
 import LockPersonIcon from '@mui/icons-material/LockPerson';
 import ClearIcon from '@mui/icons-material/Clear';
+import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
+import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import type { Record } from '@/types';
 import AdvancedSearch from '@/components/AdvancedSearch';
 import BatchAccessRequestDialog from '@/components/BatchAccessRequestDialog';
 
 export const dynamic = 'force-dynamic';
 
+const PAGE_SIZE = 50;
 const CATEGORIES = ['Finance', 'HR', 'Engineering', 'Marketing', 'Legal', 'Operations'];
 
 function RecordsContent() {
@@ -46,7 +49,8 @@ function RecordsContent() {
       registeredCompanyId: '',
       sector: ''
   });
-  const [recordTypes, setRecordTypes] = useState<any[]>([]); // Flat list or grouped
+  const [page, setPage] = useState(1);
+  const [recordTypes, setRecordTypes] = useState<any[]>([]);
 
   // Multi-select state
   const [selectedRecords, setSelectedRecords] = useState<Map<string, { id: string; title: string; referenceNumber?: string }>>(new Map());
@@ -101,7 +105,6 @@ function RecordsContent() {
     fetch('/api/record-types')
       .then(res => res.json())
       .then(data => {
-        // Flatten for simple dropdown
         const flatTypes: any[] = [];
         data.forEach((cat: any) => {
             if (cat.recordTypes) flatTypes.push(...cat.recordTypes);
@@ -111,14 +114,18 @@ function RecordsContent() {
       .catch(err => console.error('Failed to load types', err));
   }, []);
 
-  // Fetch records when filters change
+  // Reset page to 1 when filters change
+  React.useEffect(() => {
+    setPage(1);
+  }, [filters]);
+
   // SWR Fetcher
   const fetcher = (url: string) => fetch(url).then((res) => {
       if (!res.ok) throw new Error(`API Error: ${res.statusText}`);
       return res.json();
   });
 
-  // Construct Query String for SWR Key
+  // Construct Query String for SWR Key (includes pagination)
   const queryString = useMemo(() => {
     const params = new URLSearchParams();
     if (filters.q) params.set('q', filters.q);
@@ -130,16 +137,19 @@ function RecordsContent() {
     if (filters.recordTypeId) params.set('recordTypeId', filters.recordTypeId);
     if (filters.registeredCompanyId) params.set('registeredCompanyId', filters.registeredCompanyId);
     if (filters.sector) params.set('sector', filters.sector);
+    params.set('page', String(page));
+    params.set('pageSize', String(PAGE_SIZE));
     return params.toString();
-  }, [filters]);
+  }, [filters, page]);
 
   const { data: recordsData, error, isLoading } = useSWR(`/api/records?${queryString}`, fetcher, {
       refreshInterval: 5000,
-      keepPreviousData: true // UX: Keep old list while fetching new filter results
+      keepPreviousData: true
   });
 
-  const records = Array.isArray(recordsData) ? recordsData : [];
-  // const loading = isLoading; // Use SWR's isLoading or isValidating
+  // Support both new paginated shape { records, pagination } and legacy array shape
+  const records = recordsData?.records ?? (Array.isArray(recordsData) ? recordsData : []);
+  const pagination = recordsData?.pagination;
 
   return (
     <Box component="main" sx={{ flexGrow: 1, p: 4, overflow: 'auto' }}>
@@ -158,12 +168,15 @@ function RecordsContent() {
       {/* Results Summary */}
       <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="body2" color="text.secondary">
-             Showing <b>{records.length}</b> records
-             {/* Future: Add 'sort by' indicator here */}
+             {pagination ? (
+               <>Showing <b>{(pagination.page - 1) * pagination.pageSize + 1}–{Math.min(pagination.page * pagination.pageSize, pagination.totalCount)}</b> of <b>{pagination.totalCount}</b> records</>
+             ) : (
+               <>Showing <b>{records.length}</b> records</>
+             )}
           </Typography>
       </Box>
 
-      {/* Results */}
+      {/* Results Table */}
       <Paper sx={{ width: '100%', mb: 2, overflow: 'hidden', borderRadius: 3 }}>
         {/* Header Row */}
         <Box sx={{ p: 2, bgcolor: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center' }}>
@@ -250,7 +263,6 @@ function RecordsContent() {
                 </Box>
                 <Box>
                     <Typography fontWeight="500">{record.title}</Typography>
-                    {/* Show first metadata value as snippet if available */}
                     {record.metadata?.[0] && (
                         <Typography variant="caption" color="text.secondary">
                            {record.metadata[0].metadataField?.label}: {record.metadata[0].value}
@@ -287,6 +299,33 @@ function RecordsContent() {
           ))
         )}
       </Paper>
+
+      {/* Pagination Controls */}
+      {pagination && pagination.totalPages > 1 && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2, mt: 2, mb: 4 }}>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<NavigateBeforeIcon />}
+            disabled={page <= 1}
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+          >
+            Previous
+          </Button>
+          <Typography variant="body2" color="text.secondary">
+            Page <b>{pagination.page}</b> of <b>{pagination.totalPages}</b>
+          </Typography>
+          <Button
+            variant="outlined"
+            size="small"
+            endIcon={<NavigateNextIcon />}
+            disabled={!pagination.hasMore}
+            onClick={() => setPage(p => p + 1)}
+          >
+            Next
+          </Button>
+        </Box>
+      )}
 
       {/* Floating Selection Action Bar */}
       <Slide direction="up" in={selectedRecords.size > 0} mountOnEnter unmountOnExit>

@@ -26,6 +26,8 @@ public/
 # misc
 .DS_Store
 *.pem
+/backups/
+/infra/ssl/
 
 # debug
 npm-debug.log*

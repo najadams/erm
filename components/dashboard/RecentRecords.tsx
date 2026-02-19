@@ -54,11 +54,11 @@ export default function RecentRecords() {
   // SWR Fetcher
   const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-  const { data: recordsData } = useSWR('/api/records', fetcher, {
+  const { data: recordsData } = useSWR('/api/records?pageSize=5', fetcher, {
     refreshInterval: 5000
   });
 
-  const records = Array.isArray(recordsData) ? recordsData.slice(0, 5) : [];
+  const records = (recordsData?.records ?? (Array.isArray(recordsData) ? recordsData : [])).slice(0, 5);
   
   return (
     <Box>

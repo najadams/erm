@@ -30,7 +30,7 @@ export default function DispositionQueuePage() {
       const res = await fetch('/api/records?status=READY_FOR_DISPO');
       if (res.ok) {
         const data = await res.json();
-        setRecords(data);
+        setRecords(data?.records ?? (Array.isArray(data) ? data : []));
       }
     } catch (err) {
       console.error(err);

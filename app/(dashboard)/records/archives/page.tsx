@@ -24,7 +24,8 @@ function ArchivesContent() {
     fetch('/api/records?status=ARCHIVED')
       .then(res => res.json())
       .then(data => {
-         if (Array.isArray(data)) setRecords(data);
+         const list = data?.records ?? (Array.isArray(data) ? data : []);
+         setRecords(list);
       })
       .catch(err => console.error(err))
       .finally(() => setLoading(false));
